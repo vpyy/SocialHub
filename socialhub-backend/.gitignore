@@ -1,0 +1,106 @@
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.bak
+release.properties
+dependency-check-report.html
+dependency-check-report.json
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+*.xml.swp
+.vscode/
+
+# VS Code
+.vscode/
+*.swp
+*.swo
+*.swn
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Gradle (if used)
+.gradle/
+build/
+
+# Spring Boot
+/.m2/
+.classpath
+.project
+.settings/
+bin/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Application profiles
+application-local.yml
+application-dev.yml
+application-prod.yml
+
+# Database
+*.db
+*.sqlite
+
+# Log files
+logs/
+*.log
+
+# OSX
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# IDE specific files
+*.sublime-project
+*.sublime-workspace
+*.bak
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# MongoDB data (if running locally)
+/data/
+/db/
+
+# Build output
+/target/
+/dist/
+/build/
+
+# Node (if using frontend)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Coverage
+/coverage/
+.coverage
+
+# Security - Do NOT commit these files
+.env
+.env.local
+.env.*.local
+secrets/
+*.key
+*.pem
+*.jks
+*.p12

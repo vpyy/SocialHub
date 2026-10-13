@@ -1,0 +1,13 @@
+# Test Configuration
+# Used when running tests
+
+spring:
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/socialhub-test
+      auto-index-creation: true
+
+logging:
+  level:
+    root: WARN
+    com.socialhub: DEBUG

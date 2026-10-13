@@ -1,0 +1,56 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-body-md min-h-screen antialiased;
+  }
+
+  ::selection {
+    @apply bg-primary-fixed text-primary;
+  }
+}
+
+@layer components {
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    font-size: 22px;
+    line-height: 1;
+    display: inline-block;
+    vertical-align: middle;
+
+    &.fill-icon {
+      font-variation-settings: 'FILL' 1;
+    }
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(199, 196, 215, 0.4);
+    border-radius: 9999px;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 rounded-full bg-primary text-on-primary font-semibold hover:bg-primary-container transition-colors;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded-full bg-secondary text-on-secondary font-semibold hover:bg-secondary-container transition-colors;
+  }
+
+  .btn-outline {
+    @apply px-4 py-2 rounded-full border border-outline text-on-surface hover:bg-surface-container transition-colors;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2 rounded-xl bg-surface-container-low border border-outline-variant/30 text-body-md focus:outline-none focus:border-primary;
+  }
+
+  .post-card {
+    @apply p-5 bg-surface-container-lowest hover:bg-surface-bright/80 transition-colors;
+  }
+}
