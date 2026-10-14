@@ -9,35 +9,35 @@ import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
 import org.springframework.data.mongodb.core.mapping.Document;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
- * Bookmark Document for MongoDB
- * 
- * Stores bookmarked posts for users
- * Compound index prevents duplicate bookmarks
+ * bookmarks collection
+ *
+ * Fields: _id, userId, postId, createdAt
+ *
+ * Indexes:
+ *   userId + postId → UNIQUE
+ *   userId + createdAt
  */
 @Document(collection = "bookmarks")
 @CompoundIndexes({
-    @CompoundIndex(name = "user_post_idx", def = "{'userId': 1, 'postId': 1}", unique = true)
+    @CompoundIndex(name = "user_post_unique_idx",
+            def = "{'userId': 1, 'postId': 1}", unique = true),
+    @CompoundIndex(name = "user_created_idx",
+            def = "{'userId': 1, 'createdAt': -1}")
 })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Bookmark {
-    
+
     @Id
     private String id;
-    
-    private String userId;  // Reference to User._id
-    private String postId;  // Reference to Post._id
-    
-    private LocalDateTime createdAt;
-    
-    public Bookmark(String userId, String postId) {
-        this.userId = userId;
-        this.postId = postId;
-        this.createdAt = LocalDateTime.now();
-    }
+
+    private String userId;   // → users._id
+    private String postId;   // → posts._id
+
+    private Instant createdAt;
 }

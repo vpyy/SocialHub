@@ -8,38 +8,32 @@ import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
- * Post Repository for MongoDB operations
+ * Repository for posts collection.
+ *
+ * Visibility values: PUBLIC | FOLLOWERS | PRIVATE
  */
 @Repository
 public interface PostRepository extends MongoRepository<Post, String> {
-    
-    // Find posts by user
-    Page<Post> findByUserIdAndIsDeletedFalse(String userId, Pageable pageable);
-    
-    // Find all posts chronologically (for feed)
-    Page<Post> findByIsDeletedFalseOrderByCreatedAtDesc(Pageable pageable);
-    
-    // Find posts by privacy level
-    Page<Post> findByPrivacyAndIsDeletedFalseOrderByCreatedAtDesc(String privacy, Pageable pageable);
-    
-    // Find posts by multiple users (for following feed)
-    Page<Post> findByUserIdInAndIsDeletedFalseOrderByCreatedAtDesc(List<String> userIds, Pageable pageable);
-    
-    // Search posts by content (hashtags or text)
-    @Query("{ 'content': { $regex: ?0, $options: 'i' }, 'isDeleted': false }")
-    Page<Post> searchByContent(String keyword, Pageable pageable);
-    
-    // Find posts by hashtag
-    @Query("{ 'hashtags': ?0, 'isDeleted': false }")
-    Page<Post> findByHashtag(String hashtag, Pageable pageable);
-    
-    // Count user's posts
-    long countByUserIdAndIsDeletedFalse(String userId);
-    
-    // Get trending hashtags (for aggregation)
-    @Query(value = "{ 'isDeleted': false }", fields = "{ 'hashtags': 1 }")
-    List<Post> findAllHashtags();
+
+    // Tất cả bài của 1 user, mới nhất trước
+    Page<Post> findByAuthorIdOrderByCreatedAtDesc(String authorId, Pageable pageable);
+
+    // Feed: bài của nhiều user (following), mới nhất trước
+    Page<Post> findByAuthorIdInAndVisibilityInOrderByCreatedAtDesc(
+            List<String> authorIds, List<String> visibilities, Pageable pageable);
+
+    // Feed public: dành cho người chưa đăng nhập / trang khám phá
+    Page<Post> findByVisibilityOrderByCreatedAtDesc(String visibility, Pageable pageable);
+
+    // Tìm bài theo hashtag
+    @Query("{ 'hashtags': ?0, 'visibility': { $in: ?1 } }")
+    Page<Post> findByHashtagAndVisibilities(String hashtag, List<String> visibilities, Pageable pageable);
+
+    // Tìm kiếm bài theo từ khóa trong content
+    @Query("{ 'content': { $regex: ?0, $options: 'i' }, 'visibility': { $in: ?1 } }")
+    Page<Post> searchByContentAndVisibilities(String keyword, List<String> visibilities, Pageable pageable);
+
+    long countByAuthorId(String authorId);
 }

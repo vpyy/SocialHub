@@ -4,41 +4,35 @@ import com.socialhub.social.document.Follow;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
- * Follow Repository for MongoDB operations
+ * Repository for follows collection.
  */
 @Repository
 public interface FollowRepository extends MongoRepository<Follow, String> {
-    
-    // Check if user1 follows user2
-    boolean existsByFollowerIdAndFollowingId(String followerId, String followingId);
-    
-    // Find follow record
+
     Optional<Follow> findByFollowerIdAndFollowingId(String followerId, String followingId);
-    
-    // Get followers of a user (who follow this user)
-    Page<Follow> findByFollowingId(String followingId, Pageable pageable);
-    
-    // Get following list (people this user follows)
-    Page<Follow> findByFollowerId(String followerId, Pageable pageable);
-    
-    // Count followers
-    long countByFollowingId(String followingId);
-    
-    // Count following
+
+    boolean existsByFollowerIdAndFollowingId(String followerId, String followingId);
+
+    // Danh sách người mà userId đang follow
+    Page<Follow> findByFollowerIdOrderByCreatedAtDesc(String followerId, Pageable pageable);
+
+    // Danh sách người đang follow userId
+    Page<Follow> findByFollowingIdOrderByCreatedAtDesc(String followingId, Pageable pageable);
+
     long countByFollowerId(String followerId);
-    
-    // Get all followers
-    List<Follow> findByFollowingId(String followingId);
-    
-    // Get all following
-    List<Follow> findByFollowerId(String followerId);
-    
-    // Delete follow
+
+    long countByFollowingId(String followingId);
+
     void deleteByFollowerIdAndFollowingId(String followerId, String followingId);
+
+    /** Lấy list followingId để build feed */
+    @Query(value = "{ 'followerId': ?0 }", fields = "{ 'followingId': 1 }")
+    List<Follow> findFollowingIdsByFollowerId(String followerId);
 }
