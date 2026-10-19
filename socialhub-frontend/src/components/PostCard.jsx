@@ -9,23 +9,23 @@ export default function PostCard({ post, onLike, onBookmark }) {
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
           <img
-            src={post.author.avatarUrl}
-            alt={post.author.displayName}
+            src={post.author?.avatarUrl || 'https://via.placeholder.com/44'}
+            alt={post.author?.displayName || 'User'}
             className="w-11 h-11 rounded-full object-cover"
           />
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-title-md font-title-md text-on-surface">
-                {post.author.displayName}
+                {post.author?.displayName || 'User'}
               </span>
-              {post.author.isVerified && (
+              {post.author?.isVerified && (
                 <span className="material-symbols-outlined fill-icon text-primary text-[18px]">
                   verified
                 </span>
               )}
             </div>
             <div className="flex items-center gap-2 text-body-sm font-body-sm text-outline">
-              <span>@{post.author.username}</span>
+              <span>@{post.author?.username || 'user'}</span>
               <span>•</span>
               <span>{post.createdAt}</span>
               <span>•</span>

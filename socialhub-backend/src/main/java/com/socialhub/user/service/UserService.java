@@ -2,17 +2,25 @@ package com.socialhub.user.service;
 
 import com.socialhub.common.exception.ResourceNotFoundException;
 import com.socialhub.common.exception.ValidationException;
+import com.socialhub.post.document.Post;
+import com.socialhub.post.dto.PostResponseDto;
+import com.socialhub.post.repository.PostRepository;
+import com.socialhub.social.repository.FollowRepository;
 import com.socialhub.user.document.User;
 import com.socialhub.user.dto.CreateUserDto;
+import com.socialhub.user.dto.UpdateProfileDto;
 import com.socialhub.user.dto.UserDto;
+import com.socialhub.user.dto.UserProfileDto;
 import com.socialhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,6 +30,8 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final FollowRepository followRepository;
+    private final PostRepository postRepository;
     private final PasswordEncoder passwordEncoder;
 
     // ──────────────────────────────────────────────────────
@@ -96,6 +106,100 @@ public class UserService {
         return userRepository.findByEmailIgnoreCase(identifier)
                 .or(() -> userRepository.findByUsernameIgnoreCase(identifier))
                 .orElseThrow(() -> new ResourceNotFoundException("User", "email/username", identifier));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Profile features (GET /api/users/{username}, PUT /api/users/me)
+    // ──────────────────────────────────────────────────────
+
+    public UserProfileDto getUserProfile(String usernameOrId, String currentUserId) {
+        User user = userRepository.findByUsernameIgnoreCase(usernameOrId)
+                .or(() -> userRepository.findById(usernameOrId))
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", usernameOrId));
+
+        return toProfileDto(user, currentUserId);
+    }
+
+    public UserProfileDto updateMyProfile(String currentUserId, UpdateProfileDto dto) {
+        User user = findUserById(currentUserId);
+
+        if (dto.getBio() != null) {
+            user.setBio(dto.getBio());
+        }
+        if (dto.getResolvedAvatarUrl() != null) {
+            user.setAvatarUrl(dto.getResolvedAvatarUrl());
+        }
+        if (dto.getResolvedCoverUrl() != null) {
+            user.setCoverUrl(dto.getResolvedCoverUrl());
+        }
+        if (dto.getDisplayName() != null && !dto.getDisplayName().isBlank()) {
+            user.setDisplayName(dto.getDisplayName().trim());
+        }
+
+        user.setUpdatedAt(Instant.now());
+        User saved = userRepository.save(user);
+        log.info("Updated profile for user: {}", saved.getUsername());
+
+        return toProfileDto(saved, currentUserId);
+    }
+
+    public UserProfileDto toProfileDto(User user, String currentUserId) {
+        long followersCount = followRepository.countByFollowingId(user.getId());
+        long followingCount = followRepository.countByFollowerId(user.getId());
+        long postsCount = postRepository.countByAuthorId(user.getId());
+
+        boolean isSelf = currentUserId != null && currentUserId.equals(user.getId());
+        boolean isFollowing = !isSelf && currentUserId != null
+                && followRepository.existsByFollowerIdAndFollowingId(currentUserId, user.getId());
+
+        // Fetch recent posts
+        List<Post> posts = postRepository.findByAuthorIdOrderByCreatedAtDesc(user.getId(), PageRequest.of(0, 30))
+                .getContent();
+
+        List<Object> postDtos = new ArrayList<>();
+        for (Post p : posts) {
+            String imageUrl = (p.getMedia() != null && !p.getMedia().isEmpty()) ? p.getMedia().get(0).getUrl() : null;
+            postDtos.add(PostResponseDto.builder()
+                    .id(p.getId())
+                    .author(PostResponseDto.AuthorDto.builder()
+                            .id(user.getId())
+                            .username(user.getUsername())
+                            .displayName(user.getDisplayName())
+                            .avatarUrl(user.getAvatarUrl())
+                            .isVerified(false)
+                            .build())
+                    .content(p.getContent())
+                    .media(p.getMedia())
+                    .imageUrl(imageUrl)
+                    .hashtags(p.getHashtags())
+                    .visibility(p.getVisibility())
+                    .likes(p.getLikeCount())
+                    .comments(p.getCommentCount())
+                    .shares(p.getShareCount())
+                    .createdAt(p.getCreatedAt())
+                    .updatedAt(p.getUpdatedAt())
+                    .build());
+        }
+
+        return UserProfileDto.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(isSelf ? user.getEmail() : null)
+                .displayName(user.getDisplayName())
+                .avatarUrl(user.getAvatarUrl())
+                .coverUrl(user.getCoverUrl())
+                .bio(user.getBio())
+                .role(user.getRole())
+                .status(user.getStatus())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .followersCount(followersCount)
+                .followingCount(followingCount)
+                .postsCount(postsCount)
+                .isFollowing(isFollowing)
+                .isSelf(isSelf)
+                .posts(postDtos)
+                .build();
     }
 
     // ──────────────────────────────────────────────────────

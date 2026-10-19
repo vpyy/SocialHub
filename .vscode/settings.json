@@ -1,2 +1,25 @@
 {
+  "java.jdt.ls.java.home": "C:\\Users\\ADMIN\\.jdks\\jbr-21.0.11",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-21",
+      "path": "C:\\Users\\ADMIN\\.jdks\\jbr-21.0.11",
+      "default": true
+    }
+  ],
+  "java.jdt.ls.lombokSupport.enabled": true,
+  "editor.formatOnSave": true,
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "tailwindCSS.includeLanguages": {
+    "javascript": "javascript",
+    "javascriptreact": "javascriptreact"
+  }
 }

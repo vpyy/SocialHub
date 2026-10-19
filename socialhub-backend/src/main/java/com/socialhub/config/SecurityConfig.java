@@ -62,6 +62,9 @@ public class SecurityConfig {
                 // Public API endpoints - auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+
+                // Public profile and user lookups (GET only; PUT /me and POST follow require auth)
+                .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
                 
                 // All other requests require authentication
                 .anyRequest().authenticated()

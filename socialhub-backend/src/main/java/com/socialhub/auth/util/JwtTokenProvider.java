@@ -20,7 +20,7 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
     
-    @Value("${app.jwtSecret:mySecretKeyForSocialHubJWTTokenGenerationAndValidation123456789}")
+    @Value("${app.jwtSecret:mySecretKeyForSocialHubJWTTokenGenerationAndValidation1234567890SecureKeyForHS512}")
     private String jwtSecret;
     
     @Value("${app.jwtExpirationMs:86400000}")  // 24 hours default
