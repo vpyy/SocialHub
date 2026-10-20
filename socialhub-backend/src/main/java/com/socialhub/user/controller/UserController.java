@@ -2,6 +2,7 @@ package com.socialhub.user.controller;
 
 import com.socialhub.common.exception.ApiException;
 import com.socialhub.common.response.ApiResponse;
+import com.socialhub.post.dto.PostResponseDto;
 import com.socialhub.social.dto.FollowResponseDto;
 import com.socialhub.social.dto.FollowUserDto;
 import com.socialhub.social.service.FollowService;
@@ -91,6 +92,32 @@ public class UserController {
         String currentUserId = extractCurrentUserId(authentication);
         List<FollowUserDto> following = followService.getFollowing(id, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(following, "OK"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 6. GET /api/users/{id}/reposts — User Reposts
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{id}/reposts")
+    public ResponseEntity<ApiResponse<List<PostResponseDto>>> getReposts(
+            @PathVariable String id,
+            Authentication authentication) {
+        log.info("GET /api/users/{}/reposts", id);
+        String currentUserId = extractCurrentUserId(authentication);
+        List<PostResponseDto> reposts = userService.getUserReposts(id, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(reposts, "Reposts retrieved successfully"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 7. GET /api/users/{id}/liked-posts — User Liked Posts
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{id}/liked-posts")
+    public ResponseEntity<ApiResponse<List<PostResponseDto>>> getLikedPosts(
+            @PathVariable String id,
+            Authentication authentication) {
+        log.info("GET /api/users/{}/liked-posts", id);
+        String currentUserId = extractCurrentUserId(authentication);
+        List<PostResponseDto> likedPosts = userService.getUserLikedPosts(id, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(likedPosts, "Liked posts retrieved successfully"));
     }
 
     // ──────────────────────────────────────────────────────

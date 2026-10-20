@@ -28,6 +28,7 @@ public class PostResponseDto {
     private long comments;
     private long shares;
     private boolean isLiked;
+    private boolean isReposted;
     private boolean isBookmarked;
     private Instant createdAt;
     private Instant updatedAt;

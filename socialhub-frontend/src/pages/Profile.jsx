@@ -1,312 +1,370 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
-import PostCard from '../components/PostCard'
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import PostCard from "../components/PostCard";
 
-const API_BASE = 'http://localhost:8080/api'
+const API_BASE = "http://localhost:8080/api";
 
 export default function Profile() {
-  const { username } = useParams()
-  const navigate = useNavigate()
+  const { username } = useParams();
+  const navigate = useNavigate();
 
   // File input refs for local image upload
-  const avatarFileInputRef = useRef(null)
-  const coverFileInputRef = useRef(null)
+  const avatarFileInputRef = useRef(null);
+  const coverFileInputRef = useRef(null);
 
   // Current logged in user & token
-  const token = localStorage.getItem('token')
+  const token = localStorage.getItem("token");
   const [currentUser, setCurrentUser] = useState(() => {
     try {
-      const stored = localStorage.getItem('user')
-      return stored ? JSON.parse(stored) : null
+      const stored = localStorage.getItem("user");
+      return stored ? JSON.parse(stored) : null;
     } catch (e) {
-      return null
+      return null;
     }
-  })
+  });
 
   // Profile data states
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // Tabs state: 'posts' | 'followers' | 'following'
-  const [activeTab, setActiveTab] = useState('posts')
+  // Tabs state: 'posts' | 'reposts' | 'liked'
+  const [activeTab, setActiveTab] = useState("posts");
+
+  // Modal state for followers/following: null | 'followers' | 'following'
+  const [modalType, setModalType] = useState(null);
+
+  // Reposts & Liked Posts states
+  const [reposts, setReposts] = useState([]);
+  const [repostsLoading, setRepostsLoading] = useState(false);
+  const [repostsLoaded, setRepostsLoaded] = useState(false);
+
+  const [likedPosts, setLikedPosts] = useState([]);
+  const [likedPostsLoading, setLikedPostsLoading] = useState(false);
+  const [likedPostsLoaded, setLikedPostsLoaded] = useState(false);
 
   // Followers & Following lists
-  const [followers, setFollowers] = useState([])
-  const [followersLoading, setFollowersLoading] = useState(false)
-  const [followersLoaded, setFollowersLoaded] = useState(false)
+  const [followers, setFollowers] = useState([]);
+  const [followersLoading, setFollowersLoading] = useState(false);
+  const [followersLoaded, setFollowersLoaded] = useState(false);
 
-  const [following, setFollowing] = useState([])
-  const [followingLoading, setFollowingLoading] = useState(false)
-  const [followingLoaded, setFollowingLoaded] = useState(false)
+  const [following, setFollowing] = useState([]);
+  const [followingLoading, setFollowingLoading] = useState(false);
+  const [followingLoaded, setFollowingLoaded] = useState(false);
 
   // Follow/Unfollow action loading state
-  const [actionLoadingId, setActionLoadingId] = useState(null)
+  const [actionLoadingId, setActionLoadingId] = useState(null);
 
   // Edit profile modal states
-  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [editForm, setEditForm] = useState({
-    displayName: '',
-    bio: '',
-    avatarUrl: '',
-    coverUrl: '',
-  })
-  const [editSaving, setEditSaving] = useState(false)
-  const [editError, setEditError] = useState('')
+    displayName: "",
+    bio: "",
+    avatarUrl: "",
+    coverUrl: "",
+  });
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState("");
 
   // Helper to read and optimize image from local file
   const handleAvatarFileChange = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setEditError('Vui lòng chọn một tệp hình ảnh hợp lệ (JPG, PNG, WebP...)')
-      return
+    if (!file.type.startsWith("image/")) {
+      setEditError("Vui lòng chọn một tệp hình ảnh hợp lệ (JPG, PNG, WebP...)");
+      return;
     }
 
-    setEditError('')
-    const reader = new FileReader()
+    setEditError("");
+    const reader = new FileReader();
     reader.onload = (event) => {
-      const img = new Image()
+      const img = new Image();
       img.onload = () => {
         // Optimize avatar dimensions to max 400x400
-        const canvas = document.createElement('canvas')
-        const MAX_SIZE = 400
-        let width = img.width
-        let height = img.height
+        const canvas = document.createElement("canvas");
+        const MAX_SIZE = 400;
+        let width = img.width;
+        let height = img.height;
 
         if (width > height) {
           if (width > MAX_SIZE) {
-            height = Math.round((height * MAX_SIZE) / width)
-            width = MAX_SIZE
+            height = Math.round((height * MAX_SIZE) / width);
+            width = MAX_SIZE;
           }
         } else {
           if (height > MAX_SIZE) {
-            width = Math.round((width * MAX_SIZE) / height)
-            height = MAX_SIZE
+            width = Math.round((width * MAX_SIZE) / height);
+            height = MAX_SIZE;
           }
         }
 
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, width, height)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.88)
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
 
-        setEditForm((prev) => ({ ...prev, avatarUrl: dataUrl }))
-      }
-      img.src = event.target.result
-    }
-    reader.readAsDataURL(file)
-  }
+        setEditForm((prev) => ({ ...prev, avatarUrl: dataUrl }));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleCoverFileChange = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      setEditError('Vui lòng chọn một tệp hình ảnh hợp lệ (JPG, PNG, WebP...)')
-      return
+    if (!file.type.startsWith("image/")) {
+      setEditError("Vui lòng chọn một tệp hình ảnh hợp lệ (JPG, PNG, WebP...)");
+      return;
     }
 
-    setEditError('')
-    const reader = new FileReader()
+    setEditError("");
+    const reader = new FileReader();
     reader.onload = (event) => {
-      const img = new Image()
+      const img = new Image();
       img.onload = () => {
         // Optimize cover dimensions to max 1200 width
-        const canvas = document.createElement('canvas')
-        const MAX_WIDTH = 1200
-        let width = img.width
-        let height = img.height
+        const canvas = document.createElement("canvas");
+        const MAX_WIDTH = 1200;
+        let width = img.width;
+        let height = img.height;
 
         if (width > MAX_WIDTH) {
-          height = Math.round((height * MAX_WIDTH) / width)
-          width = MAX_WIDTH
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
         }
 
-        canvas.width = width
-        canvas.height = height
-        const ctx = canvas.getContext('2d')
-        ctx.drawImage(img, 0, 0, width, height)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
 
-        setEditForm((prev) => ({ ...prev, coverUrl: dataUrl }))
-      }
-      img.src = event.target.result
-    }
-    reader.readAsDataURL(file)
-  }
+        setEditForm((prev) => ({ ...prev, coverUrl: dataUrl }));
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
 
   // ──────────────────────────────────────────────────────
   // Fetch Profile by username
   // ──────────────────────────────────────────────────────
   const fetchProfile = useCallback(async () => {
-    if (!username) return
-    setLoading(true)
-    setError('')
-    setFollowersLoaded(false)
-    setFollowingLoaded(false)
-    setFollowers([])
-    setFollowing([])
+    if (!username) return;
+    setLoading(true);
+    setError("");
+    setFollowersLoaded(false);
+    setFollowingLoaded(false);
+    setFollowers([]);
+    setFollowing([]);
+    setRepostsLoaded(false);
+    setLikedPostsLoaded(false);
+    setReposts([]);
+    setLikedPosts([]);
 
     try {
-      const headers = { 'Content-Type': 'application/json' }
+      const headers = { "Content-Type": "application/json" };
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`
+        headers["Authorization"] = `Bearer ${token}`;
       }
 
-      const res = await fetch(`${API_BASE}/users/${username}`, { headers })
-      const data = await res.json()
+      const res = await fetch(`${API_BASE}/users/${username}`, { headers });
+      const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message || 'Không thể tìm thấy trang cá nhân này')
-        setProfile(null)
-        return
+        setError(data.message || "Không thể tìm thấy trang cá nhân này");
+        setProfile(null);
+        return;
       }
 
-      setProfile(data.data)
+      setProfile(data.data);
       setEditForm({
-        displayName: data.data.displayName || '',
-        bio: data.data.bio || '',
-        avatarUrl: data.data.avatarUrl || data.data.avatar || '',
-        coverUrl: data.data.coverUrl || data.data.cover || '',
-      })
+        displayName: data.data.displayName || "",
+        bio: data.data.bio || "",
+        avatarUrl: data.data.avatarUrl || data.data.avatar || "",
+        coverUrl: data.data.coverUrl || data.data.cover || "",
+      });
     } catch (err) {
-      setError('Lỗi kết nối máy chủ: ' + err.message)
-      setProfile(null)
+      setError("Lỗi kết nối máy chủ: " + err.message);
+      setProfile(null);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [username, token])
+  }, [username, token]);
 
   useEffect(() => {
-    fetchProfile()
-    setActiveTab('posts')
-  }, [fetchProfile])
+    fetchProfile();
+    setActiveTab("posts");
+  }, [fetchProfile]);
 
   // ──────────────────────────────────────────────────────
-  // Fetch Followers & Following when tab changes
+  // Fetch Followers & Following for Modal
   // ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (!profile?.id) return
+    if (!profile?.id) return;
 
-    const headers = { 'Content-Type': 'application/json' }
-    if (token) headers['Authorization'] = `Bearer ${token}`
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
 
-    if (activeTab === 'followers' && !followersLoaded) {
-      setFollowersLoading(true)
+    if (modalType === "followers" && !followersLoaded) {
+      setFollowersLoading(true);
       fetch(`${API_BASE}/users/${profile.id}/followers`, { headers })
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
-            setFollowers(data.data || [])
-            setFollowersLoaded(true)
+            setFollowers(data.data || []);
+            setFollowersLoaded(true);
           }
         })
-        .catch((err) => console.error('Failed to load followers:', err))
-        .finally(() => setFollowersLoading(false))
+        .catch((err) => console.error("Failed to load followers:", err))
+        .finally(() => setFollowersLoading(false));
     }
 
-    if (activeTab === 'following' && !followingLoaded) {
-      setFollowingLoading(true)
+    if (modalType === "following" && !followingLoaded) {
+      setFollowingLoading(true);
       fetch(`${API_BASE}/users/${profile.id}/following`, { headers })
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
-            setFollowing(data.data || [])
-            setFollowingLoaded(true)
+            setFollowing(data.data || []);
+            setFollowingLoaded(true);
           }
         })
-        .catch((err) => console.error('Failed to load following:', err))
-        .finally(() => setFollowingLoading(false))
+        .catch((err) => console.error("Failed to load following:", err))
+        .finally(() => setFollowingLoading(false));
     }
-  }, [activeTab, profile?.id, followersLoaded, followingLoaded, token])
+  }, [modalType, profile?.id, followersLoaded, followingLoaded, token]);
+
+  // ──────────────────────────────────────────────────────
+  // Fetch Reposts & Liked Posts when tab changes
+  // ──────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    const headers = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
+    if (activeTab === "reposts" && !repostsLoaded) {
+      setRepostsLoading(true);
+      fetch(`${API_BASE}/users/${profile.id}/reposts`, { headers })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setReposts(data.data || []);
+            setRepostsLoaded(true);
+          }
+        })
+        .catch((err) => console.error("Failed to load reposts:", err))
+        .finally(() => setRepostsLoading(false));
+    }
+
+    if (activeTab === "liked" && !likedPostsLoaded) {
+      setLikedPostsLoading(true);
+      fetch(`${API_BASE}/users/${profile.id}/liked-posts`, { headers })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setLikedPosts(data.data || []);
+            setLikedPostsLoaded(true);
+          }
+        })
+        .catch((err) => console.error("Failed to load liked posts:", err))
+        .finally(() => setLikedPostsLoading(false));
+    }
+  }, [activeTab, profile?.id, repostsLoaded, likedPostsLoaded, token]);
 
   // ──────────────────────────────────────────────────────
   // Toggle Follow on Profile Header
   // ──────────────────────────────────────────────────────
   const handleToggleFollowProfile = async () => {
     if (!token) {
-      navigate('/login')
-      return
+      navigate("/login");
+      return;
     }
-    if (!profile?.id || actionLoadingId) return
+    if (!profile?.id || actionLoadingId) return;
 
-    setActionLoadingId(profile.id)
+    setActionLoadingId(profile.id);
     try {
       const res = await fetch(`${API_BASE}/users/${profile.id}/follow`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
 
       if (res.ok && data.success) {
-        const isNowFollowing = data.data.following
+        const isNowFollowing = data.data.following;
         const newFollowersCount =
-          typeof data.data.followersCount === 'number'
+          typeof data.data.followersCount === "number"
             ? data.data.followersCount
             : isNowFollowing
-            ? profile.followersCount + 1
-            : Math.max(0, profile.followersCount - 1)
+              ? profile.followersCount + 1
+              : Math.max(0, profile.followersCount - 1);
 
         setProfile((prev) => ({
           ...prev,
           isFollowing: isNowFollowing,
           followersCount: newFollowersCount,
-        }))
+        }));
 
         // Refresh followers tab list if loaded
         if (followersLoaded) {
-          setFollowersLoaded(false)
+          setFollowersLoaded(false);
         }
       } else {
-        alert(data.message || 'Không thể thực hiện thao tác follow')
+        alert(data.message || "Không thể thực hiện thao tác follow");
       }
     } catch (err) {
-      console.error('Follow toggle error:', err)
-      alert('Lỗi kết nối khi follow: ' + err.message)
+      console.error("Follow toggle error:", err);
+      alert("Lỗi kết nối khi follow: " + err.message);
     } finally {
-      setActionLoadingId(null)
+      setActionLoadingId(null);
     }
-  }
+  };
 
   // ──────────────────────────────────────────────────────
   // Toggle Follow for user in Followers/Following list
   // ──────────────────────────────────────────────────────
   const handleToggleFollowUserInList = async (targetUser) => {
     if (!token) {
-      navigate('/login')
-      return
+      navigate("/login");
+      return;
     }
-    if (actionLoadingId) return
+    if (actionLoadingId) return;
 
-    setActionLoadingId(targetUser.id)
+    setActionLoadingId(targetUser.id);
     try {
       const res = await fetch(`${API_BASE}/users/${targetUser.id}/follow`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
 
       if (res.ok && data.success) {
-        const isNowFollowing = data.data.following
+        const isNowFollowing = data.data.following;
 
         // Update in followers list
         setFollowers((prev) =>
-          prev.map((u) => (u.id === targetUser.id ? { ...u, isFollowing: isNowFollowing } : u))
-        )
+          prev.map((u) =>
+            u.id === targetUser.id ? { ...u, isFollowing: isNowFollowing } : u,
+          ),
+        );
 
         // Update in following list
         setFollowing((prev) =>
-          prev.map((u) => (u.id === targetUser.id ? { ...u, isFollowing: isNowFollowing } : u))
-        )
+          prev.map((u) =>
+            u.id === targetUser.id ? { ...u, isFollowing: isNowFollowing } : u,
+          ),
+        );
 
         // If toggling on current user's profile, update followingCount
         if (profile?.isSelf) {
@@ -315,7 +373,7 @@ export default function Profile() {
             followingCount: isNowFollowing
               ? prev.followingCount + 1
               : Math.max(0, prev.followingCount - 1),
-          }))
+          }));
         }
 
         // If toggling the main profile user from a list
@@ -324,31 +382,31 @@ export default function Profile() {
             ...prev,
             isFollowing: isNowFollowing,
             followersCount: data.data.followersCount ?? prev.followersCount,
-          }))
+          }));
         }
       }
     } catch (err) {
-      console.error('List follow toggle error:', err)
+      console.error("List follow toggle error:", err);
     } finally {
-      setActionLoadingId(null)
+      setActionLoadingId(null);
     }
-  }
+  };
 
   // ──────────────────────────────────────────────────────
   // Submit Edit Profile (PUT /api/users/me)
   // ──────────────────────────────────────────────────────
   const handleSaveProfile = async (e) => {
-    e.preventDefault()
-    if (!token) return
+    e.preventDefault();
+    if (!token) return;
 
-    setEditSaving(true)
-    setEditError('')
+    setEditSaving(true);
+    setEditError("");
 
     try {
       const res = await fetch(`${API_BASE}/users/me`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
@@ -357,20 +415,20 @@ export default function Profile() {
           avatarUrl: editForm.avatarUrl.trim(),
           coverUrl: editForm.coverUrl.trim(),
         }),
-      })
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!res.ok) {
-        setEditError(data.message || 'Cập nhật hồ sơ thất bại')
-        return
+        setEditError(data.message || "Cập nhật hồ sơ thất bại");
+        return;
       }
 
       // Update state
       setProfile((prev) => ({
         ...prev,
         ...data.data,
-      }))
+      }));
 
       // Update current user in localStorage for Sidebar/Header
       const updatedUser = {
@@ -379,18 +437,18 @@ export default function Profile() {
         avatarUrl: data.data.avatarUrl || data.data.avatar,
         coverUrl: data.data.coverUrl || data.data.cover,
         bio: data.data.bio,
-      }
-      localStorage.setItem('user', JSON.stringify(updatedUser))
-      setCurrentUser(updatedUser)
+      };
+      localStorage.setItem("user", JSON.stringify(updatedUser));
+      setCurrentUser(updatedUser);
 
       // Close modal
-      setIsEditOpen(false)
+      setIsEditOpen(false);
     } catch (err) {
-      setEditError('Lỗi kết nối: ' + err.message)
+      setEditError("Lỗi kết nối: " + err.message);
     } finally {
-      setEditSaving(false)
+      setEditSaving(false);
     }
-  }
+  };
 
   // ──────────────────────────────────────────────────────
   // Loading & Error States
@@ -408,32 +466,39 @@ export default function Profile() {
           </div>
         </div>
       </section>
-    )
+    );
   }
 
   if (error || !profile) {
     return (
       <section className="flex-1 max-w-[700px] border-r border-outline-variant/30 min-h-screen p-8 text-center flex flex-col items-center justify-center">
         <div className="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center text-outline mb-4">
-          <span className="material-symbols-outlined text-[36px]">person_off</span>
+          <span className="material-symbols-outlined text-[36px]">
+            person_off
+          </span>
         </div>
-        <h2 className="text-xl font-bold text-on-surface mb-2">Người dùng không tồn tại</h2>
+        <h2 className="text-xl font-bold text-on-surface mb-2">
+          Người dùng không tồn tại
+        </h2>
         <p className="text-on-surface-variant text-sm mb-6 max-w-sm">
-          {error || `Tài khoản @${username} không tồn tại hoặc đã đổi tên người dùng.`}
+          {error ||
+            `Tài khoản @${username} không tồn tại hoặc đã đổi tên người dùng.`}
         </p>
         <button
-          onClick={() => navigate('/')}
+          onClick={() => navigate("/")}
           className="btn-primary flex items-center gap-2"
         >
-          <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+          <span className="material-symbols-outlined text-[18px]">
+            arrow_back
+          </span>
           <span>Quay lại Trang chủ</span>
         </button>
       </section>
-    )
+    );
   }
 
-  const isSelf = Boolean(profile.isSelf)
-  const isFollowing = Boolean(profile.isFollowing)
+  const isSelf = Boolean(profile.isSelf);
+  const isFollowing = Boolean(profile.isFollowing);
 
   return (
     <section className="flex-1 w-full max-w-4xl mx-auto border-r border-outline-variant/30 min-h-screen pb-20 flex flex-col">
@@ -466,7 +531,9 @@ export default function Profile() {
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-r from-[#4648d4]/30 via-[#6b38d4]/20 to-[#dae2fd] flex items-center justify-center">
-            <span className="material-symbols-outlined text-outline/40 text-[64px]">image</span>
+            <span className="material-symbols-outlined text-outline/40 text-[64px]">
+              image
+            </span>
           </div>
         )}
       </div>
@@ -477,7 +544,10 @@ export default function Profile() {
         <div className="flex items-end justify-between -mt-16 md:-mt-20 mb-4">
           <div className="relative group">
             <img
-              src={profile.avatarUrl || 'https://via.placeholder.com/120?text=Avatar'}
+              src={
+                profile.avatarUrl ||
+                "https://via.placeholder.com/120?text=Avatar"
+              }
               alt={profile.displayName || profile.username}
               className="w-28 h-28 md:w-32 md:h-32 rounded-full object-cover border-4 border-surface shadow-md bg-surface"
             />
@@ -488,7 +558,9 @@ export default function Profile() {
                 className="absolute bottom-1 right-1 p-2 bg-primary text-on-primary rounded-full shadow-lg hover:bg-primary-container transition-all hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer"
                 title="Thay đổi ảnh đại diện"
               >
-                <span className="material-symbols-outlined text-[18px]">photo_camera</span>
+                <span className="material-symbols-outlined text-[18px]">
+                  photo_camera
+                </span>
               </button>
             )}
           </div>
@@ -499,7 +571,9 @@ export default function Profile() {
                 onClick={() => setIsEditOpen(true)}
                 className="px-5 py-2 rounded-full border border-outline font-semibold text-on-surface text-label-md hover:bg-surface-container transition-all flex items-center gap-1.5 active:scale-95 shadow-sm"
               >
-                <span className="material-symbols-outlined text-[18px]">edit</span>
+                <span className="material-symbols-outlined text-[18px]">
+                  edit
+                </span>
                 <span>Chỉnh sửa hồ sơ</span>
               </button>
             ) : (
@@ -508,20 +582,24 @@ export default function Profile() {
                 disabled={actionLoadingId === profile.id}
                 className={`px-6 py-2 rounded-full font-bold text-label-md transition-all flex items-center gap-1.5 active:scale-95 shadow-sm ${
                   isFollowing
-                    ? 'border border-outline text-on-surface hover:border-error hover:text-error hover:bg-error-container/20'
-                    : 'bg-primary text-on-primary hover:bg-primary-container hover:shadow-md'
+                    ? "border border-outline text-on-surface hover:border-error hover:text-error hover:bg-error-container/20"
+                    : "bg-primary text-on-primary hover:bg-primary-container hover:shadow-md"
                 }`}
               >
                 {actionLoadingId === profile.id ? (
                   <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
                 ) : isFollowing ? (
                   <>
-                    <span className="material-symbols-outlined text-[18px]">check</span>
+                    <span className="material-symbols-outlined text-[18px]">
+                      check
+                    </span>
                     <span>Đang theo dõi</span>
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-[18px]">person_add</span>
+                    <span className="material-symbols-outlined text-[18px]">
+                      person_add
+                    </span>
                     <span>Theo dõi</span>
                   </>
                 )}
@@ -536,7 +614,9 @@ export default function Profile() {
             <h2 className="text-xl md:text-2xl font-extrabold text-on-surface leading-tight flex items-center gap-1.5">
               <span>{profile.displayName || profile.username}</span>
             </h2>
-            <p className="text-outline text-body-sm font-medium">@{profile.username}</p>
+            <p className="text-outline text-body-sm font-medium">
+              @{profile.username}
+            </p>
           </div>
 
           {/* Bio */}
@@ -551,15 +631,17 @@ export default function Profile() {
           {/* Joined date & meta */}
           <div className="flex flex-wrap items-center gap-4 text-outline text-body-sm pt-1">
             <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px]">calendar_month</span>
+              <span className="material-symbols-outlined text-[16px]">
+                calendar_month
+              </span>
               <span>
-                Tham gia{' '}
+                Tham gia{" "}
                 {profile.createdAt
-                  ? new Date(profile.createdAt).toLocaleDateString('vi-VN', {
-                      month: 'long',
-                      year: 'numeric',
+                  ? new Date(profile.createdAt).toLocaleDateString("vi-VN", {
+                      month: "long",
+                      year: "numeric",
                     })
-                  : 'gần đây'}
+                  : "gần đây"}
               </span>
             </div>
           </div>
@@ -567,7 +649,7 @@ export default function Profile() {
           {/* Followers & Following counts */}
           <div className="flex items-center gap-6 pt-1 text-body-sm">
             <button
-              onClick={() => setActiveTab('following')}
+              onClick={() => setModalType("following")}
               className="hover:underline flex items-center gap-1 group text-left"
             >
               <strong className="font-bold text-on-surface group-hover:text-primary">
@@ -576,7 +658,7 @@ export default function Profile() {
               <span className="text-outline">Đang theo dõi</span>
             </button>
             <button
-              onClick={() => setActiveTab('followers')}
+              onClick={() => setModalType("followers")}
               className="hover:underline flex items-center gap-1 group text-left"
             >
               <strong className="font-bold text-on-surface group-hover:text-primary">
@@ -591,43 +673,43 @@ export default function Profile() {
       {/* 3 Tabs Bar */}
       <div className="flex border-b border-outline-variant/30 sticky top-[57px] bg-surface/95 backdrop-blur-md z-10">
         <button
-          onClick={() => setActiveTab('posts')}
+          onClick={() => setActiveTab("posts")}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
-            activeTab === 'posts'
-              ? 'text-primary font-bold'
-              : 'text-outline hover:text-on-surface hover:bg-surface-container/50'
+            activeTab === "posts"
+              ? "text-primary font-bold"
+              : "text-outline hover:text-on-surface hover:bg-surface-container/50"
           }`}
         >
           <span>Bài viết</span>
-          {activeTab === 'posts' && (
+          {activeTab === "posts" && (
             <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-primary rounded-full"></div>
           )}
         </button>
 
         <button
-          onClick={() => setActiveTab('followers')}
+          onClick={() => setActiveTab("reposts")}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
-            activeTab === 'followers'
-              ? 'text-primary font-bold'
-              : 'text-outline hover:text-on-surface hover:bg-surface-container/50'
+            activeTab === "reposts"
+              ? "text-primary font-bold"
+              : "text-outline hover:text-on-surface hover:bg-surface-container/50"
           }`}
         >
-          <span>Người theo dõi ({profile.followersCount ?? 0})</span>
-          {activeTab === 'followers' && (
+          <span>Bài viết đã đăng lại</span>
+          {activeTab === "reposts" && (
             <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-primary rounded-full"></div>
           )}
         </button>
 
         <button
-          onClick={() => setActiveTab('following')}
+          onClick={() => setActiveTab("liked")}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
-            activeTab === 'following'
-              ? 'text-primary font-bold'
-              : 'text-outline hover:text-on-surface hover:bg-surface-container/50'
+            activeTab === "liked"
+              ? "text-primary font-bold"
+              : "text-outline hover:text-on-surface hover:bg-surface-container/50"
           }`}
         >
-          <span>Đang theo dõi ({profile.followingCount ?? 0})</span>
-          {activeTab === 'following' && (
+          <span>Bài viết đã thích</span>
+          {activeTab === "liked" && (
             <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-primary rounded-full"></div>
           )}
         </button>
@@ -636,7 +718,7 @@ export default function Profile() {
       {/* Tab Content */}
       <div className="flex-1">
         {/* ─── TAB 1: BÀI VIẾT ─── */}
-        {activeTab === 'posts' && (
+        {activeTab === "posts" && (
           <div>
             {profile.posts && profile.posts.length > 0 ? (
               <div className="divide-y divide-outline-variant/20">
@@ -652,11 +734,11 @@ export default function Profile() {
                         avatarUrl: profile.avatarUrl,
                       },
                       createdAt: post.createdAt
-                        ? new Date(post.createdAt).toLocaleDateString('vi-VN', {
-                            day: 'numeric',
-                            month: 'short',
+                        ? new Date(post.createdAt).toLocaleDateString("vi-VN", {
+                            day: "numeric",
+                            month: "short",
                           })
-                        : 'Vừa xong',
+                        : "Vừa xong",
                     }}
                     onLike={() => {}}
                     onBookmark={() => {}}
@@ -666,12 +748,16 @@ export default function Profile() {
             ) : (
               <div className="py-16 text-center px-4">
                 <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
-                  <span className="material-symbols-outlined text-[30px]">post_add</span>
+                  <span className="material-symbols-outlined text-[30px]">
+                    post_add
+                  </span>
                 </div>
-                <h3 className="text-base font-bold text-on-surface">Chưa có bài viết nào</h3>
+                <h3 className="text-base font-bold text-on-surface">
+                  Chưa có bài viết nào
+                </h3>
                 <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
                   {isSelf
-                    ? 'Bạn chưa đăng bài viết nào. Hãy chia sẻ suy nghĩ đầu tiên của bạn!'
+                    ? "Bạn chưa đăng bài viết nào. Hãy chia sẻ suy nghĩ đầu tiên của bạn!"
                     : `Người dùng @${profile.username} chưa đăng bài viết nào.`}
                 </p>
               </div>
@@ -679,78 +765,205 @@ export default function Profile() {
           </div>
         )}
 
-        {/* ─── TAB 2: FOLLOWERS ─── */}
-        {activeTab === 'followers' && (
+        {/* ─── TAB 2: BÀI VIẾT ĐÃ ĐĂNG LẠI ─── */}
+        {activeTab === "reposts" && (
           <div>
-            {followersLoading ? (
+            {repostsLoading ? (
               <div className="p-8 text-center text-outline">
                 <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-                <p className="text-body-sm">Đang tải danh sách người theo dõi...</p>
+                <p className="text-body-sm">Đang tải bài viết đã đăng lại...</p>
               </div>
-            ) : followers.length > 0 ? (
+            ) : reposts && reposts.length > 0 ? (
               <div className="divide-y divide-outline-variant/20">
-                {followers.map((u) => (
-                  <UserFollowCard
-                    key={u.id}
-                    user={u}
-                    isCurrentUser={currentUser?.id === u.id || u.isSelf}
-                    actionLoading={actionLoadingId === u.id}
-                    onToggleFollow={() => handleToggleFollowUserInList(u)}
+                {reposts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={{
+                      ...post,
+                      createdAt: post.createdAt
+                        ? new Date(post.createdAt).toLocaleDateString("vi-VN", {
+                            day: "numeric",
+                            month: "short",
+                          })
+                        : "Vừa xong",
+                    }}
+                    onLike={() => {}}
+                    onBookmark={() => {}}
                   />
                 ))}
               </div>
             ) : (
               <div className="py-16 text-center px-4">
                 <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
-                  <span className="material-symbols-outlined text-[30px]">group</span>
+                  <span className="material-symbols-outlined text-[30px]">
+                    repeat
+                  </span>
                 </div>
-                <h3 className="text-base font-bold text-on-surface">Chưa có người theo dõi</h3>
+                <h3 className="text-base font-bold text-on-surface">
+                  Chưa có bài viết đã đăng lại
+                </h3>
                 <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
                   {isSelf
-                    ? 'Khi có người theo dõi bạn, họ sẽ xuất hiện tại đây.'
-                    : `Chưa có ai theo dõi @${profile.username}.`}
+                    ? "Bạn chưa đăng lại bài viết nào."
+                    : `@${profile.username} chưa đăng lại bài viết nào.`}
                 </p>
               </div>
             )}
           </div>
         )}
 
-        {/* ─── TAB 3: FOLLOWING ─── */}
-        {activeTab === 'following' && (
+        {/* ─── TAB 3: BÀI VIẾT ĐÃ THÍCH ─── */}
+        {activeTab === "liked" && (
           <div>
-            {followingLoading ? (
+            {likedPostsLoading ? (
               <div className="p-8 text-center text-outline">
                 <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-                <p className="text-body-sm">Đang tải danh sách đang theo dõi...</p>
+                <p className="text-body-sm">Đang tải bài viết đã thích...</p>
               </div>
-            ) : following.length > 0 ? (
+            ) : likedPosts && likedPosts.length > 0 ? (
               <div className="divide-y divide-outline-variant/20">
-                {following.map((u) => (
-                  <UserFollowCard
-                    key={u.id}
-                    user={u}
-                    isCurrentUser={currentUser?.id === u.id || u.isSelf}
-                    actionLoading={actionLoadingId === u.id}
-                    onToggleFollow={() => handleToggleFollowUserInList(u)}
+                {likedPosts.map((post) => (
+                  <PostCard
+                    key={post.id}
+                    post={{
+                      ...post,
+                      createdAt: post.createdAt
+                        ? new Date(post.createdAt).toLocaleDateString("vi-VN", {
+                            day: "numeric",
+                            month: "short",
+                          })
+                        : "Vừa xong",
+                    }}
+                    onLike={() => {}}
+                    onBookmark={() => {}}
                   />
                 ))}
               </div>
             ) : (
               <div className="py-16 text-center px-4">
                 <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
-                  <span className="material-symbols-outlined text-[30px]">person_search</span>
+                  <span className="material-symbols-outlined text-[30px]">
+                    favorite
+                  </span>
                 </div>
-                <h3 className="text-base font-bold text-on-surface">Chưa theo dõi ai</h3>
+                <h3 className="text-base font-bold text-on-surface">
+                  Chưa có bài viết đã thích
+                </h3>
                 <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
                   {isSelf
-                    ? 'Bạn chưa theo dõi người dùng nào. Hãy tìm kiếm và kết nối bạn bè!'
-                    : `@${profile.username} chưa theo dõi ai.`}
+                    ? "Bạn chưa thích bài viết nào."
+                    : `@${profile.username} chưa thích bài viết nào.`}
                 </p>
               </div>
             )}
           </div>
         )}
       </div>
+
+      {/* ─── FOLLOWERS/FOLLOWING MODAL ─── */}
+      {modalType && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setModalType(null)}
+        >
+          <div
+            className="bg-surface w-full max-w-lg rounded-3xl shadow-2xl border border-outline-variant/30 overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between sticky top-0 bg-surface z-10">
+              <h3 className="text-title-md font-bold text-on-surface">
+                {modalType === "followers"
+                  ? `Người theo dõi (${profile.followersCount ?? 0})`
+                  : `Đang theo dõi (${profile.followingCount ?? 0})`}
+              </h3>
+              <button
+                onClick={() => setModalType(null)}
+                className="p-1 rounded-full text-outline hover:text-on-surface hover:bg-surface-container transition-colors"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="overflow-y-auto flex-1">
+              {modalType === "followers" ? (
+                followersLoading ? (
+                  <div className="p-8 text-center text-outline">
+                    <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <p className="text-body-sm">
+                      Đang tải danh sách người theo dõi...
+                    </p>
+                  </div>
+                ) : followers.length > 0 ? (
+                  <div className="divide-y divide-outline-variant/20">
+                    {followers.map((u) => (
+                      <UserFollowCard
+                        key={u.id}
+                        user={u}
+                        isCurrentUser={currentUser?.id === u.id || u.isSelf}
+                        actionLoading={actionLoadingId === u.id}
+                        onToggleFollow={() => handleToggleFollowUserInList(u)}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-16 text-center px-4">
+                    <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
+                      <span className="material-symbols-outlined text-[30px]">
+                        group
+                      </span>
+                    </div>
+                    <h3 className="text-base font-bold text-on-surface">
+                      Chưa có người theo dõi
+                    </h3>
+                    <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
+                      {isSelf
+                        ? "Khi có người theo dõi bạn, họ sẽ xuất hiện tại đây."
+                        : `Chưa có ai theo dõi @${profile.username}.`}
+                    </p>
+                  </div>
+                )
+              ) : followingLoading ? (
+                <div className="p-8 text-center text-outline">
+                  <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+                  <p className="text-body-sm">
+                    Đang tải danh sách đang theo dõi...
+                  </p>
+                </div>
+              ) : following.length > 0 ? (
+                <div className="divide-y divide-outline-variant/20">
+                  {following.map((u) => (
+                    <UserFollowCard
+                      key={u.id}
+                      user={u}
+                      isCurrentUser={currentUser?.id === u.id || u.isSelf}
+                      actionLoading={actionLoadingId === u.id}
+                      onToggleFollow={() => handleToggleFollowUserInList(u)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-16 text-center px-4">
+                  <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
+                    <span className="material-symbols-outlined text-[30px]">
+                      person_search
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-on-surface">
+                    Chưa theo dõi ai
+                  </h3>
+                  <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
+                    {isSelf
+                      ? "Bạn chưa theo dõi người dùng nào. Hãy tìm kiếm và kết nối bạn bè!"
+                      : `@${profile.username} chưa theo dõi ai.`}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── EDIT PROFILE MODAL ─── */}
       {isEditOpen && (
@@ -770,10 +983,15 @@ export default function Profile() {
             </div>
 
             {/* Modal Body */}
-            <form onSubmit={handleSaveProfile} className="p-6 overflow-y-auto space-y-4">
+            <form
+              onSubmit={handleSaveProfile}
+              className="p-6 overflow-y-auto space-y-4"
+            >
               {editError && (
                 <div className="p-3 rounded-xl bg-error-container text-on-error-container text-body-sm flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[18px]">error</span>
+                  <span className="material-symbols-outlined text-[18px]">
+                    error
+                  </span>
                   <span>{editError}</span>
                 </div>
               )}
@@ -840,11 +1058,13 @@ export default function Profile() {
                         alt="Avatar preview"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.target.style.display = 'none'
+                          e.target.style.display = "none";
                         }}
                       />
                     ) : (
-                      <span className="material-symbols-outlined text-outline text-[32px]">person</span>
+                      <span className="material-symbols-outlined text-outline text-[32px]">
+                        person
+                      </span>
                     )}
                   </div>
 
@@ -855,14 +1075,18 @@ export default function Profile() {
                         onClick={() => avatarFileInputRef.current?.click()}
                         className="px-4 py-1.5 rounded-full bg-primary text-on-primary hover:bg-primary-container text-label-sm font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
                       >
-                        <span className="material-symbols-outlined text-[18px]">upload_file</span>
+                        <span className="material-symbols-outlined text-[18px]">
+                          upload_file
+                        </span>
                         <span>Tải ảnh từ máy</span>
                       </button>
 
                       {editForm.avatarUrl && (
                         <button
                           type="button"
-                          onClick={() => setEditForm((prev) => ({ ...prev, avatarUrl: '' }))}
+                          onClick={() =>
+                            setEditForm((prev) => ({ ...prev, avatarUrl: "" }))
+                          }
                           className="px-3 py-1.5 rounded-full border border-outline text-error hover:bg-error-container/20 text-label-sm font-semibold transition-colors"
                         >
                           Xóa ảnh
@@ -912,11 +1136,13 @@ export default function Profile() {
                         alt="Cover preview"
                         className="w-full h-full object-cover"
                         onError={(e) => {
-                          e.target.style.display = 'none'
+                          e.target.style.display = "none";
                         }}
                       />
                     ) : (
-                      <span className="material-symbols-outlined text-outline/40 text-[40px]">image</span>
+                      <span className="material-symbols-outlined text-outline/40 text-[40px]">
+                        image
+                      </span>
                     )}
                   </div>
 
@@ -926,14 +1152,18 @@ export default function Profile() {
                       onClick={() => coverFileInputRef.current?.click()}
                       className="px-4 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 text-label-sm font-bold flex items-center gap-1.5 transition-all active:scale-95"
                     >
-                      <span className="material-symbols-outlined text-[18px]">upload_file</span>
+                      <span className="material-symbols-outlined text-[18px]">
+                        upload_file
+                      </span>
                       <span>Tải ảnh bìa từ máy</span>
                     </button>
 
                     {editForm.coverUrl && (
                       <button
                         type="button"
-                        onClick={() => setEditForm((prev) => ({ ...prev, coverUrl: '' }))}
+                        onClick={() =>
+                          setEditForm((prev) => ({ ...prev, coverUrl: "" }))
+                        }
                         className="px-3 py-1.5 rounded-full border border-outline text-error hover:bg-error-container/20 text-label-sm font-semibold transition-colors"
                       >
                         Xóa ảnh bìa
@@ -986,13 +1216,18 @@ export default function Profile() {
         </div>
       )}
     </section>
-  )
+  );
 }
 
 // ──────────────────────────────────────────────────────
 // Helper Component: User Follow Card
 // ──────────────────────────────────────────────────────
-function UserFollowCard({ user, isCurrentUser, actionLoading, onToggleFollow }) {
+function UserFollowCard({
+  user,
+  isCurrentUser,
+  actionLoading,
+  onToggleFollow,
+}) {
   return (
     <div className="p-4 hover:bg-surface-container/40 transition-colors flex items-center justify-between gap-4">
       <Link
@@ -1000,7 +1235,11 @@ function UserFollowCard({ user, isCurrentUser, actionLoading, onToggleFollow }) 
         className="flex items-center gap-3 flex-1 min-w-0 group"
       >
         <img
-          src={user.avatarUrl || user.avatar || 'https://via.placeholder.com/48?text=U'}
+          src={
+            user.avatarUrl ||
+            user.avatar ||
+            "https://via.placeholder.com/48?text=U"
+          }
           alt={user.displayName || user.username}
           className="w-12 h-12 rounded-full object-cover border border-outline-variant flex-shrink-0"
         />
@@ -1023,19 +1262,19 @@ function UserFollowCard({ user, isCurrentUser, actionLoading, onToggleFollow }) 
           disabled={actionLoading}
           className={`px-4 py-1.5 rounded-full text-label-sm font-semibold transition-all flex items-center gap-1 active:scale-95 flex-shrink-0 ${
             user.isFollowing
-              ? 'border border-outline text-on-surface hover:border-error hover:text-error hover:bg-error-container/20'
-              : 'bg-primary text-on-primary hover:bg-primary-container'
+              ? "border border-outline text-on-surface hover:border-error hover:text-error hover:bg-error-container/20"
+              : "bg-primary text-on-primary hover:bg-primary-container"
           }`}
         >
           {actionLoading ? (
             <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
           ) : user.isFollowing ? (
-            'Đang theo dõi'
+            "Đang theo dõi"
           ) : (
-            'Theo dõi'
+            "Theo dõi"
           )}
         </button>
       )}
     </div>
-  )
+  );
 }
