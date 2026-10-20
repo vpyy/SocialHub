@@ -56,9 +56,14 @@ export default function PostCard({ post, onLike, onBookmark, onUpdate }) {
     
     try {
       const response = await commentService.getPostComments(post.id, 0, 20)
-      setComments(response.data.content || [])
+      console.log('Comments response:', response)
+      
+      // Handle both response.data.content and response.content
+      const commentsData = response.data?.content || response.content || []
+      setComments(commentsData)
     } catch (error) {
       console.error('Error loading comments:', error)
+      setComments([]) // Set empty array on error
     } finally {
       setIsLoadingComments(false)
     }
@@ -75,7 +80,11 @@ export default function PostCard({ post, onLike, onBookmark, onUpdate }) {
         parentCommentId: null
       })
       
-      setComments([response.data, ...comments])
+      console.log('Create comment response:', response)
+      
+      // Handle response structure
+      const newCommentData = response.data || response
+      setComments([newCommentData, ...comments])
       setNewComment('')
       setLocalCommentCount(localCommentCount + 1)
       
@@ -98,7 +107,8 @@ export default function PostCard({ post, onLike, onBookmark, onUpdate }) {
       })
       
       const updatedComments = await commentService.getPostComments(post.id, 0, 20)
-      setComments(updatedComments.data.content || [])
+      const commentsData = updatedComments.data?.content || updatedComments.content || []
+      setComments(commentsData)
       setLocalCommentCount(localCommentCount + 1)
     } catch (error) {
       console.error('Error creating reply:', error)
@@ -113,7 +123,8 @@ export default function PostCard({ post, onLike, onBookmark, onUpdate }) {
       await commentService.deleteComment(commentId)
       
       const updatedComments = await commentService.getPostComments(post.id, 0, 20)
-      setComments(updatedComments.data.content || [])
+      const commentsData = updatedComments.data?.content || updatedComments.content || []
+      setComments(commentsData)
       setLocalCommentCount(Math.max(0, localCommentCount - 1))
     } catch (error) {
       console.error('Error deleting comment:', error)
@@ -291,7 +302,7 @@ export default function PostCard({ post, onLike, onBookmark, onUpdate }) {
             </div>
           ) : comments.length > 0 ? (
             <div className="space-y-4">
-              {comments.map(comment => (
+              {comments.filter(c => c && c.id).map(comment => (
                 <CommentItem
                   key={comment.id}
                   comment={comment}

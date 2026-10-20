@@ -52,10 +52,16 @@ export default function Feed() {
       
       console.log('Feed response:', response)
       
-      if (response.data && response.data.content) {
-        const newPosts = response.data.content.map(post => convertToFrontendFormat(post))
+      // Handle ApiResponse wrapper structure
+      const feedData = response.data || response
+      
+      if (feedData && feedData.content) {
+        const newPosts = feedData.content.map(post => convertToFrontendFormat(post))
+        console.log('Converted posts:', newPosts)
         setPosts(page === 0 ? newPosts : [...posts, ...newPosts])
-        setHasMore(!response.data.last)
+        setHasMore(!feedData.last)
+      } else {
+        console.error('Unexpected response structure:', response)
       }
     } catch (err) {
       console.error('Error fetching feed:', err)
