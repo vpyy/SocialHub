@@ -13,16 +13,13 @@ import java.time.Instant;
 
 /**
  * likes collection
- *
- * Fields: _id, userId, postId, createdAt
- *
- * Indexes:
- *   userId + postId → UNIQUE  (prevents double-like)
+ * 
+ * Stores user likes on posts
+ * Compound index ensures one like per user per post
  */
 @Document(collection = "likes")
 @CompoundIndexes({
-    @CompoundIndex(name = "user_post_unique_idx",
-            def = "{'userId': 1, 'postId': 1}", unique = true)
+    @CompoundIndex(name = "user_post_idx", def = "{'userId': 1, 'postId': 1}", unique = true)
 })
 @Data
 @NoArgsConstructor
@@ -33,8 +30,8 @@ public class Like {
     @Id
     private String id;
 
-    private String userId;   // → users._id
-    private String postId;   // → posts._id
-
+    private String userId;      // → users._id
+    private String postId;      // → posts._id
+    
     private Instant createdAt;
 }
