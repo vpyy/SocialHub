@@ -77,15 +77,17 @@ export default function Feed() {
         isVerified: false
       },
       content: backendPost.content,
-      imageUrl: backendPost.media && backendPost.media.length > 0 ? backendPost.media[0].url : null,
-      imageCaption: backendPost.media && backendPost.media.length > 0 ? 'Media content' : null,
+      imageUrl: backendPost.imageUrls && backendPost.imageUrls.length > 0 ? backendPost.imageUrls[0] : null,
+      imageCaption: backendPost.imageUrls && backendPost.imageUrls.length > 0 ? 'Image' : null,
+      videoUrl: backendPost.videoUrl || null,
       likes: backendPost.likeCount || 0,
       comments: backendPost.commentCount || 0,
       shares: backendPost.shareCount || 0,
       isLiked: backendPost.likedByCurrentUser || false,
       isBookmarked: false,
       createdAt: formatTimestamp(backendPost.createdAt),
-      privacy: backendPost.visibility?.toLowerCase() || 'public'
+      privacy: backendPost.visibility?.toLowerCase() || 'public',
+      hashtags: backendPost.hashtags || []
     }
   }
 
