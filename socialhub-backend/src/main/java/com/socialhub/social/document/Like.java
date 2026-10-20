@@ -18,9 +18,10 @@ import java.time.Instant;
  * Compound index ensures one like per user per post
  */
 @Document(collection = "likes")
-@CompoundIndexes({
-    @CompoundIndex(name = "user_post_idx", def = "{'userId': 1, 'postId': 1}", unique = true)
-})
+// Temporarily disabled due to index conflict - MongoDB already has this index
+// @CompoundIndexes({
+//     @CompoundIndex(name = "user_post_idx", def = "{'userId': 1, 'postId': 1}", unique = true)
+// })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

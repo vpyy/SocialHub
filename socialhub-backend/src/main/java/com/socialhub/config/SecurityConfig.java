@@ -111,7 +111,7 @@ public class SecurityConfig {
             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
         configuration.setAllowedHeaders(Arrays.asList(
-            "Content-Type", "Authorization", "X-Requested-With"
+            "Content-Type", "Authorization", "X-Requested-With", "X-User-Id"
         ));
         configuration.setExposedHeaders(Arrays.asList(
             "Authorization", "Content-Type"
