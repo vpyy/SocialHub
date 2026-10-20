@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import likeService from '../services/likeService'
 import commentService from '../services/commentService'
+import postService from '../services/postService'
 import CommentItem from './CommentItem'
 
-export default function PostCard({ post, onLike, onBookmark, onUpdate }) {
+export default function PostCard({ post, onLike, onBookmark, onUpdate, onDelete }) {
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState([])
   const [newComment, setNewComment] = useState('')
@@ -15,9 +16,16 @@ export default function PostCard({ post, onLike, onBookmark, onUpdate }) {
   const [localLiked, setLocalLiked] = useState(post.isLiked)
   const [localLikeCount, setLocalLikeCount] = useState(post.likes)
   const [localCommentCount, setLocalCommentCount] = useState(post.comments)
+  
+  // Edit/Delete menu state
+  const [showMenu, setShowMenu] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editContent, setEditContent] = useState(post.content)
+  const [isUpdating, setIsUpdating] = useState(false)
 
   // Get current user
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
+  const isAuthor = currentUser.id === post.author.id
 
   const handleLike = async () => {
     if (isLiking) return
@@ -132,6 +140,64 @@ export default function PostCard({ post, onLike, onBookmark, onUpdate }) {
     }
   }
 
+  // Handle edit post
+  const handleEditPost = () => {
+    setEditContent(post.content)
+    setShowEditModal(true)
+    setShowMenu(false)
+  }
+
+  // Handle update post
+  const handleUpdatePost = async () => {
+    if (!editContent.trim()) {
+      alert('Nội dung không được để trống')
+      return
+    }
+
+    setIsUpdating(true)
+    try {
+      await postService.updatePost(post.id, {
+        content: editContent.trim(),
+        visibility: post.privacy.toUpperCase()
+      })
+      
+      setShowEditModal(false)
+      
+      if (onUpdate) {
+        onUpdate()
+      }
+      
+      alert('Cập nhật bài viết thành công!')
+    } catch (error) {
+      console.error('Error updating post:', error)
+      alert('Không thể cập nhật bài viết. Vui lòng thử lại.')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  // Handle delete post
+  const handleDeletePost = async () => {
+    if (!confirm('Bạn có chắc muốn xóa bài viết này? Hành động này không thể hoàn tác.')) return
+
+    setShowMenu(false)
+    
+    try {
+      await postService.deletePost(post.id)
+      
+      if (onDelete) {
+        onDelete(post.id)
+      } else if (onUpdate) {
+        onUpdate()
+      }
+      
+      alert('Xóa bài viết thành công!')
+    } catch (error) {
+      console.error('Error deleting post:', error)
+      alert('Không thể xóa bài viết. Vui lòng thử lại.')
+    }
+  }
+
   return (
     <article className="bg-white border-b border-gray-100 hover:bg-gray-50/50 transition-colors duration-200 p-4 md:p-6">
       {/* Header */}
@@ -160,11 +226,44 @@ export default function PostCard({ post, onLike, onBookmark, onUpdate }) {
             </div>
           </div>
         </div>
-        <button className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-          </svg>
-        </button>
+        
+        {/* Menu button - only show for post author */}
+        {isAuthor && (
+          <div className="relative">
+            <button 
+              onClick={() => setShowMenu(!showMenu)}
+              className="text-gray-400 hover:text-gray-600 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+              </svg>
+            </button>
+            
+            {/* Dropdown menu */}
+            {showMenu && (
+              <div className="absolute right-0 top-8 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-[150px] z-10">
+                <button
+                  onClick={handleEditPost}
+                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Chỉnh sửa
+                </button>
+                <button
+                  onClick={handleDeletePost}
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  Xóa bài viết
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Content */}
@@ -321,6 +420,53 @@ export default function PostCard({ post, onLike, onBookmark, onUpdate }) {
               <p className="text-xs text-gray-400 mt-1">Hãy là người đầu tiên bình luận!</p>
             </div>
           )}
+        </div>
+      )}
+      
+      {/* Edit Post Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Chỉnh sửa bài viết</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                disabled={isUpdating}
+                className="text-gray-500 hover:text-gray-700 disabled:opacity-50 p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-4">
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                placeholder="Nội dung bài viết..."
+                disabled={isUpdating}
+                className="w-full min-h-[150px] p-3 bg-gray-50 text-gray-800 text-base resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg border border-gray-200 disabled:opacity-50"
+              />
+            </div>
+            
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <button
+                onClick={() => setShowEditModal(false)}
+                disabled={isUpdating}
+                className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 font-medium"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleUpdatePost}
+                disabled={isUpdating || !editContent.trim()}
+                className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+              >
+                {isUpdating ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </article>

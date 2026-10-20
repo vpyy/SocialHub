@@ -140,6 +140,11 @@ export default function Feed() {
     setPage(0)
     fetchFeed()
   }
+  
+  const handlePostDeleted = (postId) => {
+    // Remove deleted post from UI
+    setPosts(posts.filter(post => post.id !== postId))
+  }
 
   const handleTabChange = (tab) => {
     setFeedTab(tab)
@@ -219,6 +224,8 @@ export default function Feed() {
                 post={post}
                 onLike={handleLike}
                 onBookmark={handleBookmark}
+                onUpdate={fetchFeed}
+                onDelete={handlePostDeleted}
               />
             ))}
             {hasMore && (
