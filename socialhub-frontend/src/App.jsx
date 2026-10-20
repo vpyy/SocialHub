@@ -15,7 +15,23 @@ import './App.css'
 // Protected Route Component
 function ProtectedRoute({ element }) {
   const token = localStorage.getItem('token')
-  return token ? element : <Navigate to="/login" replace />
+  const user = localStorage.getItem('user')
+  
+  // TEMPORARY: Auto-create session for development
+  if (!token || !user) {
+    localStorage.setItem('token', 'dev-token-temp')
+    if (!user) {
+      localStorage.setItem('user', JSON.stringify({
+        id: 'temp-user-id',
+        username: 'testuser',
+        displayName: 'Test User',
+        email: 'test@socialhub.com',
+        avatarUrl: 'https://via.placeholder.com/100'
+      }))
+    }
+  }
+  
+  return element
 }
 
 function App() {
