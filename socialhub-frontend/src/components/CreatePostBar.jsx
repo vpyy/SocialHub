@@ -65,6 +65,8 @@ export default function CreatePostBar({ onPostCreated }) {
     setUploadingImage(true)
     
     try {
+      const newImages = []
+      
       for (const file of files) {
         // Validate file type
         if (!file.type.startsWith('image/')) {
@@ -78,17 +80,22 @@ export default function CreatePostBar({ onPostCreated }) {
           continue
         }
 
-        // Option 1: Convert to Base64 (simple but not recommended for large files)
-        const base64 = await fileToBase64(file)
-        setImageUrls([...imageUrls, base64])
-        
-        // Option 2: Upload to cloud service (recommended)
-        // Uncomment below if you have ImgBB API key
-        // const uploadedUrl = await uploadToImgBB(file)
-        // setImageUrls([...imageUrls, uploadedUrl])
+        // Upload to Imgur (no API key needed)
+        try {
+          const uploadedUrl = await uploadToImgur(file)
+          newImages.push(uploadedUrl)
+        } catch (error) {
+          console.error(`Failed to upload ${file.name}:`, error)
+          alert(`Không thể upload ${file.name}. Vui lòng thử lại.`)
+        }
       }
       
-      alert('Upload hình ảnh thành công!')
+      // Append new images to existing ones
+      setImageUrls([...imageUrls, ...newImages])
+      
+      if (newImages.length > 0) {
+        alert(`Upload ${newImages.length} hình ảnh thành công!`)
+      }
     } catch (error) {
       console.error('Error uploading image:', error)
       alert('Không thể upload hình ảnh. Vui lòng thử lại.')
@@ -109,25 +116,25 @@ export default function CreatePostBar({ onPostCreated }) {
     })
   }
 
-  // Optional: Upload to ImgBB (free image hosting)
-  // Get free API key at https://api.imgbb.com/
-  const uploadToImgBB = async (file) => {
-    const apiKey = 'YOUR_IMGBB_API_KEY' // Replace with your API key
-    
+  // Upload to Imgur (no API key required for anonymous upload)
+  const uploadToImgur = async (file) => {
     const formData = new FormData()
     formData.append('image', file)
     
-    const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+    const response = await fetch('https://api.imgur.com/3/image', {
       method: 'POST',
+      headers: {
+        'Authorization': 'Client-ID 546c25a59c58ad7' // Public anonymous client ID
+      },
       body: formData
     })
     
     const data = await response.json()
     
     if (data.success) {
-      return data.data.url
+      return data.data.link
     } else {
-      throw new Error('Upload failed')
+      throw new Error(data.data?.error || 'Upload failed')
     }
   }
 
