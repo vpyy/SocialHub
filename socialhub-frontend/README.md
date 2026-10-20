@@ -5,7 +5,7 @@ React + Vite + Tailwind CSS frontend cho SocialHub - Creator Network
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 16+ 
+- Node.js 18+
 - npm hoặc yarn
 
 ### Installation
@@ -32,10 +32,13 @@ socialhub-frontend/
 │   ├── components/
 │   │   ├── common/
 │   │   │   └── Sidebar.jsx
+│   │   ├── CommentItem.jsx
 │   │   ├── PostCard.jsx
 │   │   └── CreatePostBar.jsx
 │   ├── pages/
 │   │   ├── Feed.jsx
+│   │   ├── Login.jsx
+│   │   ├── Register.jsx
 │   │   ├── Profile.jsx
 │   │   ├── Search.jsx
 │   │   ├── Notifications.jsx
@@ -44,6 +47,11 @@ socialhub-frontend/
 │   │   └── Settings.jsx
 │   ├── layouts/
 │   │   └── MainLayout.jsx
+│   ├── services/
+│   │   ├── api.js
+│   │   ├── postService.js
+│   │   ├── commentService.js
+│   │   └── likeService.js
 │   ├── App.jsx
 │   ├── index.css
 │   ├── main.jsx
@@ -67,28 +75,33 @@ Sử dụng Material Design System với:
 
 ## 🔌 API Integration
 
-Frontend hiện đang dùng mock data. Để kết nối với backend:
+Frontend giao tiếp với backend Spring Boot qua Axios (`src/services/api.js`).
 
-1. Cập nhật `vite.config.js` proxy nếu cần
-2. Tạo API service layer (`src/services/api.js`)
-3. Replace mock data bằng API calls
+- Vite dev server proxy `/api/**` → `http://localhost:8080`
+- Request interceptor tự động gắn `Authorization: Bearer <token>` từ localStorage
+- Response interceptor tự redirect về `/login` khi nhận 401
 
 ## 📖 Available Scripts
 
-- `npm run dev` - Start Vite dev server (http://localhost:5173)
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build locally
+- `npm run dev` — Start Vite dev server (http://localhost:5173)
+- `npm run build` — Build for production
+- `npm run preview` — Preview production build locally
 
-## 🎯 Features (In Development)
+## 🎯 Features
 
-- ✅ Responsive Layout (Sidebar + Feed + Right Panel)
-- ✅ Post Card Component
-- ✅ Mock Post Data
-- ✅ Routing (React Router)
-- ✅ Tailwind CSS Theme
-- ⏳ Authentication (Todo)
-- ⏳ Real API Integration (Todo)
-- ⏳ WebSocket for Chat (Todo)
+- ✅ Authentication (Login / Register)
+- ✅ Protected routes (redirect về /login nếu chưa đăng nhập)
+- ✅ Feed với tab For You / Following + phân trang
+- ✅ Tạo bài viết (text + ảnh/video)
+- ✅ Like bài viết (optimistic update)
+- ✅ Comment + nested reply
+- ✅ Chỉnh sửa / xóa bài viết của bản thân
+- ✅ Upload ảnh qua Imgur
+- ⏳ Profile page
+- ⏳ Search
+- ⏳ Notifications
+- ⏳ Messages (WebSocket)
+- ⏳ Bookmarks
 
 ## 📱 Responsive Design
 
@@ -98,10 +111,10 @@ Frontend hiện đang dùng mock data. Để kết nối với backend:
 
 ## 🔗 Backend Integration
 
-Backend runs on `http://localhost:8080`
+Backend chạy tại `http://localhost:8080`
 Frontend dev server: `http://localhost:5173`
 
-Proxy configured in vite.config.js cho /api requests
+Proxy được cấu hình trong `vite.config.js` cho tất cả request `/api/**`.
 
 ## 🛠️ Technology Stack
 
@@ -113,4 +126,4 @@ Proxy configured in vite.config.js cho /api requests
 
 ---
 
-**Status**: Giai đoạn 2 - Frontend Development đang tiến hành
+**Status**: Đang phát triển — auth + feed + post CRUD + like + comment hoạt động end-to-end

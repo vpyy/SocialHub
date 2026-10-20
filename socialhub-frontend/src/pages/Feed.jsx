@@ -1,53 +1,16 @@
 import { useState, useEffect } from 'react'
 import PostCard from '../components/PostCard'
 import CreatePostBar from '../components/CreatePostBar'
-
-const mockPosts = [
-  {
-    id: '1',
-    author: {
-      id: '1',
-      displayName: 'Nguyễn Quang Minh',
-      username: 'minh_dev',
-      avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDR3C5cqZekBTaHa_zYHES74Ce17DZx3YewwRSTt-DWsMgLJ-SubEKAi1_MTiZr31dbGosvz4mvbuXuoBAQ7MXmpzZ2AjtfgQolnDATIKfJL5T8toWvE5fQBD0lYW9IADCnpTZpwvIvG7y6ce7wSKQTOglQ_lWpDUOlBFORG3BTNfY4SZhoeyc5q023dLAWbTNTtmtWjyyBiXgnuMZxw2QB3nrCWHBdJulJ2ZvrIVzjLAbZIqjvl2oj',
-      isVerified: true
-    },
-    content: '🚀 Vừa hoàn thành đợt benchmark thực tế cho kiến trúc hệ thống khóa luận tốt nghiệp! Kết hợp #NoSQLDatabase cùng Redis Caching giúp giảm 65% độ trễ truy vấn cho mạng xã hội phân tán.\n\n#WebDev2025 #GraduationProject #TechViet #FullStack',
-    imageUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDE38iKoYQgbs5KUR2Hg3jBzBamYDgI2b94KCj1rpkdlNYIMXaKT1QJCktzrrP6LOvI0ZyIX6rh_xLQLHSjonVdsT1ycFIL6yso-B2cM6350vs-soraaICM9n3cbmcxzFBkzAZdqlpqA8moaNEfKO9xcLnI8qwYzOZjgMSPlyRgmUWX7XbTqlmR_EgFON9-YYBMYMbjoenS1Cvf5-wEDgWygBsEnWiqaqAuBhYDsnQ4BOhdzretsrNz',
-    imageCaption: 'Benchmark Report v2.4 - Latency Reduction Graph',
-    likes: 128,
-    comments: 24,
-    shares: 14,
-    isLiked: false,
-    isBookmarked: false,
-    createdAt: '15 phút trước',
-    privacy: 'public'
-  },
-  {
-    id: '2',
-    author: {
-      id: '2',
-      displayName: 'Lê Lan Chi',
-      username: 'lanchi.ui',
-      avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCeeQnXrd--UUD0hxu5u_KVC9x7H0_QdDHrM7GthDTLff9p8YI9cLsSDYpgY86-sMNOjdG5julMCw3Wn79i42FyB_oawz2Dy5OhYRgA1NZe50p8Rq1Mc0BH9vzEbTLfDvj5OO8caH_45Lp5wyp237eHBhdiGnkLUlCMEra6XZll6gILB7tJfjeTogqkbad9BYgT9izqE6OvEea_APOXIsUgTiv9ZtQC0nynEmNqQkWaw78lK_gv7LwE',
-      isVerified: true
-    },
-    content: 'Đang thiết kế dashboard mới cho project. UI/UX design thinking với focus vào accessibility và user experience! 🎨✨',
-    imageUrl: null,
-    likes: 89,
-    comments: 12,
-    shares: 5,
-    isLiked: false,
-    isBookmarked: false,
-    createdAt: '2 giờ trước',
-    privacy: 'public'
-  }
-]
+import postService from '../services/postService'
 
 export default function Feed() {
   const [feedTab, setFeedTab] = useState('for-you')
-  const [posts, setPosts] = useState(mockPosts)
+  const [posts, setPosts] = useState([])
   const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -57,8 +20,106 @@ export default function Feed() {
       } catch (error) {
         console.error('Failed to parse user:', error)
       }
+    } else {
+      // Create temporary user for testing
+      const tempUser = {
+        id: 'temp-user-id',
+        displayName: 'Test User',
+        username: 'testuser',
+        avatarUrl: 'https://via.placeholder.com/40'
+      }
+      localStorage.setItem('user', JSON.stringify(tempUser))
+      setUser(tempUser)
     }
   }, [])
+
+  // Fetch feed data
+  useEffect(() => {
+    fetchFeed()
+  }, [feedTab, page])
+
+  const fetchFeed = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      let response
+      if (feedTab === 'for-you') {
+        response = await postService.getFeed(page, 20)
+      } else {
+        response = await postService.getPublicFeed(page, 20)
+      }
+      
+      console.log('Feed response:', response)
+      
+      // Handle ApiResponse wrapper structure
+      const feedData = response.data || response
+      
+      if (feedData && feedData.content) {
+        const newPosts = feedData.content.map(post => convertToFrontendFormat(post))
+        console.log('Converted posts:', newPosts)
+        setPosts(page === 0 ? newPosts : [...posts, ...newPosts])
+        setHasMore(!feedData.last)
+      } else {
+        console.error('Unexpected response structure:', response)
+      }
+    } catch (err) {
+      console.error('Error fetching feed:', err)
+      setError('Không thể tải bài viết. Vui lòng thử lại.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Convert backend format to frontend format
+  const convertToFrontendFormat = (backendPost) => {
+    // Extract image and video URLs from the media array [{type, url}]
+    const images = (backendPost.media || [])
+      .filter(m => m.type === 'IMAGE')
+      .map(m => m.url)
+    const videoItem = (backendPost.media || []).find(m => m.type === 'VIDEO')
+
+    return {
+      id: backendPost.id,
+      author: {
+        id: backendPost.authorId,
+        displayName: backendPost.authorDisplayName || backendPost.authorUsername || 'Unknown User',
+        username: backendPost.authorUsername || 'unknown',
+        avatarUrl: backendPost.authorAvatarUrl || 'https://via.placeholder.com/40',
+        isVerified: false
+      },
+      content: backendPost.content,
+      imageUrl: images.length > 0 ? images[0] : null,
+      imageCaption: images.length > 0 ? 'Image' : null,
+      videoUrl: videoItem ? videoItem.url : null,
+      likes: backendPost.likeCount || 0,
+      comments: backendPost.commentCount || 0,
+      shares: backendPost.shareCount || 0,
+      isLiked: backendPost.likedByCurrentUser || false,
+      isBookmarked: false,
+      createdAt: formatTimestamp(backendPost.createdAt),
+      privacy: backendPost.visibility?.toLowerCase() || 'public',
+      hashtags: backendPost.hashtags || []
+    }
+  }
+
+  // Format timestamp to relative time
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return 'Vừa xong'
+    
+    const now = new Date()
+    const postTime = new Date(timestamp)
+    const diffMs = now - postTime
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    
+    if (diffMins < 1) return 'Vừa xong'
+    if (diffMins < 60) return `${diffMins} phút trước`
+    if (diffHours < 24) return `${diffHours} giờ trước`
+    if (diffDays < 7) return `${diffDays} ngày trước`
+    return postTime.toLocaleDateString('vi-VN')
+  }
 
   const handleLike = (postId) => {
     setPosts(posts.map(post => 
@@ -80,6 +141,23 @@ export default function Feed() {
     ))
   }
 
+  const handlePostCreated = (newPost) => {
+    // Refresh feed when new post is created
+    setPage(0)
+    fetchFeed()
+  }
+  
+  const handlePostDeleted = (postId) => {
+    // Remove deleted post from UI
+    setPosts(posts.filter(post => post.id !== postId))
+  }
+
+  const handleTabChange = (tab) => {
+    setFeedTab(tab)
+    setPage(0)
+    setPosts([])
+  }
+
   return (
     <section className="flex-1 w-full max-w-4xl mx-auto border-r border-outline-variant/30 min-h-screen pb-20 flex flex-col">
       {/* Header */}
@@ -93,7 +171,7 @@ export default function Feed() {
         
         <div className="flex items-center gap-4 md:gap-6 ml-auto">
           <button
-            onClick={() => setFeedTab('for-you')}
+            onClick={() => handleTabChange('for-you')}
             className={`pb-2 text-label-md font-label-md transition-all whitespace-nowrap ${
               feedTab === 'for-you'
                 ? 'text-primary border-b-2 border-primary font-bold'
@@ -104,7 +182,7 @@ export default function Feed() {
             <span className="sm:hidden">For You</span>
           </button>
           <button
-            onClick={() => setFeedTab('following')}
+            onClick={() => handleTabChange('following')}
             className={`pb-2 text-label-md font-label-md transition-all whitespace-nowrap ${
               feedTab === 'following'
                 ? 'text-primary border-b-2 border-primary font-bold'
@@ -115,29 +193,66 @@ export default function Feed() {
           </button>
         </div>
 
-        <button className="p-2 text-primary hover:bg-surface-container rounded-full transition-colors ml-2 flex-shrink-0">
-          <span className="material-symbols-outlined">add_circle</span>
+        <button 
+          onClick={() => window.location.reload()}
+          className="p-2 text-primary hover:bg-surface-container rounded-full transition-colors ml-2 flex-shrink-0"
+        >
+          <span className="material-symbols-outlined">refresh</span>
         </button>
       </header>
 
       {/* Create Post Bar */}
-      <CreatePostBar />
+      <CreatePostBar onPostCreated={handlePostCreated} />
 
       {/* Posts Feed - Scrollable */}
       <div className="flex-1 overflow-y-auto divide-y divide-outline-variant/30">
-        {posts.length > 0 ? (
-          posts.map(post => (
-            <PostCard
-              key={post.id}
-              post={post}
-              onLike={handleLike}
-              onBookmark={handleBookmark}
-            />
-          ))
+        {loading && posts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
+            <p className="text-on-surface-variant">Đang tải...</p>
+          </div>
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <span className="material-symbols-outlined text-6xl text-error mb-4">error</span>
+            <p className="text-error text-center mb-4">{error}</p>
+            <button 
+              onClick={() => fetchFeed()}
+              className="px-4 py-2 bg-primary text-on-primary rounded-full hover:bg-primary-container transition-colors"
+            >
+              Thử lại
+            </button>
+          </div>
+        ) : posts.length > 0 ? (
+          <>
+            {posts.map(post => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onLike={handleLike}
+                onBookmark={handleBookmark}
+                onUpdate={fetchFeed}
+                onDelete={handlePostDeleted}
+              />
+            ))}
+            {hasMore && (
+              <div className="py-8 text-center">
+                <button 
+                  onClick={() => setPage(page + 1)}
+                  disabled={loading}
+                  className="px-6 py-2 bg-primary text-on-primary rounded-full hover:bg-primary-container transition-colors disabled:opacity-50"
+                >
+                  {loading ? 'Đang tải...' : 'Tải thêm'}
+                </button>
+              </div>
+            )}
+          </>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 px-4">
             <span className="material-symbols-outlined text-6xl text-outline-variant/40 mb-4">inbox</span>
-            <p className="text-on-surface-variant text-center">Không có bài viết nào</p>
+            <p className="text-on-surface-variant text-center mb-2">Chưa có bài viết nào</p>
+            <p className="text-body-sm text-on-surface-variant text-center">
+              Hãy tạo bài viết đầu tiên của bạn!
+            </p>
           </div>
         )}
       </div>

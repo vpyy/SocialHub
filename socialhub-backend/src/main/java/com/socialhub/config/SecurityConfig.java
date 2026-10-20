@@ -62,9 +62,6 @@ public class SecurityConfig {
                 // Public API endpoints - auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-
-                // Public profile and user lookups (GET only; PUT /me and POST follow require auth)
-                .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
                 
                 // All other requests require authentication
                 .anyRequest().authenticated()
@@ -110,7 +107,7 @@ public class SecurityConfig {
             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
         configuration.setAllowedHeaders(Arrays.asList(
-            "Content-Type", "Authorization", "X-Requested-With"
+            "Content-Type", "Authorization", "X-Requested-With", "X-User-Id"
         ));
         configuration.setExposedHeaders(Arrays.asList(
             "Authorization", "Content-Type"
