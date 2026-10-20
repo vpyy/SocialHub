@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import commentService from '../services/commentService'
 
 export default function CommentItem({ comment, onDelete, onReply, currentUserId, level = 0 }) {
   const [showReplyInput, setShowReplyInput] = useState(false)
@@ -53,31 +52,31 @@ export default function CommentItem({ comment, onDelete, onReply, currentUserId,
         <img
           src={comment.authorAvatarUrl || 'https://via.placeholder.com/32'}
           alt={comment.authorDisplayName}
-          className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+          className="w-8 h-8 rounded-full object-cover flex-shrink-0 border-2 border-white shadow-sm"
         />
 
         <div className="flex-1">
-          {/* Comment content */}
-          <div className="bg-surface-container p-3 rounded-2xl rounded-tl-none">
+          {/* Comment bubble */}
+          <div className="bg-gray-100 hover:bg-gray-200 transition-colors p-3 rounded-2xl rounded-tl-md">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-title-md text-on-surface font-semibold text-sm">
+              <span className="font-semibold text-sm text-gray-900">
                 {comment.authorDisplayName || comment.authorUsername || 'Unknown User'}
               </span>
-              <span className="text-outline text-xs">
+              <span className="text-gray-500 text-xs">
                 {formatTimestamp(comment.createdAt)}
               </span>
             </div>
-            <p className="text-on-surface-variant text-sm leading-relaxed whitespace-pre-wrap">
+            <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
               {comment.content}
             </p>
           </div>
 
-          {/* Actions */}
+          {/* Action buttons */}
           <div className="flex items-center gap-4 mt-1 ml-3">
             {!isReply && (
               <button
                 onClick={() => setShowReplyInput(!showReplyInput)}
-                className="text-xs text-primary font-semibold hover:underline"
+                className="text-xs text-blue-600 hover:text-blue-700 font-semibold transition-colors"
               >
                 Trả lời
               </button>
@@ -86,7 +85,7 @@ export default function CommentItem({ comment, onDelete, onReply, currentUserId,
             {isAuthor && (
               <button
                 onClick={() => onDelete(comment.id)}
-                className="text-xs text-error font-semibold hover:underline"
+                className="text-xs text-red-600 hover:text-red-700 font-semibold transition-colors"
               >
                 Xóa
               </button>
@@ -95,39 +94,40 @@ export default function CommentItem({ comment, onDelete, onReply, currentUserId,
             {hasReplies && (
               <button
                 onClick={() => setShowReplies(!showReplies)}
-                className="text-xs text-outline hover:text-on-surface font-semibold"
+                className="text-xs text-gray-600 hover:text-gray-800 font-semibold transition-colors"
               >
-                {showReplies ? 'Ẩn' : 'Hiện'} {comment.replies.length} phản hồi
+                {showReplies ? '▼ Ẩn' : '▶ Hiện'} {comment.replies.length} phản hồi
               </button>
             )}
           </div>
 
-          {/* Reply input */}
+          {/* Reply input box */}
           {showReplyInput && (
-            <div className="mt-2 flex items-start gap-2">
+            <div className="mt-3 flex items-start gap-2">
               <img
                 src="https://via.placeholder.com/32"
                 alt="Current user"
-                className="w-7 h-7 rounded-full object-cover"
+                className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm"
               />
               <div className="flex-1 relative">
                 <input
                   type="text"
                   value={replyContent}
                   onChange={(e) => setReplyContent(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSubmitReply()}
+                  onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
                   placeholder="Viết phản hồi..."
                   disabled={isSubmitting}
-                  className="w-full py-2 pl-3 pr-10 bg-surface-container-low rounded-full text-body-sm font-body-sm border border-outline-variant/30 focus:outline-none focus:border-primary disabled:opacity-50"
+                  className="w-full py-2 pl-4 pr-12 bg-white rounded-full text-sm border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50 transition-all"
                 />
                 <button
                   onClick={handleSubmitReply}
                   disabled={isSubmitting || !replyContent.trim()}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-primary hover:text-secondary disabled:opacity-40"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  title="Gửi"
                 >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {isSubmitting ? 'hourglass_empty' : 'send'}
-                  </span>
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                  </svg>
                 </button>
               </div>
             </div>
@@ -135,7 +135,7 @@ export default function CommentItem({ comment, onDelete, onReply, currentUserId,
 
           {/* Nested replies */}
           {showReplies && hasReplies && (
-            <div className="mt-2">
+            <div className="mt-3">
               {comment.replies.map((reply) => (
                 <CommentItem
                   key={reply.id}

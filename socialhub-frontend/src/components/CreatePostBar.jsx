@@ -1,52 +1,18 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import postService from '../services/postService'
 
 export default function CreatePostBar({ onPostCreated }) {
+  const [showModal, setShowModal] = useState(false)
   const [content, setContent] = useState('')
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [mediaUrls, setMediaUrls] = useState([])
-  const [mediaInput, setMediaInput] = useState('')
-  const [mediaType, setMediaType] = useState('IMAGE')
+  const [imageUrls, setImageUrls] = useState([])
+  const [imageUrlInput, setImageUrlInput] = useState('')
+  const [videoUrl, setVideoUrl] = useState('')
   const [visibility, setVisibility] = useState('PUBLIC')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [user, setUser] = useState(null)
-
-  useEffect(() => {
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      try {
-        setUser(JSON.parse(userData))
-      } catch (error) {
-        console.error('Failed to parse user:', error)
-      }
-    }
-  }, [])
-
-  const handleOpenModal = () => {
-    setIsModalOpen(true)
-  }
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false)
-    setContent('')
-    setMediaUrls([])
-    setMediaInput('')
-  }
-
-  const handleAddMedia = () => {
-    if (mediaInput.trim()) {
-      setMediaUrls([...mediaUrls, { type: mediaType, url: mediaInput.trim() }])
-      setMediaInput('')
-    }
-  }
-
-  const handleRemoveMedia = (index) => {
-    setMediaUrls(mediaUrls.filter((_, i) => i !== index))
-  }
 
   const handleSubmit = async () => {
-    if (!content.trim()) {
-      alert('Vui lòng nhập nội dung bài viết')
+    if (!content.trim() && imageUrls.length === 0 && !videoUrl) {
+      alert('Vui lòng nhập nội dung hoặc thêm media')
       return
     }
 
@@ -54,186 +20,184 @@ export default function CreatePostBar({ onPostCreated }) {
     try {
       const postData = {
         content: content.trim(),
-        media: mediaUrls,
-        hashtags: [], // Extract from content automatically on backend
-        visibility: visibility
+        visibility,
+        ...(imageUrls.length > 0 && { imageUrls }),
+        ...(videoUrl && { videoUrl })
       }
 
-      const response = await postService.createPost(postData)
-      console.log('Post created:', response)
+      await postService.createPost(postData)
       
-      // Call parent callback to refresh feed
-      if (onPostCreated) {
-        onPostCreated(response.data)
-      }
-
       // Reset form
-      handleCloseModal()
-      alert('Đăng bài thành công!')
+      setContent('')
+      setImageUrls([])
+      setImageUrlInput('')
+      setVideoUrl('')
+      setVisibility('PUBLIC')
+      setShowModal(false)
+      
+      // Notify parent to refresh feed
+      if (onPostCreated) onPostCreated()
     } catch (error) {
       console.error('Error creating post:', error)
-      alert('Không thể đăng bài. Vui lòng thử lại.')
+      alert('Không thể tạo bài viết. Vui lòng thử lại.')
     } finally {
       setIsSubmitting(false)
     }
   }
 
+  const handleAddImageUrl = () => {
+    if (imageUrlInput.trim()) {
+      setImageUrls([...imageUrls, imageUrlInput.trim()])
+      setImageUrlInput('')
+    }
+  }
+
+  const handleRemoveImageUrl = (index) => {
+    setImageUrls(imageUrls.filter((_, i) => i !== index))
+  }
+
   return (
     <>
-      <div className="p-5 border-b border-outline-variant/30 bg-surface-container-lowest">
-        <div className="flex items-start gap-3">
+      {/* Create Post Bar */}
+      <div className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-200">
+        <div className="flex items-center gap-3">
           <img
-            src={user?.avatarUrl || "https://via.placeholder.com/40"}
-            alt="Current user"
-            className="w-10 h-10 rounded-full object-cover border border-outline-variant/40"
+            src="https://via.placeholder.com/40"
+            alt="User avatar"
+            className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
           />
-          <div className="flex-1">
-            <button 
-              onClick={handleOpenModal}
-              className="w-full text-left py-2.5 px-4 rounded-xl bg-surface-container-low text-on-surface-variant text-body-md font-body-md hover:bg-surface-container transition-colors"
-            >
-              {user?.displayName ? `Bạn đang nghĩ gì, ${user.displayName}?` : 'Chia sẻ suy nghĩ của bạn...'}
-            </button>
-            <div className="flex items-center justify-between mt-3 pt-2 border-t border-outline-variant/20">
-              <div className="flex items-center gap-1 text-outline">
-                <button onClick={handleOpenModal} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-surface-container-low text-label-sm font-label-sm text-primary transition-colors">
-                  <span className="material-symbols-outlined text-[18px]">image</span>
-                  <span className="hidden sm:inline">Hình ảnh</span>
-                </button>
-                <button onClick={handleOpenModal} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-surface-container-low text-label-sm font-label-sm text-secondary transition-colors">
-                  <span className="material-symbols-outlined text-[18px]">videocam</span>
-                  <span className="hidden sm:inline">Video</span>
-                </button>
-                <button onClick={handleOpenModal} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-surface-container-low text-label-sm font-label-sm text-tertiary transition-colors">
-                  <span className="material-symbols-outlined text-[18px]">tag</span>
-                  <span className="hidden sm:inline">Hashtag</span>
-                </button>
-              </div>
-              <button 
-                onClick={handleOpenModal}
-                className="px-4 py-1.5 rounded-full bg-primary text-on-primary text-label-sm font-label-sm font-semibold hover:bg-primary-container transition-colors"
-              >
-                Đăng
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-600 text-left rounded-full transition-colors cursor-pointer text-sm"
+          >
+            Bạn đang nghĩ gì?
+          </button>
         </div>
       </div>
 
       {/* Create Post Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-surface rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      {showModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
             {/* Modal Header */}
-            <div className="sticky top-0 bg-surface border-b border-outline-variant/30 px-6 py-4 flex items-center justify-between">
-              <h2 className="text-headline-md font-headline-md text-on-surface font-bold">
-                Tạo bài viết mới
-              </h2>
-              <button 
-                onClick={handleCloseModal}
-                className="p-2 hover:bg-surface-container rounded-full transition-colors"
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Tạo bài viết</h2>
+              <button
+                onClick={() => setShowModal(false)}
+                disabled={isSubmitting}
+                className="text-gray-500 hover:text-gray-700 disabled:opacity-50 p-1 hover:bg-gray-100 rounded-full transition-colors"
               >
-                <span className="material-symbols-outlined">close</span>
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                </svg>
               </button>
             </div>
 
-            {/* Modal Content */}
-            <div className="p-6 space-y-4">
-              {/* Visibility Selector */}
-              <div>
-                <label className="text-label-md font-label-md text-on-surface-variant mb-2 block">
-                  Quyền riêng tư
-                </label>
-                <select 
-                  value={visibility}
-                  onChange={(e) => setVisibility(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:border-primary"
-                >
-                  <option value="PUBLIC">Công khai</option>
-                  <option value="FOLLOWERS">Người theo dõi</option>
-                  <option value="PRIVATE">Riêng tư</option>
-                </select>
-              </div>
-
-              {/* Content Textarea */}
-              <div>
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Bạn đang nghĩ gì? Sử dụng #hashtag để tăng tương tác..."
-                  className="w-full h-40 px-4 py-3 rounded-lg bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:border-primary resize-none text-body-md font-body-md"
-                  maxLength={5000}
+            {/* Modal Body */}
+            <div className="p-4 overflow-y-auto max-h-[calc(90vh-180px)]">
+              {/* User info */}
+              <div className="flex items-center gap-3 mb-4">
+                <img
+                  src="https://via.placeholder.com/40"
+                  alt="User avatar"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
                 />
-                <div className="text-right text-body-sm font-body-sm text-on-surface-variant mt-1">
-                  {content.length}/5000
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-900">Test User</div>
+                  <select
+                    value={visibility}
+                    onChange={(e) => setVisibility(e.target.value)}
+                    className="text-xs text-gray-600 bg-gray-100 hover:bg-gray-200 rounded px-2 py-1 mt-1 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                    disabled={isSubmitting}
+                  >
+                    <option value="PUBLIC">🌍 Công khai</option>
+                    <option value="FRIENDS">👥 Bạn bè</option>
+                    <option value="PRIVATE">🔒 Chỉ mình tôi</option>
+                  </select>
                 </div>
               </div>
 
-              {/* Media URLs */}
-              <div>
-                <label className="text-label-md font-label-md text-on-surface-variant mb-2 block">
-                  Thêm media (URL)
-                </label>
-                <div className="flex gap-2 mb-2">
-                  <select 
-                    value={mediaType}
-                    onChange={(e) => setMediaType(e.target.value)}
-                    className="px-3 py-2 rounded-lg bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:border-primary"
-                  >
-                    <option value="IMAGE">Hình ảnh</option>
-                    <option value="VIDEO">Video</option>
-                  </select>
-                  <input
-                    type="url"
-                    value={mediaInput}
-                    onChange={(e) => setMediaInput(e.target.value)}
-                    placeholder="https://example.com/image.jpg"
-                    className="flex-1 px-4 py-2 rounded-lg bg-surface-container-low border border-outline-variant/30 focus:outline-none focus:border-primary"
-                  />
-                  <button 
-                    onClick={handleAddMedia}
-                    className="px-4 py-2 rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-colors"
-                  >
-                    Thêm
-                  </button>
-                </div>
+              {/* Content textarea */}
+              <textarea
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Bạn đang nghĩ gì?"
+                disabled={isSubmitting}
+                className="w-full min-h-[120px] p-3 bg-transparent text-gray-800 text-base resize-none focus:outline-none placeholder:text-gray-400"
+              />
 
-                {/* Media Preview */}
-                {mediaUrls.length > 0 && (
-                  <div className="space-y-2">
-                    {mediaUrls.map((media, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-surface-container-low rounded-lg">
-                        <span className="material-symbols-outlined text-primary">
-                          {media.type === 'IMAGE' ? 'image' : 'videocam'}
-                        </span>
-                        <span className="flex-1 text-body-sm font-body-sm truncate">{media.url}</span>
-                        <button 
-                          onClick={() => handleRemoveMedia(index)}
-                          className="p-1 hover:bg-error-container rounded-full transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-error text-[18px]">delete</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+              {/* Image URLs */}
+              {imageUrls.length > 0 && (
+                <div className="mb-3 space-y-2">
+                  {imageUrls.map((url, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 p-2 rounded-lg transition-colors">
+                      <img src={url} alt={`Preview ${index + 1}`} className="w-16 h-16 object-cover rounded border border-gray-200" />
+                      <div className="flex-1 text-xs text-gray-600 truncate">{url}</div>
+                      <button
+                        onClick={() => handleRemoveImageUrl(index)}
+                        disabled={isSubmitting}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1.5 rounded-full disabled:opacity-50 transition-all"
+                      >
+                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add image URL */}
+              <div className="mb-3 flex gap-2">
+                <input
+                  type="text"
+                  value={imageUrlInput}
+                  onChange={(e) => setImageUrlInput(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddImageUrl()}
+                  placeholder="Nhập URL hình ảnh"
+                  disabled={isSubmitting}
+                  className="flex-1 py-2 px-4 bg-gray-50 rounded-full text-sm border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 transition-all"
+                />
+                <button
+                  onClick={handleAddImageUrl}
+                  disabled={isSubmitting || !imageUrlInput.trim()}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                  </svg>
+                  Thêm
+                </button>
+              </div>
+
+              {/* Video URL */}
+              <div className="mb-3">
+                <input
+                  type="text"
+                  value={videoUrl}
+                  onChange={(e) => setVideoUrl(e.target.value)}
+                  placeholder="Nhập URL video (tùy chọn)"
+                  disabled={isSubmitting}
+                  className="w-full py-2 px-4 bg-gray-50 rounded-full text-sm border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 transition-all"
+                />
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="sticky bottom-0 bg-surface border-t border-outline-variant/30 px-6 py-4 flex items-center justify-end gap-3">
-              <button 
-                onClick={handleCloseModal}
-                className="px-6 py-2 rounded-full border border-outline-variant/30 text-on-surface hover:bg-surface-container transition-colors"
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <button
+                onClick={() => setShowModal(false)}
+                disabled={isSubmitting}
+                className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 font-medium"
               >
                 Hủy
               </button>
-              <button 
+              <button
                 onClick={handleSubmit}
-                disabled={isSubmitting || !content.trim()}
-                className="px-6 py-2 rounded-full bg-primary text-on-primary font-semibold hover:bg-primary-container transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isSubmitting || (!content.trim() && imageUrls.length === 0 && !videoUrl)}
+                className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
-                {isSubmitting ? 'Đang đăng...' : 'Đăng bài'}
+                {isSubmitting ? 'Đang đăng...' : 'Đăng'}
               </button>
             </div>
           </div>
