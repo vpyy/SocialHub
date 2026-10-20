@@ -29,25 +29,31 @@ export default function PostCard({ post, onLike, onBookmark, onUpdate, onDelete 
 
   const handleLike = async () => {
     if (isLiking) return
-    
+
     setIsLiking(true)
-    
+
     // Optimistic update
     const wasLiked = localLiked
     setLocalLiked(!wasLiked)
-    setLocalLikeCount(wasLiked ? localLikeCount - 1 : localLikeCount + 1)
-    
+    setLocalLikeCount(prev => wasLiked ? prev - 1 : prev + 1)
+
     try {
       const response = await likeService.toggleLike(post.id)
-      setLocalLiked(response.data.liked)
-      
-      if (onLike) {
-        onLike(post.id)
+      // response is ApiResponse.data → { liked, likeCount }
+      const data = response?.data ?? response
+      if (data != null) {
+        setLocalLiked(data.liked)
+        // If server returned the true count, use it; otherwise keep optimistic value
+        if (typeof data.likeCount === 'number') {
+          setLocalLikeCount(data.likeCount)
+        }
       }
+      if (onLike) onLike(post.id)
     } catch (error) {
       console.error('Error toggling like:', error)
+      // Rollback optimistic update
       setLocalLiked(wasLiked)
-      setLocalLikeCount(wasLiked ? localLikeCount + 1 : localLikeCount - 1)
+      setLocalLikeCount(prev => wasLiked ? prev + 1 : prev - 1)
     } finally {
       setIsLiking(false)
     }

@@ -40,14 +40,10 @@ public class LikeController {
         
         log.info("POST /api/posts/{}/like - User: {}", id, userId);
         
-        boolean liked = likeService.toggleLike(id, userId);
+        Map<String, Object> result = likeService.toggleLike(id, userId);
+        boolean liked = (boolean) result.get("liked");
         
-        Map<String, Object> result = Map.of(
-            "liked", liked,
-            "message", liked ? "Post liked" : "Post unliked"
-        );
-        
-        return ResponseEntity.ok(ApiResponse.success(result, 
+        return ResponseEntity.ok(ApiResponse.success(result,
             liked ? "Post liked successfully" : "Post unliked successfully"));
     }
 

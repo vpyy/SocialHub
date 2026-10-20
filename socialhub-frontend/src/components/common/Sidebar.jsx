@@ -13,15 +13,21 @@ const navItems = [
 
 export default function Sidebar({ user, navigate, location }) {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const [searchInput, setSearchInput] = useState('')
 
   const isActive = (path) => location.pathname === path
 
   const handleLogout = () => {
-    // Remove auth data
     localStorage.removeItem('token')
     localStorage.removeItem('user')
-    // Redirect to login
     navigate('/login')
+  }
+
+  const handleSearch = (e) => {
+    e.preventDefault()
+    if (searchInput.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchInput.trim())}&tab=posts`)
+    }
   }
 
   return (
@@ -41,6 +47,18 @@ export default function Sidebar({ user, navigate, location }) {
             </span>
           </div>
         </Link>
+
+        {/* Search bar */}
+        <form onSubmit={handleSearch} className="relative">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-outline text-[18px]">search</span>
+          <input
+            type="text"
+            value={searchInput}
+            onChange={e => setSearchInput(e.target.value)}
+            placeholder="Tìm kiếm..."
+            className="w-full pl-9 pr-3 py-2.5 bg-surface-container rounded-full text-body-sm text-on-surface placeholder:text-outline outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+          />
+        </form>
 
         {/* Navigation */}
         <nav className="flex flex-col gap-1.5">

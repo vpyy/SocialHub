@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import Sidebar from '../components/common/Sidebar'
 
 export default function MainLayout() {
@@ -9,7 +9,6 @@ export default function MainLayout() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load user from localStorage
     const userData = localStorage.getItem('user')
     if (userData) {
       try {
@@ -17,11 +16,11 @@ export default function MainLayout() {
       } catch (error) {
         console.error('Failed to parse user data:', error)
         localStorage.removeItem('user')
-        navigate('/login')
+        localStorage.removeItem('token')
       }
     }
     setLoading(false)
-  }, [navigate])
+  }, [])
 
   if (loading) {
     return (
@@ -32,7 +31,7 @@ export default function MainLayout() {
   }
 
   if (!user) {
-    return null
+    return <Navigate to="/login" replace />
   }
 
   return (

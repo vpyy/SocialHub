@@ -14,33 +14,41 @@ const apiClient = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config) => {
-    // Get user from localStorage
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    
-    // Add user ID header (temporary until JWT is implemented)
-    if (user.id) {
-      config.headers['X-User-Id'] = user.id;
+    const token = localStorage.getItem('token')
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
     }
-    
-    return config;
+
+    // Fallback: also send X-User-Id for endpoints that still need it
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    if (user.id) {
+      config.headers['X-User-Id'] = user.id
+    }
+
+    return config
   },
   (error) => {
-    return Promise.reject(error);
+    return Promise.reject(error)
   }
-);
+)
 
 // Response interceptor to handle errors
 apiClient.interceptors.response.use(
   (response) => {
     // Return the data directly from the response
-    return response.data;
+    return response.data
   },
   (error) => {
-    // Handle error responses
-    const message = error.response?.data?.message || error.message || 'An error occurred';
-    console.error('API Error:', message);
-    return Promise.reject(error);
+    // Redirect to login on 401 Unauthorized
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+      window.location.href = '/login'
+    }
+    const message = error.response?.data?.message || error.message || 'An error occurred'
+    console.error('API Error:', message)
+    return Promise.reject(error)
   }
-);
+)
 
 export default apiClient;

@@ -2,7 +2,6 @@ package com.socialhub.auth.util;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,91 +11,80 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 
 /**
- * JWT Token Provider
- * 
- * Generates and validates JWT tokens
+ * JWT Token Provider — uses jjwt 0.12.x API exclusively.
  */
 @Slf4j
 @Component
 public class JwtTokenProvider {
-    
+
     @Value("${app.jwtSecret:mySecretKeyForSocialHubJWTTokenGenerationAndValidation123456789}")
     private String jwtSecret;
-    
-    @Value("${app.jwtExpirationMs:86400000}")  // 24 hours default
+
+    @Value("${app.jwtExpirationMs:86400000}")
     private long jwtExpirationMs;
-    
+
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
-    
-    /**
-     * Generate JWT token for user
-     */
+
+    // ──────────────────────────────────────────────────────
+    // Generate
+    // ──────────────────────────────────────────────────────
+
     public String generateToken(String userId, String username) {
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
-        
+        Date now      = new Date();
+        Date expiry   = new Date(now.getTime() + jwtExpirationMs);
+
         return Jwts.builder()
-            .setSubject(userId)
-            .claim("username", username)
-            .setIssuedAt(now)
-            .setExpiration(expiryDate)
-            .signWith(getSigningKey(), SignatureAlgorithm.HS512)
-            .compact();
+                .subject(userId)                   // 0.12.x: subject() not setSubject()
+                .claim("username", username)
+                .issuedAt(now)                     // 0.12.x: issuedAt() not setIssuedAt()
+                .expiration(expiry)                // 0.12.x: expiration() not setExpiration()
+                .signWith(getSigningKey())         // 0.12.x: key only, algorithm inferred
+                .compact();
     }
-    
-    /**
-     * Get user ID from token
-     */
+
+    // ──────────────────────────────────────────────────────
+    // Read claims
+    // ──────────────────────────────────────────────────────
+
     public String getUserIdFromToken(String token) {
-        Claims claims = getAllClaimsFromToken(token);
-        return claims.getSubject();
+        return parseClaims(token).getSubject();
     }
-    
-    /**
-     * Get username from token
-     */
+
     public String getUsernameFromToken(String token) {
-        Claims claims = getAllClaimsFromToken(token);
-        return claims.get("username", String.class);
+        return parseClaims(token).get("username", String.class);
     }
-    
-    /**
-     * Check if token is valid
-     */
+
+    // ──────────────────────────────────────────────────────
+    // Validate
+    // ──────────────────────────────────────────────────────
+
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
-                .verifyWith(getSigningKey())
-                .build()
-                .parseSignedClaims(token);
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token);
             return true;
         } catch (Exception e) {
-            log.error("JWT validation failed: {}", e.getMessage());
+            log.warn("JWT validation failed: {}", e.getMessage());
             return false;
         }
     }
-    
-    /**
-     * Get all claims from token
-     */
-    private Claims getAllClaimsFromToken(String token) {
-        try {
-            return Jwts.parser()
+
+    // ──────────────────────────────────────────────────────
+    // Helpers
+    // ──────────────────────────────────────────────────────
+
+    private Claims parseClaims(String token) {
+        return Jwts.parser()
                 .verifyWith(getSigningKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        } catch (Exception e) {
-            log.error("Failed to get claims from token: {}", e.getMessage());
-            throw new RuntimeException("Invalid token", e);
-        }
     }
-    
-    /**
-     * Get expiration time
-     */
+
     public long getExpirationMs() {
         return jwtExpirationMs;
     }

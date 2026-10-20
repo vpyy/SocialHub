@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -32,50 +33,58 @@ public class LikeService {
     private final UserRepository userRepository;
 
     /**
-     * Toggle like on a post
-     * If user already liked → unlike
-     * If user hasn't liked → like
+     * Toggle like on a post.
+     * Returns the new liked state (true = liked, false = unliked).
+     *
+     * likeCount is re-counted from the likes collection after every toggle
+     * so it can never drift out of sync, regardless of duplicate likes or
+     * any data already in the database.
      */
     @Transactional
-    public boolean toggleLike(String postId, String userId) {
+    public Map<String, Object> toggleLike(String postId, String userId) {
         log.info("Toggling like on post {} by user {}", postId, userId);
 
-        // Verify post exists
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new ResourceNotFoundException("Post not found with id: " + postId));
 
-        // Check if already liked
-        Optional<Like> existingLike = likeRepository.findByUserIdAndPostId(userId, postId);
+        Optional<Like> existing = likeRepository.findByUserIdAndPostId(userId, postId);
+        boolean nowLiked;
 
-        if (existingLike.isPresent()) {
-            // Unlike
-            likeRepository.delete(existingLike.get());
-            
-            // Update post like count
-            long newCount = Math.max(0, post.getLikeCount() - 1);
-            post.setLikeCount(newCount);
-            postRepository.save(post);
-            
-            log.info("Post {} unliked by user {}. New count: {}", postId, userId, newCount);
-            return false; // unliked
+        if (existing.isPresent()) {
+            likeRepository.delete(existing.get());
+            nowLiked = false;
+            log.info("Post {} unliked by user {}", postId, userId);
         } else {
-            // Like
-            Like like = Like.builder()
+            likeRepository.save(Like.builder()
                     .userId(userId)
                     .postId(postId)
                     .createdAt(Instant.now())
-                    .build();
-            
-            likeRepository.save(like);
-            
-            // Update post like count
-            long newCount = post.getLikeCount() + 1;
-            post.setLikeCount(newCount);
-            postRepository.save(post);
-            
-            log.info("Post {} liked by user {}. New count: {}", postId, userId, newCount);
-            return true; // liked
+                    .build());
+            nowLiked = true;
+            log.info("Post {} liked by user {}", postId, userId);
         }
+
+        // Recount from DB — single source of truth, never drifts negative
+        long trueCount = likeRepository.countByPostId(postId);
+        post.setLikeCount(trueCount);
+        postRepository.save(post);
+        log.info("Post {} likeCount synced to {}", postId, trueCount);
+
+        return Map.of("liked", nowLiked, "likeCount", trueCount);
+    }
+
+    /**
+     * One-time utility: recalculate likeCount for a post from the likes collection.
+     * Call this if likeCount on existing posts is out of sync.
+     */
+    public long resyncLikeCount(String postId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new ResourceNotFoundException("Post not found with id: " + postId));
+        long trueCount = likeRepository.countByPostId(postId);
+        post.setLikeCount(trueCount);
+        postRepository.save(post);
+        log.info("Resynced likeCount for post {} → {}", postId, trueCount);
+        return trueCount;
     }
 
     /**

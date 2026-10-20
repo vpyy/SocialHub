@@ -242,6 +242,22 @@ public class PostService {
     }
 
     /**
+     * Search posts by keyword in content (public only)
+     */
+    public Page<PostDto> searchPosts(String keyword, int page, int size) {
+        log.info("Searching posts with keyword: '{}' (page: {}, size: {})", keyword, page, size);
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        List<String> visibilities = Arrays.asList("PUBLIC");
+        Page<Post> posts = postRepository.searchByContentAndVisibilities(keyword, visibilities, pageable);
+
+        return posts.map(post -> {
+            User author = userRepository.findById(post.getAuthorId()).orElse(null);
+            return convertToDto(post, author);
+        });
+    }
+
+    /**
      * Get public feed (for non-authenticated users or explore page)
      */
     public Page<PostDto> getPublicFeed(int page, int size) {

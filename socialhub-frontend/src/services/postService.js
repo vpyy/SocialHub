@@ -6,6 +6,20 @@ import apiClient from './api';
  */
 const postService = {
   /**
+   * Search posts by keyword
+   */
+  searchPosts: async (keyword, page = 0, size = 20) => {
+    try {
+      const response = await apiClient.get('/posts/search', {
+        params: { q: keyword, page, size }
+      })
+      return response.data
+    } catch (error) {
+      throw error
+    }
+  },
+
+  /**
    * Create a new post
    * @param {Object} postData - Post data (content, media, hashtags, visibility)
    * @returns {Promise<Object>} Created post

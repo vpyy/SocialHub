@@ -73,6 +73,12 @@ export default function Feed() {
 
   // Convert backend format to frontend format
   const convertToFrontendFormat = (backendPost) => {
+    // Extract image and video URLs from the media array [{type, url}]
+    const images = (backendPost.media || [])
+      .filter(m => m.type === 'IMAGE')
+      .map(m => m.url)
+    const videoItem = (backendPost.media || []).find(m => m.type === 'VIDEO')
+
     return {
       id: backendPost.id,
       author: {
@@ -83,9 +89,9 @@ export default function Feed() {
         isVerified: false
       },
       content: backendPost.content,
-      imageUrl: backendPost.imageUrls && backendPost.imageUrls.length > 0 ? backendPost.imageUrls[0] : null,
-      imageCaption: backendPost.imageUrls && backendPost.imageUrls.length > 0 ? 'Image' : null,
-      videoUrl: backendPost.videoUrl || null,
+      imageUrl: images.length > 0 ? images[0] : null,
+      imageCaption: images.length > 0 ? 'Image' : null,
+      videoUrl: videoItem ? videoItem.url : null,
       likes: backendPost.likeCount || 0,
       comments: backendPost.commentCount || 0,
       shares: backendPost.shareCount || 0,

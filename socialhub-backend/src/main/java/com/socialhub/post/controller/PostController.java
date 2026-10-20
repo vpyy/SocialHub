@@ -141,6 +141,23 @@ public class PostController {
     }
 
     /**
+     * Search posts by keyword
+     * GET /api/posts/search?q=keyword&page=0&size=20
+     */
+    @GetMapping("/search")
+    @Operation(summary = "Search posts", description = "Search public posts by keyword in content")
+    public ResponseEntity<ApiResponse<Page<PostDto>>> searchPosts(
+            @Parameter(description = "Search keyword", required = true)
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        log.info("GET /api/posts/search?q={} (page: {}, size: {})", q, page, size);
+        Page<PostDto> results = postService.searchPosts(q, page, size);
+        return ResponseEntity.ok(ApiResponse.success(results, "Search results"));
+    }
+
+    /**
      * Get posts by user ID
      * GET /api/posts/user/{userId}
      */
