@@ -2,19 +2,32 @@ package com.socialhub.user.service;
 
 import com.socialhub.common.exception.ResourceNotFoundException;
 import com.socialhub.common.exception.ValidationException;
+import com.socialhub.post.document.Post;
+import com.socialhub.post.dto.PostResponseDto;
+import com.socialhub.post.repository.PostRepository;
+import com.socialhub.social.document.Like;
+import com.socialhub.social.document.Repost;
+import com.socialhub.social.repository.FollowRepository;
+import com.socialhub.social.repository.LikeRepository;
+import com.socialhub.social.repository.RepostRepository;
 import com.socialhub.user.document.User;
 import com.socialhub.user.dto.CreateUserDto;
+import com.socialhub.user.dto.UpdateProfileDto;
 import com.socialhub.user.dto.UserDto;
+import com.socialhub.user.dto.UserProfileDto;
 import com.socialhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -22,6 +35,10 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final FollowRepository followRepository;
+    private final PostRepository postRepository;
+    private final LikeRepository likeRepository;
+    private final RepostRepository repostRepository;
     private final PasswordEncoder passwordEncoder;
 
     // ──────────────────────────────────────────────────────
@@ -99,13 +116,109 @@ public class UserService {
     }
 
     // ──────────────────────────────────────────────────────
+    // Profile features (GET /api/users/{username}, PUT /api/users/me)
+    // ──────────────────────────────────────────────────────
+
+    public UserProfileDto getUserProfile(String usernameOrId, String currentUserId) {
+        User user = userRepository.findByUsernameIgnoreCase(usernameOrId)
+                .or(() -> userRepository.findById(usernameOrId))
+                .orElseThrow(() -> new ResourceNotFoundException("User", "username", usernameOrId));
+
+        return toProfileDto(user, currentUserId);
+    }
+
+    public UserProfileDto updateMyProfile(String currentUserId, UpdateProfileDto dto) {
+        User user = findUserById(currentUserId);
+
+        if (dto.getBio() != null) {
+            user.setBio(dto.getBio());
+        }
+        if (dto.getResolvedAvatarUrl() != null) {
+            user.setAvatarUrl(dto.getResolvedAvatarUrl());
+        }
+        if (dto.getResolvedCoverUrl() != null) {
+            user.setCoverUrl(dto.getResolvedCoverUrl());
+        }
+        if (dto.getDisplayName() != null && !dto.getDisplayName().isBlank()) {
+            user.setDisplayName(dto.getDisplayName().trim());
+        }
+
+        user.setUpdatedAt(Instant.now());
+        User saved = userRepository.save(user);
+        log.info("Updated profile for user: {}", saved.getUsername());
+
+        return toProfileDto(saved, currentUserId);
+    }
+
+    public UserProfileDto toProfileDto(User user, String currentUserId) {
+        long followersCount = followRepository.countByFollowingId(user.getId());
+        long followingCount = followRepository.countByFollowerId(user.getId());
+        long postsCount = postRepository.countByAuthorId(user.getId());
+
+        boolean isSelf = currentUserId != null && currentUserId.equals(user.getId());
+        boolean isFollowing = !isSelf && currentUserId != null
+                && followRepository.existsByFollowerIdAndFollowingId(currentUserId, user.getId());
+
+        // Fetch recent posts
+        List<Post> posts = postRepository.findByAuthorIdOrderByCreatedAtDesc(user.getId(), PageRequest.of(0, 30))
+                .getContent();
+
+        List<Object> postDtos = new ArrayList<>();
+        for (Post p : posts) {
+            String imageUrl = (p.getMedia() != null && !p.getMedia().isEmpty()) ? p.getMedia().get(0).getUrl() : null;
+            postDtos.add(PostResponseDto.builder()
+                    .id(p.getId())
+                    .author(PostResponseDto.AuthorDto.builder()
+                            .id(user.getId())
+                            .username(user.getUsername())
+                            .displayName(user.getDisplayName())
+                            .avatarUrl(user.getAvatarUrl())
+                            .isVerified(false)
+                            .build())
+                    .content(p.getContent())
+                    .media(p.getMedia())
+                    .imageUrl(imageUrl)
+                    .hashtags(p.getHashtags())
+                    .visibility(p.getVisibility())
+                    .likes(p.getLikeCount())
+                    .comments(p.getCommentCount())
+                    .shares(p.getShareCount())
+                    .createdAt(p.getCreatedAt())
+                    .updatedAt(p.getUpdatedAt())
+                    .build());
+        }
+
+        return UserProfileDto.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(isSelf ? user.getEmail() : null)
+                .displayName(user.getDisplayName())
+                .avatarUrl(user.getAvatarUrl())
+                .coverUrl(user.getCoverUrl())
+                .bio(user.getBio())
+                .role(user.getRole())
+                .status(user.getStatus())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .followersCount(followersCount)
+                .followingCount(followingCount)
+                .postsCount(postsCount)
+                .isFollowing(isFollowing)
+                .isSelf(isSelf)
+                .posts(postDtos)
+                .build();
+    }
+
+    // ──────────────────────────────────────────────────────
     // Profile updates
     // ──────────────────────────────────────────────────────
 
     public UserDto updateProfile(String userId, String displayName, String bio) {
         User user = findUserById(userId);
-        if (displayName != null) user.setDisplayName(displayName);
-        if (bio != null)         user.setBio(bio);
+        if (displayName != null)
+            user.setDisplayName(displayName);
+        if (bio != null)
+            user.setBio(bio);
         user.setUpdatedAt(Instant.now());
         return toDto(userRepository.save(user));
     }
@@ -157,7 +270,8 @@ public class UserService {
      * Handles Vietnamese diacritics + đ→d.
      */
     private String generateUsernameFromDisplayName(String displayName) {
-        if (displayName == null || displayName.isBlank()) return "user";
+        if (displayName == null || displayName.isBlank())
+            return "user";
 
         // Unicode normalize → strip diacritics
         String normalized = Normalizer.normalize(displayName, Normalizer.Form.NFD)
@@ -169,5 +283,110 @@ public class UserService {
                 .replaceAll("[^a-z0-9]+", "-")
                 .replaceAll("^-+|-+$", "")
                 .substring(0, Math.min(40, normalized.length()));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // User Posts: Reposts & Liked Posts
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * Get posts that user has reposted
+     * GET /api/users/{id}/reposts
+     */
+    public List<PostResponseDto> getUserReposts(String userId, String currentUserId) {
+        log.info("Fetching reposts for user: {}", userId);
+
+        // Get all reposts by user (ordered by most recent)
+        List<Repost> reposts = repostRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        // Extract post IDs
+        List<String> postIds = reposts.stream()
+                .map(Repost::getPostId)
+                .collect(Collectors.toList());
+
+        if (postIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Fetch all posts
+        List<Post> posts = postRepository.findAllById(postIds);
+
+        // Convert to DTOs and maintain order
+        return posts.stream()
+                .map(post -> convertPostToResponseDto(post, currentUserId))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get posts that user has liked
+     * GET /api/users/{id}/liked-posts
+     */
+    public List<PostResponseDto> getUserLikedPosts(String userId, String currentUserId) {
+        log.info("Fetching liked posts for user: {}", userId);
+
+        // Get all likes by user (ordered by most recent)
+        List<Like> likes = likeRepository.findByUserIdOrderByCreatedAtDesc(userId);
+
+        // Extract post IDs
+        List<String> postIds = likes.stream()
+                .map(Like::getPostId)
+                .collect(Collectors.toList());
+
+        if (postIds.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // Fetch all posts
+        List<Post> posts = postRepository.findAllById(postIds);
+
+        // Convert to DTOs and maintain order
+        return posts.stream()
+                .map(post -> convertPostToResponseDto(post, currentUserId))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Helper method to convert Post to PostResponseDto
+     */
+    private PostResponseDto convertPostToResponseDto(Post post, String currentUserId) {
+        // Fetch author info
+        User author = userRepository.findById(post.getAuthorId()).orElse(null);
+
+        if (author == null) {
+            log.warn("Author not found for post: {}", post.getId());
+            return null;
+        }
+
+        String imageUrl = (post.getMedia() != null && !post.getMedia().isEmpty())
+                ? post.getMedia().get(0).getUrl()
+                : null;
+
+        // Check if current user liked, reposted, or bookmarked
+        boolean isLiked = currentUserId != null && likeRepository.existsByUserIdAndPostId(currentUserId, post.getId());
+        boolean isReposted = currentUserId != null
+                && repostRepository.existsByUserIdAndPostId(currentUserId, post.getId());
+
+        return PostResponseDto.builder()
+                .id(post.getId())
+                .author(PostResponseDto.AuthorDto.builder()
+                        .id(author.getId())
+                        .username(author.getUsername())
+                        .displayName(author.getDisplayName())
+                        .avatarUrl(author.getAvatarUrl())
+                        .isVerified(false)
+                        .build())
+                .content(post.getContent())
+                .media(post.getMedia())
+                .imageUrl(imageUrl)
+                .hashtags(post.getHashtags())
+                .visibility(post.getVisibility())
+                .likes(post.getLikeCount())
+                .comments(post.getCommentCount())
+                .shares(post.getShareCount())
+                .isLiked(isLiked)
+                .isReposted(isReposted)
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
+                .build();
     }
 }

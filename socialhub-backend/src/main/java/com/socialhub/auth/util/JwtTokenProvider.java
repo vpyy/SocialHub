@@ -16,7 +16,7 @@ import java.util.Date;
 @Slf4j
 @Component
 public class JwtTokenProvider {
-
+    
     @Value("${app.jwtSecret:mySecretKeyForSocialHubJWTTokenGenerationAndValidation123456789}")
     private String jwtSecret;
 

@@ -62,11 +62,6 @@ public class SecurityConfig {
                 // Public API endpoints - auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-
-                // Public search endpoints
-                .requestMatchers(HttpMethod.GET, "/api/posts/public").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/posts/search").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/users/search").permitAll()
                 
                 // All other requests require authentication
                 .anyRequest().authenticated()

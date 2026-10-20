@@ -1,19 +1,21 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-const navItems = [
-  { icon: 'home', label: 'Home', path: '/', fill: true },
-  { icon: 'tag', label: 'Explore', path: '/search', fill: false },
-  { icon: 'notifications', label: 'Notifications', path: '/notifications', fill: false, badge: '4' },
-  { icon: 'chat_bubble', label: 'Messages', path: '/messages', fill: false, badge: '2' },
-  { icon: 'bookmark', label: 'Bookmarks', path: '/bookmarks', fill: false },
-  { icon: 'person', label: 'Profile', path: '/profile/minh_dev', fill: false },
-  { icon: 'settings', label: 'Settings', path: '/settings', fill: false },
-]
-
 export default function Sidebar({ user, navigate, location }) {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [searchInput, setSearchInput] = useState('')
+
+  const profilePath = user?.username ? `/profile/${user.username}` : '/profile/me'
+
+  const navItems = [
+    { icon: 'home', label: 'Home', path: '/', fill: true },
+    { icon: 'tag', label: 'Explore', path: '/search', fill: false },
+    { icon: 'notifications', label: 'Notifications', path: '/notifications', fill: false, badge: '4' },
+    { icon: 'chat_bubble', label: 'Messages', path: '/messages', fill: false, badge: '2' },
+    { icon: 'bookmark', label: 'Bookmarks', path: '/bookmarks', fill: false },
+    { icon: 'person', label: 'Profile', path: profilePath, fill: false },
+    { icon: 'settings', label: 'Settings', path: '/settings', fill: false },
+  ]
 
   const isActive = (path) => location.pathname === path
 

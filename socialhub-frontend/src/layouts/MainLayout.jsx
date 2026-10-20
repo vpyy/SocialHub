@@ -1,37 +1,38 @@
-import { useState, useEffect } from 'react'
-import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom'
-import Sidebar from '../components/common/Sidebar'
+import { useState, useEffect } from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
+import Sidebar from "../components/common/Sidebar";
 
 export default function MainLayout() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user')
+    // Load user from localStorage
+    const userData = localStorage.getItem("user");
     if (userData) {
       try {
-        setUser(JSON.parse(userData))
+        setUser(JSON.parse(userData));
       } catch (error) {
-        console.error('Failed to parse user data:', error)
-        localStorage.removeItem('user')
-        localStorage.removeItem('token')
+        console.error("Failed to parse user data:", error);
+        localStorage.removeItem("user");
+        navigate("/login");
       }
     }
-    setLoading(false)
-  }, [])
+    setLoading(false);
+  }, [navigate]);
 
   if (loading) {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-[#faf8ff]">
         <div className="animate-pulse">Loading...</div>
       </div>
-    )
+    );
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />
+    return null;
   }
 
   return (
@@ -43,5 +44,5 @@ export default function MainLayout() {
         </main>
       </div>
     </div>
-  )
+  );
 }

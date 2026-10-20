@@ -1,13 +1,20 @@
 package com.socialhub.user.controller;
 
-import com.socialhub.common.exception.ResourceNotFoundException;
+import com.socialhub.common.exception.ApiException;
 import com.socialhub.common.response.ApiResponse;
-import com.socialhub.user.document.User;
+import com.socialhub.post.dto.PostResponseDto;
+import com.socialhub.social.dto.FollowResponseDto;
+import com.socialhub.social.dto.FollowUserDto;
+import com.socialhub.social.service.FollowService;
+import com.socialhub.user.dto.UpdateProfileDto;
 import com.socialhub.user.dto.UserDto;
+import com.socialhub.user.dto.UserProfileDto;
 import com.socialhub.user.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,12 +26,103 @@ import java.util.List;
 public class UserController {
 
     private final UserService userService;
+    private final FollowService followService;
 
-    /** GET /api/users/:id */
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<UserDto>> getById(@PathVariable String id) {
-        return ResponseEntity.ok(ApiResponse.success(userService.getUserById(id), "OK"));
+    // ──────────────────────────────────────────────────────
+    // 1. GET /api/users/{username} — Public Profile
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{username}")
+    public ResponseEntity<ApiResponse<UserProfileDto>> getProfile(
+            @PathVariable String username,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        UserProfileDto profile = userService.getUserProfile(username, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(profile, "OK"));
     }
+
+    // ──────────────────────────────────────────────────────
+    // 2. PUT /api/users/me — Update My Profile
+    // ──────────────────────────────────────────────────────
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<UserProfileDto>> updateProfile(
+            @Valid @RequestBody UpdateProfileDto dto,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        UserProfileDto updated = userService.updateMyProfile(currentUserId, dto);
+        return ResponseEntity.ok(ApiResponse.success(updated, "Cập nhật profile thành công"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 3. POST /api/users/{id}/follow — Toggle Follow / Unfollow
+    // ──────────────────────────────────────────────────────
+    @PostMapping("/{id}/follow")
+    public ResponseEntity<ApiResponse<FollowResponseDto>> toggleFollow(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        FollowResponseDto result = followService.toggleFollow(currentUserId, id);
+        return ResponseEntity.ok(ApiResponse.success(result, result.getMessage()));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 4. GET /api/users/{id}/followers — Followers List
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{id}/followers")
+    public ResponseEntity<ApiResponse<List<FollowUserDto>>> getFollowers(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        List<FollowUserDto> followers = followService.getFollowers(id, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(followers, "OK"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 5. GET /api/users/{id}/following — Following List
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{id}/following")
+    public ResponseEntity<ApiResponse<List<FollowUserDto>>> getFollowing(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        List<FollowUserDto> following = followService.getFollowing(id, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(following, "OK"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 6. GET /api/users/{id}/reposts — User Reposts
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{id}/reposts")
+    public ResponseEntity<ApiResponse<List<PostResponseDto>>> getReposts(
+            @PathVariable String id,
+            Authentication authentication) {
+        log.info("GET /api/users/{}/reposts", id);
+        String currentUserId = extractCurrentUserId(authentication);
+        List<PostResponseDto> reposts = userService.getUserReposts(id, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(reposts, "Reposts retrieved successfully"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 7. GET /api/users/{id}/liked-posts — User Liked Posts
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{id}/liked-posts")
+    public ResponseEntity<ApiResponse<List<PostResponseDto>>> getLikedPosts(
+            @PathVariable String id,
+            Authentication authentication) {
+        log.info("GET /api/users/{}/liked-posts", id);
+        String currentUserId = extractCurrentUserId(authentication);
+        List<PostResponseDto> likedPosts = userService.getUserLikedPosts(id, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(likedPosts, "Liked posts retrieved successfully"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Existing API compatibility
+    // ──────────────────────────────────────────────────────
 
     /** GET /api/users/username/:username */
     @GetMapping("/username/{username}")
@@ -37,5 +135,19 @@ public class UserController {
     public ResponseEntity<ApiResponse<List<UserDto>>> search(@RequestParam String q) {
         List<UserDto> results = userService.searchUsers(q);
         return ResponseEntity.ok(ApiResponse.success(results, "OK"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Helper
+    // ──────────────────────────────────────────────────────
+    private String extractCurrentUserId(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        if ("anonymousUser".equals(principal)) {
+            return null;
+        }
+        return principal.toString();
     }
 }

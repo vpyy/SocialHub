@@ -16,7 +16,7 @@ spring:
 
 # App Configuration
 app:
-  jwtSecret: ${JWT_SECRET:mySecretKeyForSocialHubJWTTokenGenerationAndValidation123456789}
+  jwtSecret: ${JWT_SECRET:mySecretKeyForSocialHubJWTTokenGenerationAndValidation1234567890SecureKeyForHS512}
   jwtExpirationMs: ${JWT_EXPIRATION_MS:86400000}
 
 # Server Configuration
