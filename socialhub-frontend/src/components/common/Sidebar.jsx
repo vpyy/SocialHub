@@ -1,20 +1,35 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import notificationService from '../../services/notificationService'
 
 export default function Sidebar({ user, navigate, location }) {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [searchInput, setSearchInput] = useState('')
+  const [unreadNotifs, setUnreadNotifs] = useState(0)
 
   const profilePath = user?.username ? `/profile/${user.username}` : '/profile/me'
 
+  // Poll unread notification count every 30s
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await notificationService.getUnreadCount()
+        setUnreadNotifs(res?.data?.count ?? res?.count ?? 0)
+      } catch { /* silent */ }
+    }
+    fetchCount()
+    const id = setInterval(fetchCount, 30000)
+    return () => clearInterval(id)
+  }, [])
+
   const navItems = [
-    { icon: 'home', label: 'Home', path: '/', fill: true },
-    { icon: 'tag', label: 'Explore', path: '/search', fill: false },
-    { icon: 'notifications', label: 'Notifications', path: '/notifications', fill: false, badge: '4' },
-    { icon: 'chat_bubble', label: 'Messages', path: '/messages', fill: false, badge: '2' },
-    { icon: 'bookmark', label: 'Bookmarks', path: '/bookmarks', fill: false },
-    { icon: 'person', label: 'Profile', path: profilePath, fill: false },
-    { icon: 'settings', label: 'Settings', path: '/settings', fill: false },
+    { icon: 'home',          label: 'Home',          path: '/',              fill: true  },
+    { icon: 'tag',           label: 'Explore',        path: '/search',        fill: false },
+    { icon: 'notifications', label: 'Notifications',  path: '/notifications', fill: false, badge: unreadNotifs > 0 ? String(unreadNotifs > 99 ? '99+' : unreadNotifs) : null },
+    { icon: 'chat_bubble',   label: 'Messages',       path: '/messages',      fill: false },
+    { icon: 'bookmark',      label: 'Bookmarks',      path: '/bookmarks',     fill: false },
+    { icon: 'person',        label: 'Profile',        path: profilePath,      fill: false },
+    { icon: 'settings',      label: 'Settings',       path: '/settings',      fill: false },
   ]
 
   const isActive = (path) => location.pathname === path

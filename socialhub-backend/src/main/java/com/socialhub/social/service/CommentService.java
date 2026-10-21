@@ -2,6 +2,7 @@ package com.socialhub.social.service;
 
 import com.socialhub.common.exception.ResourceNotFoundException;
 import com.socialhub.common.exception.ValidationException;
+import com.socialhub.notification.service.NotificationService;
 import com.socialhub.post.document.Post;
 import com.socialhub.post.repository.PostRepository;
 import com.socialhub.social.document.Comment;
@@ -33,6 +34,7 @@ public class CommentService {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * Create a comment or reply
@@ -86,6 +88,9 @@ public class CommentService {
             post.setCommentCount(post.getCommentCount() + 1);
             postRepository.save(post);
             log.info("Comment added to post {}. New comment count: {}", postId, post.getCommentCount());
+            // Notify post author
+            notificationService.createCommentNotification(
+                    authorId, post.getAuthorId(), postId, comment.getId());
         }
 
         log.info("Comment created successfully: {}", comment.getId());

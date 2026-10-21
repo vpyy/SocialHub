@@ -62,7 +62,15 @@ public class SecurityConfig {
                 // Public API endpoints - auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-                
+
+                // Public read-only endpoints
+                .requestMatchers(HttpMethod.GET, "/api/posts/public").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/posts/search").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/users/search").permitAll()
+
+                // Dev seed endpoints (remove in production)
+                .requestMatchers("/api/dev/**").permitAll()
+
                 // All other requests require authentication
                 .anyRequest().authenticated()
             )

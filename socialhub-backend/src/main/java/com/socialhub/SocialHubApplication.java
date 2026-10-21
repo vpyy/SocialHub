@@ -9,7 +9,7 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
  * 
  * Technologies:
  * - Spring Boot 3.5.x
- * - Java 21
+ * - Java 17
  * - MongoDB
  * - Spring Security
  * 

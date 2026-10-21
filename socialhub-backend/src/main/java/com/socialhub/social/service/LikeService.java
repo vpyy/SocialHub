@@ -1,6 +1,7 @@
 package com.socialhub.social.service;
 
 import com.socialhub.common.exception.ResourceNotFoundException;
+import com.socialhub.notification.service.NotificationService;
 import com.socialhub.post.document.Post;
 import com.socialhub.post.repository.PostRepository;
 import com.socialhub.social.document.Like;
@@ -31,6 +32,7 @@ public class LikeService {
     private final LikeRepository likeRepository;
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     /**
      * Toggle like on a post.
@@ -69,6 +71,11 @@ public class LikeService {
         post.setLikeCount(trueCount);
         postRepository.save(post);
         log.info("Post {} likeCount synced to {}", postId, trueCount);
+
+        // Send notification when liking (not when unliking)
+        if (nowLiked) {
+            notificationService.createLikeNotification(userId, post.getAuthorId(), postId);
+        }
 
         return Map.of("liked", nowLiked, "likeCount", trueCount);
     }

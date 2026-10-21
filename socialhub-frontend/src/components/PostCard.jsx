@@ -2,6 +2,7 @@ import { useState } from "react";
 import likeService from "../services/likeService";
 import commentService from "../services/commentService";
 import postService from "../services/postService";
+import bookmarkService from "../services/bookmarkService";
 import CommentItem from "./CommentItem";
 import RepostButton from "./RepostButton";
 
@@ -23,6 +24,7 @@ export default function PostCard({
   const [localLiked, setLocalLiked] = useState(post.isLiked);
   const [localLikeCount, setLocalLikeCount] = useState(post.likes);
   const [localCommentCount, setLocalCommentCount] = useState(post.comments);
+  const [localBookmarked, setLocalBookmarked] = useState(post.isBookmarked ?? false);
 
   // Edit/Delete menu state
   const [showMenu, setShowMenu] = useState(false);
@@ -63,6 +65,20 @@ export default function PostCard({
       setLocalLikeCount((prev) => (wasLiked ? prev + 1 : prev - 1));
     } finally {
       setIsLiking(false);
+    }
+  };
+
+  const handleBookmark = async () => {
+    const wasBookmarked = localBookmarked;
+    setLocalBookmarked(!wasBookmarked);    // optimistic
+    try {
+      const res = await bookmarkService.toggleBookmark(post.id);
+      const data = res?.data ?? res;
+      if (data?.bookmarked != null) setLocalBookmarked(data.bookmarked);
+      if (onBookmark) onBookmark(post.id);
+    } catch (err) {
+      console.error('Bookmark error:', err);
+      setLocalBookmarked(wasBookmarked);   // rollback
     }
   };
 
@@ -394,16 +410,16 @@ export default function PostCard({
 
         {/* Bookmark Button */}
         <button
-          onClick={() => onBookmark && onBookmark(post.id)}
+          onClick={handleBookmark}
           className="p-1.5 rounded-full hover:bg-yellow-50 transition-all group"
         >
           <svg
             className={`w-5 h-5 transition-colors ${
-              post.isBookmarked
+              localBookmarked
                 ? "text-yellow-500 fill-current"
                 : "text-gray-400 group-hover:text-yellow-500"
             }`}
-            fill={post.isBookmarked ? "currentColor" : "none"}
+            fill={localBookmarked ? "currentColor" : "none"}
             stroke="currentColor"
             strokeWidth="2"
             viewBox="0 0 24 24"
