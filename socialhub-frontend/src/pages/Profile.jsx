@@ -250,23 +250,48 @@ export default function Profile() {
   // Fetch Reposts & Liked Posts when tab changes
   // ──────────────────────────────────────────────────────
   useEffect(() => {
+    console.log("=== Profile Tab Effect ===");
+    console.log("activeTab:", activeTab);
+    console.log("profile?.id:", profile?.id);
+    console.log("repostsLoaded:", repostsLoaded);
+    console.log("likedPostsLoaded:", likedPostsLoaded);
+    
     if (!profile?.id) return;
 
-    const headers = { "Content-Type": "application/json" };
+    const headers = { 
+      "Content-Type": "application/json",
+      "X-User-Id": "temp-user-id"
+    };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     if (activeTab === "reposts" && !repostsLoaded) {
       setRepostsLoading(true);
+      console.log("Fetching reposts for profile.id:", profile.id);
       fetch(`${API_BASE}/users/${profile.id}/reposts`, { headers })
-        .then((res) => res.json())
+        .then((res) => {
+          console.log("Reposts response status:", res.status);
+          return res.json();
+        })
         .then((data) => {
+          console.log("Reposts data:", data);
+          console.log("Reposts data.success:", data.success);
+          console.log("Reposts data.data:", data.data);
+          console.log("Reposts data.data.length:", data.data?.length);
           if (data.success) {
             setReposts(data.data || []);
             setRepostsLoaded(true);
+            console.log("Reposts state set with", data.data?.length, "items");
+          } else {
+            console.error("Reposts API returned success=false:", data.message);
           }
         })
-        .catch((err) => console.error("Failed to load reposts:", err))
-        .finally(() => setRepostsLoading(false));
+        .catch((err) => {
+          console.error("Failed to load reposts:", err);
+        })
+        .finally(() => {
+          setRepostsLoading(false);
+          console.log("Reposts loading finished");
+        });
     }
 
     if (activeTab === "liked" && !likedPostsLoaded) {
@@ -274,6 +299,7 @@ export default function Profile() {
       fetch(`${API_BASE}/users/${profile.id}/liked-posts`, { headers })
         .then((res) => res.json())
         .then((data) => {
+          console.log("Liked posts data:", data);
           if (data.success) {
             setLikedPosts(data.data || []);
             setLikedPostsLoaded(true);
@@ -795,7 +821,10 @@ export default function Profile() {
         </button>
 
         <button
-          onClick={() => setActiveTab("reposts")}
+          onClick={() => {
+            setActiveTab("reposts");
+            setRepostsLoaded(false); // Force reload
+          }}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
             activeTab === "reposts"
               ? "text-primary font-bold"
@@ -809,7 +838,10 @@ export default function Profile() {
         </button>
 
         <button
-          onClick={() => setActiveTab("liked")}
+          onClick={() => {
+            setActiveTab("liked");
+            setLikedPostsLoaded(false); // Force reload
+          }}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
             activeTab === "liked"
               ? "text-primary font-bold"
@@ -882,24 +914,29 @@ export default function Profile() {
                 <p className="text-body-sm">Đang tải bài viết đã đăng lại...</p>
               </div>
             ) : reposts && reposts.length > 0 ? (
-              <div className="divide-y divide-outline-variant/20">
-                {reposts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={{
-                      ...post,
-                      createdAt: post.createdAt
-                        ? new Date(post.createdAt).toLocaleDateString("vi-VN", {
-                            day: "numeric",
-                            month: "short",
-                          })
-                        : "Vừa xong",
-                    }}
-                    onLike={() => {}}
-                    onBookmark={() => {}}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="p-2 bg-yellow-100 text-xs">
+                  DEBUG: Found {reposts.length} reposts
+                </div>
+                <div className="divide-y divide-outline-variant/20">
+                  {reposts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={{
+                        ...post,
+                        createdAt: post.createdAt
+                          ? new Date(post.createdAt).toLocaleDateString("vi-VN", {
+                              day: "numeric",
+                              month: "short",
+                            })
+                          : "Vừa xong",
+                      }}
+                      onLike={() => {}}
+                      onBookmark={() => {}}
+                    />
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="py-16 text-center px-4">
                 <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">

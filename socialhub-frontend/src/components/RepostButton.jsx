@@ -19,23 +19,31 @@ export default function RepostButton({
   const handleRepost = async (e) => {
     e.stopPropagation();
 
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+    // In dev mode, we use X-User-Id header instead of token
+    // if (!token) {
+    //   navigate("/login");
+    //   return;
+    // }
 
     if (loading) return;
 
     setLoading(true);
     try {
+      const headers = {
+        "Content-Type": "application/json",
+        "X-User-Id": "temp-user-id",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const res = await fetch(`${API_BASE}/posts/${postId}/repost`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: headers,
       });
       const data = await res.json();
+
+      console.log("Repost response:", data);
 
       if (res.ok && data.success) {
         const newReposted = data.data.reposted;

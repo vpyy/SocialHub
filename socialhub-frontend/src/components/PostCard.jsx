@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import likeService from "../services/likeService";
 import commentService from "../services/commentService";
 import postService from "../services/postService";
@@ -39,6 +40,13 @@ export default function PostCard({
   // Get current user
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAuthor = currentUser.id === post.author.id;
+  const navigate = useNavigate();
+
+  // Navigate to user profile
+  const handleProfileClick = (e) => {
+    e.stopPropagation();
+    navigate(`/profile/${post.author.username}`);
+  };
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -255,11 +263,15 @@ export default function PostCard({
           <img
             src={post.author.avatarUrl}
             alt={post.author.displayName}
-            className="w-11 h-11 rounded-full object-cover"
+            className="w-11 h-11 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={handleProfileClick}
           />
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-title-md font-title-md text-on-surface">
+              <span 
+                className="text-title-md font-title-md text-on-surface cursor-pointer hover:underline"
+                onClick={handleProfileClick}
+              >
                 {post.author.displayName}
               </span>
               {post.author.isVerified && (
@@ -269,7 +281,12 @@ export default function PostCard({
               )}
             </div>
             <div className="flex items-center gap-2 text-body-sm font-body-sm text-outline">
-              <span>@{post.author.username}</span>
+              <span 
+                className="cursor-pointer hover:underline"
+                onClick={handleProfileClick}
+              >
+                @{post.author.username}
+              </span>
               <span>•</span>
               <span>{post.createdAt}</span>
             </div>
