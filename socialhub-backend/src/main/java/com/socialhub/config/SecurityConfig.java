@@ -67,6 +67,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/posts/public").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/posts/search").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/search").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/users/*/liked-posts").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/users/*/reposts").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/users/*").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/users/*/followers").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/users/*/following").permitAll()
 
                 // Dev seed endpoints (remove in production)
                 .requestMatchers("/api/dev/**").permitAll()
