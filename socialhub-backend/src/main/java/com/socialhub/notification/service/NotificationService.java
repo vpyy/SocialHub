@@ -8,6 +8,8 @@ import com.socialhub.post.repository.PostRepository;
 import com.socialhub.social.document.Comment;
 import com.socialhub.user.document.User;
 import com.socialhub.user.repository.UserRepository;
+import com.socialhub.websocket.controller.WebSocketNotificationHandler;
+import com.socialhub.websocket.dto.NotificationMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 @Service
@@ -26,6 +29,7 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository         userRepository;
     private final PostRepository         postRepository;
+    private final WebSocketNotificationHandler websocketHandler;
 
     // ── Read ──────────────────────────────────────────────────────────────
 
@@ -77,6 +81,15 @@ public class NotificationService {
                 .build();
         notificationRepository.save(n);
         log.debug("LIKE notification saved → recipient={}", recipientId);
+
+        // Send WebSocket notification
+        Optional<User> actor = userRepository.findById(actorId);
+        if (actor.isPresent()) {
+            NotificationMessage wsMsg = NotificationMessage.like(postId, actor.get().getDisplayName());
+            wsMsg.setUserId(recipientId);
+            wsMsg.setAvatarUrl(actor.get().getAvatarUrl());
+            websocketHandler.sendNotificationToUser(recipientId, wsMsg);
+        }
     }
 
     public void createCommentNotification(String actorId, String recipientId,
@@ -93,6 +106,15 @@ public class NotificationService {
                 .build();
         notificationRepository.save(n);
         log.debug("COMMENT notification saved → recipient={}", recipientId);
+
+        // Send WebSocket notification
+        Optional<User> actor = userRepository.findById(actorId);
+        if (actor.isPresent()) {
+            NotificationMessage wsMsg = NotificationMessage.comment(postId, actor.get().getDisplayName());
+            wsMsg.setUserId(recipientId);
+            wsMsg.setAvatarUrl(actor.get().getAvatarUrl());
+            websocketHandler.sendNotificationToUser(recipientId, wsMsg);
+        }
     }
 
     public void createFollowNotification(String actorId, String recipientId) {
@@ -106,6 +128,15 @@ public class NotificationService {
                 .build();
         notificationRepository.save(n);
         log.debug("FOLLOW notification saved → recipient={}", recipientId);
+
+        // Send WebSocket notification
+        Optional<User> actor = userRepository.findById(actorId);
+        if (actor.isPresent()) {
+            NotificationMessage wsMsg = NotificationMessage.follow(recipientId, actor.get().getDisplayName());
+            wsMsg.setUserId(recipientId);
+            wsMsg.setAvatarUrl(actor.get().getAvatarUrl());
+            websocketHandler.sendNotificationToUser(recipientId, wsMsg);
+        }
     }
 
     // ── Mapping ───────────────────────────────────────────────────────────

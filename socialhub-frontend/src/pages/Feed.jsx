@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import PostCard from '../components/PostCard'
 import CreatePostBar from '../components/CreatePostBar'
 import postService from '../services/postService'
+import { useInfiniteScroll } from '../hooks/useInfiniteScroll'
 
 export default function Feed() {
   const [feedTab, setFeedTab] = useState('for-you')
@@ -11,6 +12,14 @@ export default function Feed() {
   const [error, setError] = useState(null)
   const [page, setPage] = useState(0)
   const [hasMore, setHasMore] = useState(true)
+
+  // Infinite scroll target
+  const observerTarget = useInfiniteScroll(
+    () => setPage((p) => p + 1),
+    hasMore,
+    loading,
+    300 // trigger 300px from bottom
+  )
 
   useEffect(() => {
     const userData = localStorage.getItem('user')
@@ -159,34 +168,33 @@ export default function Feed() {
   }
 
   return (
-    <section className="flex-1 w-full max-w-4xl mx-auto border-r border-outline-variant/30 min-h-screen pb-20 flex flex-col">
+    <section className="flex-1 w-full max-w-4xl mx-auto border-r border-gray-200 dark:border-gray-700 min-h-screen pb-20 flex flex-col bg-white dark:bg-gray-950">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-surface/85 backdrop-blur-md border-b border-outline-variant/30 px-4 md:px-6 py-3 flex items-center justify-between flex-shrink-0">
-        <h1 className="text-headline-md font-headline-md text-on-surface font-bold hidden sm:block">
+      <header className="sticky top-0 z-20 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-3 flex items-center justify-between flex-shrink-0">
+        <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
           {user?.displayName ? `Welcome, ${user.displayName}` : 'Home Feed'}
         </h1>
-        <h1 className="text-headline-md font-headline-md text-on-surface font-bold sm:hidden">
+        <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white sm:hidden">
           Home
         </h1>
         
         <div className="flex items-center gap-4 md:gap-6 ml-auto">
           <button
             onClick={() => handleTabChange('for-you')}
-            className={`pb-2 text-label-md font-label-md transition-all whitespace-nowrap ${
+            className={`pb-2 text-sm md:text-base font-medium transition-all whitespace-nowrap ${
               feedTab === 'for-you'
-                ? 'text-primary border-b-2 border-primary font-bold'
-                : 'text-on-surface-variant hover:text-on-surface'
+                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 font-bold'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
           >
-            <span className="hidden sm:inline">For You</span>
-            <span className="sm:hidden">For You</span>
+            For You
           </button>
           <button
             onClick={() => handleTabChange('following')}
-            className={`pb-2 text-label-md font-label-md transition-all whitespace-nowrap ${
+            className={`pb-2 text-sm md:text-base font-medium transition-all whitespace-nowrap ${
               feedTab === 'following'
-                ? 'text-primary border-b-2 border-primary font-bold'
-                : 'text-on-surface-variant hover:text-on-surface'
+                ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-600 dark:border-indigo-400 font-bold'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
           >
             Following
@@ -195,9 +203,9 @@ export default function Feed() {
 
         <button 
           onClick={() => window.location.reload()}
-          className="p-2 text-primary hover:bg-surface-container rounded-full transition-colors ml-2 flex-shrink-0"
+          className="p-2 text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors ml-2 flex-shrink-0"
         >
-          <span className="material-symbols-outlined">refresh</span>
+          🔄
         </button>
       </header>
 
@@ -205,19 +213,19 @@ export default function Feed() {
       <CreatePostBar onPostCreated={handlePostCreated} />
 
       {/* Posts Feed - Scrollable */}
-      <div className="flex-1 overflow-y-auto divide-y divide-outline-variant/30">
+      <div className="flex-1 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
         {loading && posts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-            <p className="text-on-surface-variant">Đang tải...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+            <p className="text-gray-500 dark:text-gray-400">Đang tải...</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-12 px-4">
-            <span className="material-symbols-outlined text-6xl text-error mb-4">error</span>
-            <p className="text-error text-center mb-4">{error}</p>
+            <span className="text-6xl mb-4">⚠️</span>
+            <p className="text-red-600 dark:text-red-400 text-center mb-4">{error}</p>
             <button 
               onClick={() => fetchFeed()}
-              className="px-4 py-2 bg-primary text-on-primary rounded-full hover:bg-primary-container transition-colors"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors"
             >
               Thử lại
             </button>
@@ -234,15 +242,16 @@ export default function Feed() {
                 onDelete={handlePostDeleted}
               />
             ))}
+            {/* Infinite scroll trigger element */}
             {hasMore && (
-              <div className="py-8 text-center">
-                <button 
-                  onClick={() => setPage(page + 1)}
-                  disabled={loading}
-                  className="px-6 py-2 bg-primary text-on-primary rounded-full hover:bg-primary-container transition-colors disabled:opacity-50"
-                >
-                  {loading ? 'Đang tải...' : 'Tải thêm'}
-                </button>
+              <div ref={observerTarget} className="py-8 text-center">
+                {loading ? (
+                  <div className="flex justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400">Scroll to load more...</p>
+                )}
               </div>
             )}
           </>
@@ -258,16 +267,16 @@ export default function Feed() {
       </div>
 
       {/* Right Sidebar - Hide on mobile */}
-      <div className="hidden lg:block w-80 border-l border-outline-variant/30 bg-surface p-4 flex-shrink-0">
-        <div className="rounded-2xl bg-surface-container p-4">
-          <h3 className="text-headline-md font-headline-md text-on-surface font-bold mb-4">
+      <div className="hidden lg:block w-80 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4 flex-shrink-0">
+        <div className="rounded-2xl bg-white dark:bg-gray-800 p-4 shadow-sm dark:shadow-lg">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
             Có thể bạn quan tâm
           </h3>
           <div className="space-y-3">
             {['#WebDevelopment', '#ReactJS', '#MongoDB', '#FullStack'].map(tag => (
-              <div key={tag} className="p-3 rounded-xl hover:bg-surface-container-high cursor-pointer transition-colors">
-                <p className="text-label-md font-label-md text-primary font-bold">{tag}</p>
-                <p className="text-body-sm font-body-sm text-on-surface-variant">127.5K posts</p>
+              <div key={tag} className="p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{tag}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">127.5K posts</p>
               </div>
             ))}
           </div>

@@ -5,6 +5,7 @@ import postService from "../services/postService";
 import bookmarkService from "../services/bookmarkService";
 import CommentItem from "./CommentItem";
 import RepostButton from "./RepostButton";
+import EngagementModal from "./EngagementModal";
 
 export default function PostCard({
   post,
@@ -19,6 +20,9 @@ export default function PostCard({
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
+
+  // Engagement modal state
+  const [engagementModal, setEngagementModal] = useState({ type: null, open: false });
 
   // Local state for optimistic updates
   const [localLiked, setLocalLiked] = useState(post.isLiked);
@@ -48,6 +52,7 @@ export default function PostCard({
 
     try {
       const response = await likeService.toggleLike(post.id);
+
       // response is ApiResponse.data → { liked, likeCount }
       const data = response?.data ?? response;
       if (data != null) {
@@ -371,11 +376,16 @@ export default function PostCard({
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
             />
           </svg>
-          <span
-            className={`text-sm font-semibold ${localLiked ? "text-pink-600" : "text-gray-600"}`}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setEngagementModal({ type: 'likes', open: true })
+            }}
+            className="text-sm font-semibold hover:underline"
+            style={{ color: localLiked ? '#ec4899' : '#4b5563' }}
           >
             {localLikeCount}
-          </span>
+          </button>
         </button>
 
         {/* Comment Button */}
@@ -396,9 +406,15 @@ export default function PostCard({
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
             />
           </svg>
-          <span className="text-sm font-semibold text-gray-600">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setEngagementModal({ type: 'comments', open: true })
+            }}
+            className="text-sm font-semibold text-gray-600 hover:underline"
+          >
             {localCommentCount}
-          </span>
+          </button>
         </button>
 
         {/* Repost Button */}
@@ -573,6 +589,16 @@ export default function PostCard({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Engagement Modal */}
+      {engagementModal.open && (
+        <EngagementModal
+          postId={post.id}
+          type={engagementModal.type}
+          count={engagementModal.type === 'likes' ? localLikeCount : localCommentCount}
+          onClose={() => setEngagementModal({ type: null, open: false })}
+        />
       )}
     </article>
   );

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import chatService from '../services/chatService'
 import userService from '../services/userService'
 
@@ -17,22 +18,45 @@ function formatTime(ts) {
 
 function Avatar({ src, name, size = 9 }) {
   const initials = (name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  
+  // Map size numbers to actual px/rem values
+  const sizeMap = {
+    7: 'w-7 h-7',   // 28px
+    8: 'w-8 h-8',   // 32px
+    9: 'w-9 h-9',   // 36px
+    10: 'w-10 h-10', // 40px
+    11: 'w-11 h-11', // 44px
+    12: 'w-12 h-12', // 48px
+    28: 'w-28 h-28', // 112px
+    32: 'w-32 h-32', // 128px
+  }
+  
+  const sizeClass = sizeMap[size] || 'w-9 h-9'
+  
   return src
-    ? <img src={src} alt={name} className={`w-${size} h-${size} rounded-full object-cover shrink-0`} />
-    : <div className={`w-${size} h-${size} rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0`}>{initials}</div>
+    ? <img src={src} alt={name} className={`${sizeClass} rounded-full object-cover shrink-0`} />
+    : <div className={`${sizeClass} rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0`}>{initials}</div>
 }
 
 // ─── Conversation List Item ──────────────────────────────────────────────────
 
 function ConvItem({ conv, currentUserId, isActive, onClick }) {
+  const navigate = useNavigate()
   const other = conv.participants?.find(p => p.userId !== currentUserId) || conv.participants?.[0]
+
+  const handleAvatarClick = (e) => {
+    e.stopPropagation()
+    if (other?.username) {
+      navigate(`/profile/${other.username}`)
+    }
+  }
 
   return (
     <div
       onClick={onClick}
       className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-50 ${isActive ? 'bg-indigo-50' : ''}`}
     >
-      <div className="relative">
+      <div className="relative cursor-pointer hover:opacity-80" onClick={handleAvatarClick}>
         <Avatar src={other?.avatarUrl} name={other?.displayName} size={11} />
         {conv.unreadCount > 0 && (
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-indigo-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
@@ -57,10 +81,20 @@ function ConvItem({ conv, currentUserId, isActive, onClick }) {
 
 // ─── Message Bubble ──────────────────────────────────────────────────────────
 
-function MessageBubble({ msg, isMe }) {
+function MessageBubble({ msg, isMe, navigate }) {
+  const handleAvatarClick = () => {
+    if (!isMe && msg.senderUsername && navigate) {
+      navigate(`/profile/${msg.senderUsername}`)
+    }
+  }
+
   return (
     <div className={`flex items-end gap-2 mb-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-      {!isMe && <Avatar src={msg.senderAvatarUrl} name={msg.senderDisplayName} size={7} />}
+      {!isMe && (
+        <div className="cursor-pointer hover:opacity-80" onClick={handleAvatarClick}>
+          <Avatar src={msg.senderAvatarUrl} name={msg.senderDisplayName} size={7} />
+        </div>
+      )}
       <div className={`max-w-[72%] ${isMe ? 'items-end' : 'items-start'} flex flex-col gap-0.5`}>
         {msg.messageType === 'IMAGE' && msg.mediaUrl && (
           <img src={msg.mediaUrl} alt="media" className="rounded-2xl max-h-56 object-cover border border-gray-100" />
@@ -99,6 +133,7 @@ function MessageBubble({ msg, isMe }) {
 // ─── Main ────────────────────────────────────────────────────────────────────
 
 export default function Messages() {
+  const navigate = useNavigate()
   const currentUser = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
 
   const [conversations, setConversations] = useState([])
@@ -153,6 +188,22 @@ export default function Messages() {
     } catch (e) { console.error(e) }
     finally { setLoadingMsgs(false) }
   }
+
+  // Auto-refresh messages every 3 seconds when conversation is open
+  useEffect(() => {
+    if (!activeConvId) return
+    
+    const interval = setInterval(async () => {
+      try {
+        const res = await chatService.getMessages(activeConvId, 0, 100)
+        const data = res?.data ?? res
+        const msgs = data?.content ?? []
+        setMessages(msgs)
+      } catch (e) { console.error('Refresh messages error:', e) }
+    }, 3000)
+    
+    return () => clearInterval(interval)
+  }, [activeConvId])
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -327,6 +378,7 @@ export default function Messages() {
                   key={msg.id}
                   msg={msg}
                   isMe={msg.senderId === currentUser.id}
+                  navigate={navigate}
                 />
               ))}
               <div ref={bottomRef} />

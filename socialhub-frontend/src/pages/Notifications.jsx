@@ -26,19 +26,45 @@ const TYPE_META = {
 
 function Avatar({ src, name, size = 10 }) {
   const initials = (name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  
+  // Map size numbers to actual px/rem values
+  const sizeMap = {
+    7: 'w-7 h-7',   // 28px
+    8: 'w-8 h-8',   // 32px
+    9: 'w-9 h-9',   // 36px
+    10: 'w-10 h-10', // 40px
+    11: 'w-11 h-11', // 44px
+    12: 'w-12 h-12', // 48px
+    28: 'w-28 h-28', // 112px
+    32: 'w-32 h-32', // 128px
+  }
+  
+  const sizeClass = sizeMap[size] || 'w-10 h-10'
+  
   return src
-    ? <img src={src} alt={name} className={`w-${size} h-${size} rounded-full object-cover shrink-0`} />
-    : <div className={`w-${size} h-${size} rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0`}>{initials}</div>
+    ? <img src={src} alt={name} className={`${sizeClass} rounded-full object-cover shrink-0`} />
+    : <div className={`${sizeClass} rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0`}>{initials}</div>
 }
 
 function NotificationItem({ notif, onRead, navigate }) {
   const meta = TYPE_META[notif.type] || TYPE_META.LIKE
+  
+  const handleClick = () => {
+    if (!notif.isRead) onRead(notif.id)
+    
+    // Navigate to source based on type
+    if (notif.type === 'LIKE' || notif.type === 'COMMENT') {
+      navigate(`/`)  // Navigate to feed, post will show in there
+    } else if (notif.type === 'FOLLOW' || notif.type === 'MENTION') {
+      navigate(`/profile/${notif.actorUsername}`)
+    } else if (notif.type === 'MESSAGE') {
+      navigate(`/messages`)
+    }
+  }
+  
   return (
     <div
-      onClick={() => {
-        if (!notif.isRead) onRead(notif.id)
-        if (notif.postId) navigate(`/search?q=${notif.postId}`)
-      }}
+      onClick={handleClick}
       className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-50 ${!notif.isRead ? 'bg-indigo-50/40' : ''}`}
     >
       {/* Actor avatar + type icon */}
