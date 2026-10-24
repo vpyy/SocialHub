@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import PostCard from "../components/PostCard";
+import chatService from "../services/chatService";
 
 const API_BASE = "http://localhost:8080/api";
 
@@ -65,6 +66,12 @@ export default function Profile() {
   });
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
+
+  // Message & blocked list states
+  const [messageSending, setMessageSending] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [showMenuOptions, setShowMenuOptions] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
 
   // Helper to read and optimize image from local file
   const handleAvatarFileChange = (e) => {
@@ -243,23 +250,48 @@ export default function Profile() {
   // Fetch Reposts & Liked Posts when tab changes
   // ──────────────────────────────────────────────────────
   useEffect(() => {
+    console.log("=== Profile Tab Effect ===");
+    console.log("activeTab:", activeTab);
+    console.log("profile?.id:", profile?.id);
+    console.log("repostsLoaded:", repostsLoaded);
+    console.log("likedPostsLoaded:", likedPostsLoaded);
+    
     if (!profile?.id) return;
 
-    const headers = { "Content-Type": "application/json" };
+    const headers = { 
+      "Content-Type": "application/json",
+      "X-User-Id": "temp-user-id"
+    };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 
     if (activeTab === "reposts" && !repostsLoaded) {
       setRepostsLoading(true);
+      console.log("Fetching reposts for profile.id:", profile.id);
       fetch(`${API_BASE}/users/${profile.id}/reposts`, { headers })
-        .then((res) => res.json())
+        .then((res) => {
+          console.log("Reposts response status:", res.status);
+          return res.json();
+        })
         .then((data) => {
+          console.log("Reposts data:", data);
+          console.log("Reposts data.success:", data.success);
+          console.log("Reposts data.data:", data.data);
+          console.log("Reposts data.data.length:", data.data?.length);
           if (data.success) {
             setReposts(data.data || []);
             setRepostsLoaded(true);
+            console.log("Reposts state set with", data.data?.length, "items");
+          } else {
+            console.error("Reposts API returned success=false:", data.message);
           }
         })
-        .catch((err) => console.error("Failed to load reposts:", err))
-        .finally(() => setRepostsLoading(false));
+        .catch((err) => {
+          console.error("Failed to load reposts:", err);
+        })
+        .finally(() => {
+          setRepostsLoading(false);
+          console.log("Reposts loading finished");
+        });
     }
 
     if (activeTab === "liked" && !likedPostsLoaded) {
@@ -267,6 +299,7 @@ export default function Profile() {
       fetch(`${API_BASE}/users/${profile.id}/liked-posts`, { headers })
         .then((res) => res.json())
         .then((data) => {
+          console.log("Liked posts data:", data);
           if (data.success) {
             setLikedPosts(data.data || []);
             setLikedPostsLoaded(true);
@@ -393,7 +426,62 @@ export default function Profile() {
   };
 
   // ──────────────────────────────────────────────────────
-  // Submit Edit Profile (PUT /api/users/me)
+  // Handle Send Message - Navigate to Messages page
+  // ──────────────────────────────────────────────────────
+  const handleSendMessage = async () => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    if (!profile?.id || messageSending) return;
+
+    setMessageSending(true);
+    try {
+      const res = await chatService.startConversation(profile.id);
+      const conv = res?.data ?? res;
+      // Navigate to messages page
+      navigate(`/messages?convId=${conv.id}`);
+    } catch (err) {
+      console.error("Error starting conversation:", err);
+      alert("Không thể bắt đầu cuộc trò chuyện");
+    } finally {
+      setMessageSending(false);
+    }
+  };
+
+  // ──────────────────────────────────────────────────────
+  // Handle Block/Unblock User
+  // ──────────────────────────────────────────────────────
+  const handleToggleBlock = async () => {
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+    if (!profile?.id) return;
+
+    try {
+      const res = await fetch(`${API_BASE}/users/${profile.id}/${isBlocked ? 'unblock' : 'block'}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setIsBlocked(!isBlocked);
+        setShowMenuOptions(false);
+        alert(isBlocked ? 'Đã bỏ chặn người dùng' : 'Đã chặn người dùng');
+      } else {
+        alert(data.message || 'Không thể thực hiện thao tác');
+      }
+    } catch (err) {
+      console.error("Block toggle error:", err);
+      alert('Lỗi kết nối');
+    }
+  };
+
   // ──────────────────────────────────────────────────────
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -577,15 +665,17 @@ export default function Profile() {
                 <span>Chỉnh sửa hồ sơ</span>
               </button>
             ) : (
-              <button
-                onClick={handleToggleFollowProfile}
-                disabled={actionLoadingId === profile.id}
-                className={`px-6 py-2 rounded-full font-bold text-label-md transition-all flex items-center gap-1.5 active:scale-95 shadow-sm ${
-                  isFollowing
-                    ? "border border-outline text-on-surface hover:border-error hover:text-error hover:bg-error-container/20"
-                    : "bg-primary text-on-primary hover:bg-primary-container hover:shadow-md"
-                }`}
-              >
+              <>
+                {/* Follow Button */}
+                <button
+                  onClick={handleToggleFollowProfile}
+                  disabled={actionLoadingId === profile.id}
+                  className={`px-6 py-2 rounded-full font-bold text-label-md transition-all flex items-center gap-1.5 active:scale-95 shadow-sm ${
+                    isFollowing
+                      ? "border border-outline text-on-surface hover:border-error hover:text-error hover:bg-error-container/20"
+                      : "bg-primary text-on-primary hover:bg-primary-container hover:shadow-md"
+                  }`}
+                >
                 {actionLoadingId === profile.id ? (
                   <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
                 ) : isFollowing ? (
@@ -603,7 +693,51 @@ export default function Profile() {
                     <span>Theo dõi</span>
                   </>
                 )}
-              </button>
+                </button>
+
+                {/* Message Button - Shown if following or have pending message */}
+                {isFollowing && (
+                  <button
+                    onClick={handleSendMessage}
+                    disabled={messageSending}
+                    className="px-6 py-2 rounded-full bg-secondary text-on-secondary font-bold text-label-md hover:bg-secondary-container transition-all flex items-center gap-1.5 active:scale-95 shadow-sm disabled:opacity-50"
+                    title="Gửi tin nhắn"
+                  >
+                    {messageSending ? (
+                      <span className="inline-block w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-[18px]">mail</span>
+                        <span>Nhắn tin</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* Menu Button (3 dots) */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowMenuOptions(!showMenuOptions)}
+                    className="p-2 rounded-full border border-outline text-on-surface hover:bg-surface-container transition-all"
+                    title="Thêm tùy chọn"
+                  >
+                    <span className="material-symbols-outlined">more_vert</span>
+                  </button>
+
+                  {/* Menu dropdown */}
+                  {showMenuOptions && (
+                    <div className="absolute right-0 top-full mt-2 bg-surface-container-lowest border border-outline-variant/40 rounded-lg shadow-xl z-50">
+                      <button
+                        onClick={handleToggleBlock}
+                        className="w-full px-4 py-2.5 text-left text-error hover:bg-error-container/20 flex items-center gap-2.5 text-label-md rounded-lg transition-colors first:rounded-t-lg last:rounded-b-lg"
+                      >
+                        <span className="material-symbols-outlined text-[18px]">block</span>
+                        <span>{isBlocked ? 'Bỏ chặn' : 'Chặn người dùng'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -687,7 +821,10 @@ export default function Profile() {
         </button>
 
         <button
-          onClick={() => setActiveTab("reposts")}
+          onClick={() => {
+            setActiveTab("reposts");
+            setRepostsLoaded(false); // Force reload
+          }}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
             activeTab === "reposts"
               ? "text-primary font-bold"
@@ -701,7 +838,10 @@ export default function Profile() {
         </button>
 
         <button
-          onClick={() => setActiveTab("liked")}
+          onClick={() => {
+            setActiveTab("liked");
+            setLikedPostsLoaded(false); // Force reload
+          }}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
             activeTab === "liked"
               ? "text-primary font-bold"
@@ -774,24 +914,29 @@ export default function Profile() {
                 <p className="text-body-sm">Đang tải bài viết đã đăng lại...</p>
               </div>
             ) : reposts && reposts.length > 0 ? (
-              <div className="divide-y divide-outline-variant/20">
-                {reposts.map((post) => (
-                  <PostCard
-                    key={post.id}
-                    post={{
-                      ...post,
-                      createdAt: post.createdAt
-                        ? new Date(post.createdAt).toLocaleDateString("vi-VN", {
-                            day: "numeric",
-                            month: "short",
-                          })
-                        : "Vừa xong",
-                    }}
-                    onLike={() => {}}
-                    onBookmark={() => {}}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="p-2 bg-yellow-100 text-xs">
+                  DEBUG: Found {reposts.length} reposts
+                </div>
+                <div className="divide-y divide-outline-variant/20">
+                  {reposts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={{
+                        ...post,
+                        createdAt: post.createdAt
+                          ? new Date(post.createdAt).toLocaleDateString("vi-VN", {
+                              day: "numeric",
+                              month: "short",
+                            })
+                          : "Vừa xong",
+                      }}
+                      onLike={() => {}}
+                      onBookmark={() => {}}
+                    />
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="py-16 text-center px-4">
                 <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">

@@ -237,6 +237,24 @@ public class UserService {
         return toDto(userRepository.save(user));
     }
 
+    /**
+     * Change password — validate current password, encode new one
+     */
+    public void changePassword(String userId, String currentPassword, String newPassword) {
+        User user = findUserById(userId);
+
+        // Verify current password
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new ValidationException("Mật khẩu hiện tại không chính xác");
+        }
+
+        // Encode and set new password
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setUpdatedAt(Instant.now());
+        userRepository.save(user);
+        log.info("Password changed for user: {}", userId);
+    }
+
     // ──────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────

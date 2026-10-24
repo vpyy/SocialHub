@@ -1,20 +1,55 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import notificationService from '../../services/notificationService'
+import chatService from '../../services/chatService'
+import ThemeToggle from '../ThemeToggle'
+import { useTheme } from '../../hooks/useTheme'
 
 export default function Sidebar({ user, navigate, location }) {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
   const [searchInput, setSearchInput] = useState('')
+  const [unreadNotifs, setUnreadNotifs] = useState(0)
+  const [unreadMessages, setUnreadMessages] = useState(0)
 
   const profilePath = user?.username ? `/profile/${user.username}` : '/profile/me'
 
+  // Poll unread notification count every 2s for real-time updates
+  useEffect(() => {
+    const fetchCount = async () => {
+      try {
+        const res = await notificationService.getUnreadCount()
+        setUnreadNotifs(res?.data?.count ?? res?.count ?? 0)
+      } catch { /* silent */ }
+    }
+    fetchCount()
+    const id = setInterval(fetchCount, 2000)  // Changed from 30s to 2s for real-time
+    return () => clearInterval(id)
+  }, [])
+
+  // Poll unread message count every 2s for real-time updates
+  useEffect(() => {
+    const fetchMessageCount = async () => {
+      try {
+        const res = await chatService.getConversations(0, 1000)
+        const data = res?.data ?? res
+        const convs = data?.content ?? []
+        const totalUnread = convs.reduce((sum, conv) => sum + (conv.unreadCount ?? 0), 0)
+        setUnreadMessages(totalUnread)
+      } catch { /* silent */ }
+    }
+    fetchMessageCount()
+    const id = setInterval(fetchMessageCount, 2000)
+    return () => clearInterval(id)
+  }, [])
+
   const navItems = [
-    { icon: 'home', label: 'Home', path: '/', fill: true },
-    { icon: 'tag', label: 'Explore', path: '/search', fill: false },
-    { icon: 'notifications', label: 'Notifications', path: '/notifications', fill: false, badge: '4' },
-    { icon: 'chat_bubble', label: 'Messages', path: '/messages', fill: false, badge: '2' },
-    { icon: 'bookmark', label: 'Bookmarks', path: '/bookmarks', fill: false },
-    { icon: 'person', label: 'Profile', path: profilePath, fill: false },
-    { icon: 'settings', label: 'Settings', path: '/settings', fill: false },
+    { icon: 'home',          label: 'Home',          path: '/',              fill: true  },
+    { icon: 'tag',           label: 'Explore',        path: '/search',        fill: false },
+    { icon: 'notifications', label: 'Notifications',  path: '/notifications', fill: false, badge: unreadNotifs > 0 ? String(unreadNotifs > 99 ? '99+' : unreadNotifs) : null },
+    { icon: 'chat_bubble',   label: 'Messages',       path: '/messages',      fill: false, badge: unreadMessages > 0 ? String(unreadMessages > 99 ? '99+' : unreadMessages) : null },
+    { icon: 'bookmark',      label: 'Bookmarks',      path: '/bookmarks',     fill: false },
+    { icon: 'person',        label: 'Profile',        path: profilePath,      fill: false },
+    { icon: 'settings',      label: 'Settings',       path: '/settings',      fill: false },
   ]
 
   const isActive = (path) => location.pathname === path
@@ -97,25 +132,28 @@ export default function Sidebar({ user, navigate, location }) {
       </div>
 
       {/* User Card */}
-      <div className="border-t border-outline-variant/30 pt-3 relative">
-        <div
-          onClick={() => setShowUserDropdown(!showUserDropdown)}
-          className="flex items-center justify-between p-2 rounded-2xl hover:bg-surface-container cursor-pointer transition-colors duration-150"
-        >
-          <div className="flex items-center gap-3 overflow-hidden">
-            <img
-              src={user?.avatarUrl || 'https://via.placeholder.com/40'}
-              alt={user?.displayName || 'User'}
-              className="w-10 h-10 rounded-full object-cover border border-outline-variant flex-shrink-0"
-            />
-            <div className="truncate min-w-0">
-              <p className="text-title-md font-title-md leading-tight text-on-surface truncate">
-                {user?.displayName || 'User'}
-              </p>
-              <p className="text-body-sm font-body-sm text-outline truncate">@{user?.username || 'user'}</p>
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-3 relative">
+        <div className="flex items-center justify-between px-2 py-2">
+          <ThemeToggle />
+          <div
+            onClick={() => setShowUserDropdown(!showUserDropdown)}
+            className="flex items-center justify-between p-2 rounded-2xl hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors flex-1 ml-2"
+          >
+            <div className="flex items-center gap-3 overflow-hidden">
+              <img
+                src={user?.avatarUrl || 'https://via.placeholder.com/40'}
+                alt={user?.displayName || 'User'}
+                className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-gray-700 flex-shrink-0"
+              />
+              <div className="truncate min-w-0">
+                <p className="text-sm font-semibold leading-tight text-gray-900 dark:text-white truncate">
+                  {user?.displayName || 'User'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">@{user?.username || 'user'}</p>
+              </div>
             </div>
+            <span className="ml-1">⋮</span>
           </div>
-          <span className="material-symbols-outlined text-outline flex-shrink-0">more_vert</span>
         </div>
 
         {/* Dropdown */}

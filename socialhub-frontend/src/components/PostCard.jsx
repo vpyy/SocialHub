@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import likeService from "../services/likeService";
 import commentService from "../services/commentService";
 import postService from "../services/postService";
+import bookmarkService from "../services/bookmarkService";
 import CommentItem from "./CommentItem";
 import RepostButton from "./RepostButton";
+import EngagementModal from "./EngagementModal";
 
 export default function PostCard({
   post,
@@ -19,10 +22,14 @@ export default function PostCard({
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
 
+  // Engagement modal state
+  const [engagementModal, setEngagementModal] = useState({ type: null, open: false });
+
   // Local state for optimistic updates
   const [localLiked, setLocalLiked] = useState(post.isLiked);
   const [localLikeCount, setLocalLikeCount] = useState(post.likes);
   const [localCommentCount, setLocalCommentCount] = useState(post.comments);
+  const [localBookmarked, setLocalBookmarked] = useState(post.isBookmarked ?? false);
 
   // Edit/Delete menu state
   const [showMenu, setShowMenu] = useState(false);
@@ -33,6 +40,13 @@ export default function PostCard({
   // Get current user
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
   const isAuthor = currentUser.id === post.author.id;
+  const navigate = useNavigate();
+
+  // Navigate to user profile
+  const handleProfileClick = (e) => {
+    e.stopPropagation();
+    navigate(`/profile/${post.author.username}`);
+  };
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -46,6 +60,7 @@ export default function PostCard({
 
     try {
       const response = await likeService.toggleLike(post.id);
+
       // response is ApiResponse.data → { liked, likeCount }
       const data = response?.data ?? response;
       if (data != null) {
@@ -63,6 +78,20 @@ export default function PostCard({
       setLocalLikeCount((prev) => (wasLiked ? prev + 1 : prev - 1));
     } finally {
       setIsLiking(false);
+    }
+  };
+
+  const handleBookmark = async () => {
+    const wasBookmarked = localBookmarked;
+    setLocalBookmarked(!wasBookmarked);    // optimistic
+    try {
+      const res = await bookmarkService.toggleBookmark(post.id);
+      const data = res?.data ?? res;
+      if (data?.bookmarked != null) setLocalBookmarked(data.bookmarked);
+      if (onBookmark) onBookmark(post.id);
+    } catch (err) {
+      console.error('Bookmark error:', err);
+      setLocalBookmarked(wasBookmarked);   // rollback
     }
   };
 
@@ -234,11 +263,15 @@ export default function PostCard({
           <img
             src={post.author.avatarUrl}
             alt={post.author.displayName}
-            className="w-11 h-11 rounded-full object-cover"
+            className="w-11 h-11 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={handleProfileClick}
           />
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="text-title-md font-title-md text-on-surface">
+              <span 
+                className="text-title-md font-title-md text-on-surface cursor-pointer hover:underline"
+                onClick={handleProfileClick}
+              >
                 {post.author.displayName}
               </span>
               {post.author.isVerified && (
@@ -248,7 +281,12 @@ export default function PostCard({
               )}
             </div>
             <div className="flex items-center gap-2 text-body-sm font-body-sm text-outline">
-              <span>@{post.author.username}</span>
+              <span 
+                className="cursor-pointer hover:underline"
+                onClick={handleProfileClick}
+              >
+                @{post.author.username}
+              </span>
               <span>•</span>
               <span>{post.createdAt}</span>
             </div>
@@ -355,11 +393,16 @@ export default function PostCard({
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
             />
           </svg>
-          <span
-            className={`text-sm font-semibold ${localLiked ? "text-pink-600" : "text-gray-600"}`}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setEngagementModal({ type: 'likes', open: true })
+            }}
+            className="text-sm font-semibold hover:underline"
+            style={{ color: localLiked ? '#ec4899' : '#4b5563' }}
           >
             {localLikeCount}
-          </span>
+          </button>
         </button>
 
         {/* Comment Button */}
@@ -380,9 +423,15 @@ export default function PostCard({
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
             />
           </svg>
-          <span className="text-sm font-semibold text-gray-600">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setEngagementModal({ type: 'comments', open: true })
+            }}
+            className="text-sm font-semibold text-gray-600 hover:underline"
+          >
             {localCommentCount}
-          </span>
+          </button>
         </button>
 
         {/* Repost Button */}
@@ -394,16 +443,16 @@ export default function PostCard({
 
         {/* Bookmark Button */}
         <button
-          onClick={() => onBookmark && onBookmark(post.id)}
+          onClick={handleBookmark}
           className="p-1.5 rounded-full hover:bg-yellow-50 transition-all group"
         >
           <svg
             className={`w-5 h-5 transition-colors ${
-              post.isBookmarked
+              localBookmarked
                 ? "text-yellow-500 fill-current"
                 : "text-gray-400 group-hover:text-yellow-500"
             }`}
-            fill={post.isBookmarked ? "currentColor" : "none"}
+            fill={localBookmarked ? "currentColor" : "none"}
             stroke="currentColor"
             strokeWidth="2"
             viewBox="0 0 24 24"
@@ -557,6 +606,16 @@ export default function PostCard({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Engagement Modal */}
+      {engagementModal.open && (
+        <EngagementModal
+          postId={post.id}
+          type={engagementModal.type}
+          count={engagementModal.type === 'likes' ? localLikeCount : localCommentCount}
+          onClose={() => setEngagementModal({ type: null, open: false })}
+        />
       )}
     </article>
   );

@@ -4,13 +4,16 @@ import postService from "../services/postService";
 export default function CreatePostBar({ onPostCreated }) {
   const [showModal, setShowModal] = useState(false);
   const [content, setContent] = useState("");
-  const [imageUrls, setImageUrls] = useState([]); // data: URLs or remote URLs
+  const [imageUrls, setImageUrls] = useState([]);
   const [imageUrlInput, setImageUrlInput] = useState("");
   const [videoUrl, setVideoUrl] = useState("");
   const [visibility, setVisibility] = useState("PUBLIC");
-  const [imageSize, setImageSize] = useState("medium"); // 'small' | 'medium' | 'large'
+  const [imageSize, setImageSize] = useState("medium");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  // ── Hashtag state ──
+  const [hashtagInput, setHashtagInput] = useState("");
+  const [hashtags, setHashtags] = useState([]);
   const fileInputRef = useRef(null);
 
   // ─── read user from localStorage for display ──────────────
@@ -36,16 +39,20 @@ export default function CreatePostBar({ onPostCreated }) {
         ...(videoUrl ? [{ type: "VIDEO", url: videoUrl }] : []),
       ];
 
+      // Merge explicit hashtags + tags auto-extracted from content by backend
       await postService.createPost({
         content: content.trim(),
         visibility,
         media,
+        hashtags,
       });
 
       setContent("");
       setImageUrls([]);
       setImageUrlInput("");
       setVideoUrl("");
+      setHashtags([]);
+      setHashtagInput("");
       setVisibility("PUBLIC");
       setShowModal(false);
       if (onPostCreated) onPostCreated();
@@ -139,9 +146,33 @@ export default function CreatePostBar({ onPostCreated }) {
     setImageUrls([]);
     setImageUrlInput("");
     setVideoUrl("");
+    setHashtags([]);
+    setHashtagInput("");
     setVisibility("PUBLIC");
     setShowModal(false);
   };
+
+  // ─── hashtag helpers ───────────────────────────────────────
+  const addHashtag = (raw) => {
+    const tag = raw.replace(/^#+/, "").trim().toLowerCase().replace(/\s+/g, "_");
+    if (tag && !hashtags.includes(tag)) {
+      setHashtags((prev) => [...prev, tag]);
+    }
+    setHashtagInput("");
+  };
+
+  const handleHashtagKeyDown = (e) => {
+    if (["Enter", " ", ","].includes(e.key)) {
+      e.preventDefault();
+      addHashtag(hashtagInput);
+    }
+    if (e.key === "Backspace" && !hashtagInput && hashtags.length) {
+      setHashtags((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const removeHashtag = (tag) =>
+    setHashtags((prev) => prev.filter((t) => t !== tag));
 
   // ─── render ────────────────────────────────────────────────
   return (
@@ -356,6 +387,41 @@ export default function CreatePostBar({ onPostCreated }) {
                 disabled={isSubmitting}
                 className="w-full py-2 px-4 bg-gray-50 rounded-full text-sm border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
               />
+
+              {/* Hashtag input */}
+              <div className="mt-3">
+                <div className="flex items-center gap-1.5 flex-wrap min-h-[40px] px-3 py-2 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-300 transition-all">
+                  <span className="text-indigo-400 text-sm font-bold select-none">#</span>
+                  {hashtags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="flex items-center gap-1 px-2.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium"
+                    >
+                      #{tag}
+                      <button
+                        type="button"
+                        onClick={() => removeHashtag(tag)}
+                        className="text-indigo-400 hover:text-indigo-700 leading-none"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                  <input
+                    type="text"
+                    value={hashtagInput}
+                    onChange={(e) => setHashtagInput(e.target.value)}
+                    onKeyDown={handleHashtagKeyDown}
+                    onBlur={() => hashtagInput.trim() && addHashtag(hashtagInput)}
+                    placeholder={hashtags.length === 0 ? "Thêm hashtag (Enter để xác nhận)" : ""}
+                    disabled={isSubmitting}
+                    className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-gray-400 disabled:opacity-50"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1 ml-1">
+                  Gõ hashtag + Enter hoặc Space để thêm. Backend cũng tự trích xuất #tags từ nội dung.
+                </p>
+              </div>
             </div>
 
             {/* Footer */}

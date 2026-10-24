@@ -6,9 +6,7 @@ import com.socialhub.post.dto.PostResponseDto;
 import com.socialhub.social.dto.FollowResponseDto;
 import com.socialhub.social.dto.FollowUserDto;
 import com.socialhub.social.service.FollowService;
-import com.socialhub.user.dto.UpdateProfileDto;
-import com.socialhub.user.dto.UserDto;
-import com.socialhub.user.dto.UserProfileDto;
+import com.socialhub.user.dto.*;
 import com.socialhub.user.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -118,6 +116,55 @@ public class UserController {
         String currentUserId = extractCurrentUserId(authentication);
         List<PostResponseDto> likedPosts = userService.getUserLikedPosts(id, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(likedPosts, "Liked posts retrieved successfully"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Settings Endpoints (require authentication)
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * PUT /api/users/me/password — Change Password
+     */
+    @PutMapping("/me/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest req,
+            Authentication authentication) {
+        String userId = extractCurrentUserId(authentication);
+        if (userId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        userService.changePassword(userId, req.getCurrentPassword(), req.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success(null, "Mật khẩu đã được cập nhật"));
+    }
+
+    /**
+     * PUT /api/users/me/avatar — Update Avatar URL
+     */
+    @PutMapping("/me/avatar")
+    public ResponseEntity<ApiResponse<UserDto>> updateAvatar(
+            @Valid @RequestBody UpdateAvatarRequest req,
+            Authentication authentication) {
+        String userId = extractCurrentUserId(authentication);
+        if (userId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        UserDto updated = userService.updateAvatar(userId, req.getAvatarUrl());
+        return ResponseEntity.ok(ApiResponse.success(updated, "Avatar đã được cập nhật"));
+    }
+
+    /**
+     * PUT /api/users/me/cover — Update Cover URL
+     */
+    @PutMapping("/me/cover")
+    public ResponseEntity<ApiResponse<UserDto>> updateCover(
+            @Valid @RequestBody UpdateCoverRequest req,
+            Authentication authentication) {
+        String userId = extractCurrentUserId(authentication);
+        if (userId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        UserDto updated = userService.updateCover(userId, req.getCoverUrl());
+        return ResponseEntity.ok(ApiResponse.success(updated, "Cover đã được cập nhật"));
     }
 
     // ──────────────────────────────────────────────────────
