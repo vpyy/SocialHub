@@ -1,0 +1,99 @@
+{
+  "nav": {
+    "home": "Home",
+    "explore": "Explore",
+    "notifications": "Notifications",
+    "messages": "Messages",
+    "bookmarks": "Bookmarks",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "feed": {
+    "forYou": "For You",
+    "following": "Following",
+    "createPost": "Create Post"
+  },
+  "post": {
+    "title": "Post",
+    "whatsOnMind": "What's on your mind?",
+    "visibility": "Visibility",
+    "public": "Public",
+    "followers": "Followers",
+    "onlyMe": "Only Me",
+    "posting": "Posting...",
+    "post": "Post",
+    "cancel": "Cancel",
+    "addPhoto": "Add Photo",
+    "uploading": "Uploading...",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Are you sure you want to delete this post?",
+    "likes": "Likes",
+    "comments": "Comments",
+    "shares": "Shares",
+    "bookmarks": "Bookmarks",
+    "writeComment": "Write a comment...",
+    "reply": "Reply",
+    "viewReplies": "View {{count}} replies",
+    "hideReplies": "Hide replies",
+    "loading": "Loading...",
+    "notFound": "Not Found",
+    "backToHome": "Back to Home"
+  },
+  "profile": {
+    "posts": "Posts",
+    "followers": "Followers",
+    "following": "Following",
+    "follow": "Follow",
+    "unfollow": "Unfollow",
+    "editProfile": "Edit Profile",
+    "message": "Message",
+    "joinedDate": "Joined",
+    "bio": "Bio"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "username": "Username",
+    "displayName": "Display Name",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "haveAccount": "Already have an account?",
+    "switchAccount": "Switch Account"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "confirm": "Confirm",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "search": "Search",
+    "searchPlaceholder": "Search...",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "back": "Back",
+    "more": "More",
+    "less": "Less"
+  },
+  "settings": {
+    "language": "Language",
+    "theme": "Theme",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode",
+    "notifications": "Notifications",
+    "privacy": "Privacy",
+    "account": "Account"
+  },
+  "language": {
+    "vietnamese": "Tiếng Việt",
+    "english": "English"
+  }
+}

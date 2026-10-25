@@ -67,9 +67,9 @@ export default function PostCard({
       return;
     }
     
-    // Check if post is viewable (not ONLY_ME from another user)
+    // Check if post is viewable (not PRIVATE from another user)
     const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-    if (post.visibility === "ONLY_ME" && post.author?.id !== currentUser.id) {
+    if (post.visibility === "PRIVATE" && post.author?.id !== currentUser.id) {
       // Don't navigate to posts user can't view
       return;
     }
@@ -303,11 +303,16 @@ export default function PostCard({
 
     setIsUpdating(true);
     try {
-      await postService.updatePost(post.id, {
+      const updatePayload = {
         content: editContent.trim(),
         visibility: editVisibility,
         media: editImages,
-      });
+      };
+      
+      console.log("Update payload:", updatePayload);
+      console.log("Post object:", post);
+      
+      await postService.updatePost(post.id, updatePayload);
 
       setShowEditModal(false);
 
@@ -319,6 +324,7 @@ export default function PostCard({
       window.location.reload();
     } catch (error) {
       console.error("Error updating post:", error);
+      console.error("Error response:", error.response?.data);
       alert("Không thể cập nhật bài viết. Vui lòng thử lại.");
     } finally {
       setIsUpdating(false);
@@ -354,11 +360,11 @@ export default function PostCard({
 
   return (
     <article 
-      className={`bg-white p-4 md:p-6 ${noBorder ? '' : 'border-b border-gray-100'}`}
+      className={`bg-white dark:bg-slate-950 ${noBorder ? 'p-3 md:p-4' : 'p-4 md:p-6 border-b border-gray-100 dark:border-slate-800'}`}
     >
       {/* Header */}
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2.5">
           <img
             src={post.author?.avatarUrl || 'https://via.placeholder.com/44'}
             alt={post.author?.displayName || 'User'}
@@ -453,7 +459,7 @@ export default function PostCard({
 
       {/* Content */}
       <div 
-        className="mb-3 text-[15px] text-gray-800 leading-relaxed whitespace-pre-wrap cursor-pointer hover:bg-gray-50/30 rounded-lg p-2 -mx-2 transition-colors"
+        className="mb-2 text-[15px] text-gray-900 dark:text-slate-100 leading-relaxed whitespace-pre-wrap cursor-pointer"
         onClick={handlePostClick}
       >
         {post.content}
@@ -462,31 +468,29 @@ export default function PostCard({
       {/* Media */}
       {post.imageUrl && (
         <div 
-          className="mb-3 rounded-xl overflow-hidden border border-gray-200 cursor-pointer hover:opacity-95 transition-opacity"
+          className="mb-2 rounded-lg overflow-hidden cursor-pointer bg-gray-100 dark:bg-slate-900"
           onClick={handlePostClick}
         >
           <img
             src={post.imageUrl}
             alt={post.imageCaption || "Post image"}
-            className="w-full max-h-96 object-cover"
+            className="w-full h-auto object-contain max-h-[600px]"
           />
         </div>
       )}
 
       {/* Engagement Bar */}
-      <div className="flex items-center justify-between py-3 border-t border-gray-100">
+      <div className="flex items-center justify-between py-1.5 mt-1">
         {/* Like Button */}
         <button
           onClick={handleLike}
           disabled={isLiking}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-pink-50 transition-all group disabled:opacity-50"
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group disabled:opacity-50"
         >
           <svg
-            className={`w-5 h-5 transition-all ${
-              localLiked
-                ? "text-pink-600 fill-current"
-                : "text-gray-400 group-hover:text-pink-600"
-            } ${isLiking ? "" : "group-hover:scale-110"}`}
+            className={`w-5 h-5 transition-colors ${
+              localLiked ? "text-red-500 fill-current" : "text-gray-600 dark:text-slate-400"
+            }`}
             fill={localLiked ? "currentColor" : "none"}
             stroke="currentColor"
             strokeWidth="2"
@@ -503,8 +507,7 @@ export default function PostCard({
               e.stopPropagation()
               setEngagementModal({ type: 'likes', open: true })
             }}
-            className="text-sm font-semibold hover:underline cursor-pointer"
-            style={{ color: localLiked ? '#ec4899' : '#4b5563' }}
+            className="text-sm font-medium hover:underline cursor-pointer text-gray-700 dark:text-slate-300"
           >
             {localLikeCount}
           </span>
@@ -513,10 +516,10 @@ export default function PostCard({
         {/* Comment Button */}
         <button
           onClick={loadComments}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-blue-50 transition-all group"
+          className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group"
         >
           <svg
-            className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors"
+            className="w-5 h-5 text-gray-600 dark:text-slate-400"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
@@ -533,7 +536,7 @@ export default function PostCard({
               e.stopPropagation()
               setEngagementModal({ type: 'comments', open: true })
             }}
-            className="text-sm font-semibold text-gray-600 hover:underline cursor-pointer"
+            className="text-sm font-medium hover:underline cursor-pointer text-gray-700 dark:text-slate-300"
           >
             {localCommentCount}
           </span>
@@ -549,13 +552,11 @@ export default function PostCard({
         {/* Bookmark Button */}
         <button
           onClick={handleBookmark}
-          className="p-1.5 rounded-full hover:bg-yellow-50 transition-all group"
+          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors group"
         >
           <svg
             className={`w-5 h-5 transition-colors ${
-              localBookmarked
-                ? "text-yellow-500 fill-current"
-                : "text-gray-400 group-hover:text-yellow-500"
+              localBookmarked ? "text-blue-500 fill-current" : "text-gray-600 dark:text-slate-400"
             }`}
             fill={localBookmarked ? "currentColor" : "none"}
             stroke="currentColor"
@@ -573,13 +574,13 @@ export default function PostCard({
 
       {/* Comments Section */}
       {showComments && (
-        <div className="mt-4 pt-4 border-t border-gray-100">
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-slate-800">
           {/* Comment Input */}
-          <div className="flex items-start gap-3 mb-4">
+          <div className="flex items-start gap-2.5 mb-3">
             <img
               src={currentUser.avatarUrl || "https://via.placeholder.com/32"}
               alt="You"
-              className="w-8 h-8 rounded-full object-cover ring-2 ring-gray-100"
+              className="w-8 h-8 rounded-full object-cover"
             />
             <div className="flex-1">
               <div className="relative">
@@ -595,35 +596,28 @@ export default function PostCard({
                   placeholder="Viết bình luận..."
                   disabled={isSubmittingComment}
                   rows="1"
-                  className="w-full px-4 py-2.5 bg-gray-50 rounded-2xl text-sm border border-gray-200 focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100 outline-none resize-none disabled:opacity-50 transition-all"
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-900 rounded-lg text-sm border-0 focus:bg-gray-100 dark:focus:bg-slate-800 outline-none resize-none disabled:opacity-50 transition-colors text-gray-900 dark:text-slate-100 placeholder:text-gray-500 dark:placeholder:text-slate-400"
                 />
                 <button
                   onClick={handleSubmitComment}
                   disabled={isSubmittingComment || !newComment.trim()}
-                  className="absolute right-2 bottom-2 p-1.5 rounded-full bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                  className="absolute right-3 bottom-2.5 text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
                   </svg>
                 </button>
               </div>
-              <p className="text-xs text-gray-400 mt-1 ml-1">
-                Nhấn Enter để gửi • Shift+Enter để xuống dòng
-              </p>
             </div>
           </div>
 
           {/* Comments List */}
           {isLoadingComments ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <div className="flex items-center justify-center py-6">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-300 border-t-blue-500"></div>
             </div>
           ) : comments.length > 0 ? (
-            <div className="space-y-4">
+            <div className="space-y-2.5">
               {comments
                 .filter((c) => c && c.id)
                 .map((comment) => (
@@ -711,7 +705,7 @@ export default function PostCard({
                 >
                   <option value="PUBLIC">🌍 Công khai - Mọi người có thể xem</option>
                   <option value="FOLLOWERS">👥 Người theo dõi - Chỉ người theo dõi tôi</option>
-                  <option value="ONLY_ME">🔒 Chỉ mình tôi</option>
+                  <option value="PRIVATE">🔒 Chỉ mình tôi</option>
                 </select>
               </div>
 
@@ -774,14 +768,14 @@ export default function PostCard({
               <button
                 onClick={() => setShowEditModal(false)}
                 disabled={isUpdating}
-                className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 font-medium"
+                className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 font-medium"
               >
                 Hủy
               </button>
               <button
                 onClick={handleUpdatePost}
                 disabled={isUpdating || isUploadingImage || (!editContent.trim() && editImages.length === 0)}
-                className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                className="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isUpdating ? "Đang lưu..." : "Lưu thay đổi"}
               </button>

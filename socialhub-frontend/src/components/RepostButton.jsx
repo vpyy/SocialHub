@@ -67,21 +67,19 @@ export default function RepostButton({
     <button
       onClick={handleRepost}
       disabled={loading}
-      className={`flex items-center gap-1.5 text-label-sm font-semibold transition-all ${
-        isRepostedState
-          ? "text-success"
-          : "text-outline hover:text-success hover:bg-success/10"
-      } px-3 py-1.5 rounded-full active:scale-95`}
+      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors ${
+        isRepostedState ? "text-green-600" : "text-gray-600"
+      }`}
       title={isRepostedState ? "Bỏ đăng lại" : "Đăng lại"}
     >
       {loading ? (
-        <span className="inline-block w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+        <span className="inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
       ) : (
-        <span className="material-symbols-outlined text-[18px]">
-          {isRepostedState ? "repeat_on" : "repeat"}
-        </span>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
       )}
-      {count > 0 && <span>{count}</span>}
+      {count > 0 && <span className="text-sm font-medium">{count}</span>}
     </button>
   );
 }

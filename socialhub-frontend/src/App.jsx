@@ -12,6 +12,7 @@ import Notifications from './pages/Notifications'
 import Bookmarks from './pages/Bookmarks'
 import Messages from './pages/Messages'
 import Settings from './pages/Settings'
+import './i18n/config' // Initialize i18n
 import './App.css'
 
 function App() {

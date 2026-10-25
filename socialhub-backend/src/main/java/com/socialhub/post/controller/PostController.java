@@ -84,6 +84,23 @@ public class PostController {
     }
 
     /**
+     * Get following feed
+     * GET /api/posts/following
+     */
+    @GetMapping("/following")
+    @Operation(summary = "Get following feed", description = "Get posts from users that current user follows")
+    public ResponseEntity<ApiResponse<Page<PostDto>>> getFollowingFeed(
+            @Parameter(description = "Current user ID") @RequestHeader(value = "X-User-Id", required = false, defaultValue = "temp-user-id") String currentUserId,
+            @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
+
+        log.info("GET /api/posts/following - Fetching following feed for user: {} (page: {}, size: {})", currentUserId, page, size);
+
+        Page<PostDto> feed = postService.getFollowingFeed(currentUserId, page, size);
+        return ResponseEntity.ok(ApiResponse.success(feed, "Following feed retrieved successfully"));
+    }
+
+    /**
      * Get post by ID
      * GET /api/posts/{id}
      */
