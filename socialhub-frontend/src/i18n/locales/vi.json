@@ -1,0 +1,99 @@
+{
+  "nav": {
+    "home": "Trang chủ",
+    "explore": "Khám phá",
+    "notifications": "Thông báo",
+    "messages": "Tin nhắn",
+    "bookmarks": "Đã lưu",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt"
+  },
+  "feed": {
+    "forYou": "Dành cho bạn",
+    "following": "Đang theo dõi",
+    "createPost": "Tạo bài viết"
+  },
+  "post": {
+    "title": "Bài viết",
+    "whatsOnMind": "Bạn đang nghĩ gì?",
+    "visibility": "Chế độ hiển thị",
+    "public": "Công khai",
+    "followers": "Người theo dõi",
+    "onlyMe": "Chỉ mình tôi",
+    "posting": "Đang đăng...",
+    "post": "Đăng",
+    "cancel": "Hủy",
+    "addPhoto": "Thêm ảnh",
+    "uploading": "Đang tải...",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa",
+    "deleteConfirm": "Bạn có chắc chắn muốn xóa bài viết này?",
+    "likes": "Lượt thích",
+    "comments": "Bình luận",
+    "shares": "Chia sẻ",
+    "bookmarks": "Đã lưu",
+    "writeComment": "Viết bình luận...",
+    "reply": "Trả lời",
+    "viewReplies": "Xem {{count}} phản hồi",
+    "hideReplies": "Ẩn phản hồi",
+    "loading": "Đang tải...",
+    "notFound": "Không tìm thấy",
+    "backToHome": "Quay lại trang chủ"
+  },
+  "profile": {
+    "posts": "Bài viết",
+    "followers": "Người theo dõi",
+    "following": "Đang theo dõi",
+    "follow": "Theo dõi",
+    "unfollow": "Bỏ theo dõi",
+    "editProfile": "Chỉnh sửa hồ sơ",
+    "message": "Nhắn tin",
+    "joinedDate": "Đã tham gia",
+    "bio": "Tiểu sử"
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "logout": "Đăng xuất",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "username": "Tên người dùng",
+    "displayName": "Tên hiển thị",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "forgotPassword": "Quên mật khẩu?",
+    "noAccount": "Chưa có tài khoản?",
+    "haveAccount": "Đã có tài khoản?",
+    "switchAccount": "Chuyển tài khoản"
+  },
+  "common": {
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "confirm": "Xác nhận",
+    "close": "Đóng",
+    "yes": "Có",
+    "no": "Không",
+    "search": "Tìm kiếm",
+    "searchPlaceholder": "Tìm kiếm...",
+    "loading": "Đang tải...",
+    "error": "Lỗi",
+    "success": "Thành công",
+    "back": "Quay lại",
+    "more": "Thêm",
+    "less": "Ít hơn"
+  },
+  "settings": {
+    "language": "Ngôn ngữ",
+    "theme": "Chủ đề",
+    "darkMode": "Chế độ tối",
+    "lightMode": "Chế độ sáng",
+    "notifications": "Thông báo",
+    "privacy": "Quyền riêng tư",
+    "account": "Tài khoản"
+  },
+  "language": {
+    "vietnamese": "Tiếng Việt",
+    "english": "English"
+  }
+}

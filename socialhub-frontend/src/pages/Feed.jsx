@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import PostCard from '../components/PostCard'
 import CreatePostBar from '../components/CreatePostBar'
 import postService from '../services/postService'
 import { useInfiniteScroll } from '../hooks/useInfiniteScroll'
 
 export default function Feed() {
+  const { t } = useTranslation()
   const [feedTab, setFeedTab] = useState('for-you')
   const [posts, setPosts] = useState([])
   const [user, setUser] = useState(null)
@@ -54,9 +56,11 @@ export default function Feed() {
       
       let response
       if (feedTab === 'for-you') {
+        // For You: Show all PUBLIC and FOLLOWERS posts (excluding PRIVATE from others)
         response = await postService.getFeed(page, 20)
       } else {
-        response = await postService.getPublicFeed(page, 20)
+        // Following: Show only posts from followed users
+        response = await postService.getFollowingFeed(page, 20)
       }
       
       console.log('Feed response:', response)
@@ -101,6 +105,8 @@ export default function Feed() {
       imageUrl: images.length > 0 ? images[0] : null,
       imageCaption: images.length > 0 ? 'Image' : null,
       videoUrl: videoItem ? videoItem.url : null,
+      media: backendPost.media || [], // Keep original media array for editing
+      visibility: backendPost.visibility || 'PUBLIC', // Keep original visibility
       likes: backendPost.likeCount || 0,
       comments: backendPost.commentCount || 0,
       shares: backendPost.shareCount || 0,
@@ -168,7 +174,7 @@ export default function Feed() {
   }
 
   return (
-    <section className="flex-1 w-full max-w-4xl mx-auto border-r border-gray-200 dark:border-gray-700 min-h-screen pb-20 flex flex-col bg-white dark:bg-gray-950">
+    <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-700 min-h-screen pb-20 flex flex-col bg-white dark:bg-gray-950">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-3 flex items-center justify-between flex-shrink-0">
         <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
@@ -187,7 +193,7 @@ export default function Feed() {
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
           >
-            For You
+            {t('feed.forYou')}
           </button>
           <button
             onClick={() => handleTabChange('following')}
@@ -197,7 +203,7 @@ export default function Feed() {
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
             }`}
           >
-            Following
+            {t('feed.following')}
           </button>
         </div>
 

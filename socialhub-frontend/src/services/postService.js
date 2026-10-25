@@ -68,6 +68,23 @@ const postService = {
   },
 
   /**
+   * Get following feed (posts from followed users only)
+   * @param {number} page - Page number (0-indexed)
+   * @param {number} size - Number of posts per page
+   * @returns {Promise<Object>} Paginated following feed data
+   */
+  getFollowingFeed: async (page = 0, size = 20) => {
+    try {
+      const response = await apiClient.get('/posts/following', {
+        params: { page, size }
+      });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  /**
    * Get post by ID
    * @param {string} postId - Post ID
    * @returns {Promise<Object>} Post data

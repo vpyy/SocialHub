@@ -7,6 +7,7 @@ import com.socialhub.post.dto.CreatePostRequest;
 import com.socialhub.post.dto.PostDto;
 import com.socialhub.post.dto.UpdatePostRequest;
 import com.socialhub.post.repository.PostRepository;
+import com.socialhub.social.repository.FollowRepository;
 import com.socialhub.user.document.User;
 import com.socialhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +37,7 @@ public class PostService {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
+    private final FollowRepository followRepository;
     
     private static final List<String> VALID_VISIBILITIES = Arrays.asList("PUBLIC", "FOLLOWERS", "PRIVATE");
     private static final int MAX_MEDIA_COUNT = 10;
@@ -300,6 +303,49 @@ public class PostService {
             User author = userRepository.findById(post.getAuthorId()).orElse(null);
             return convertToDto(post, author);
         });
+    }
+
+    /**
+     * Get following feed - posts from users that current user follows
+     * Shows PUBLIC and FOLLOWERS posts from followed users only
+     */
+    public Page<PostDto> getFollowingFeed(String currentUserId, int page, int size) {
+        log.info("Fetching following feed for user: {} (page: {}, size: {})", currentUserId, page, size);
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        // Get current user
+        User currentUser = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + currentUserId));
+
+        // Get list of users that current user follows
+        List<String> followingIds = followRepository.findFollowingIdsByFollowerId(currentUserId)
+                .stream()
+                .map(follow -> follow.getFollowingId())
+                .collect(Collectors.toList());
+        
+        if (followingIds.isEmpty()) {
+            // User doesn't follow anyone, return empty feed
+            return Page.empty(pageable);
+        }
+
+        // Fetch more posts to ensure enough results after filtering
+        Pageable fetchPageable = PageRequest.of(0, size * 3, Sort.by("createdAt").descending());
+        Page<Post> allPosts = postRepository.findAll(fetchPageable);
+
+        // Filter posts: only from followed users, and PUBLIC or FOLLOWERS visibility
+        List<PostDto> filteredPosts = allPosts.getContent().stream()
+                .filter(post -> followingIds.contains(post.getAuthorId())) // Only posts from followed users
+                .filter(post -> "PUBLIC".equals(post.getVisibility()) || "FOLLOWERS".equals(post.getVisibility())) // PUBLIC or FOLLOWERS only
+                .map(post -> {
+                    User author = userRepository.findById(post.getAuthorId()).orElse(null);
+                    return convertToDto(post, author);
+                })
+                .filter(postDto -> postDto != null)
+                .limit(size)
+                .collect(Collectors.toList());
+
+        return new PageImpl<>(filteredPosts, pageable, filteredPosts.size());
     }
 
     // ============================================================

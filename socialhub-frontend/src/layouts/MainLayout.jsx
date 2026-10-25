@@ -35,8 +35,8 @@ export default function MainLayout() {
   }
 
   return (
-    <div className="w-full flex justify-center min-h-screen">
-      <div className="w-full max-w-[1400px] flex min-h-screen">
+    <div className="w-full flex min-h-screen bg-gray-50">
+      <div className="w-full flex min-h-screen">
         <Sidebar user={user} navigate={navigate} location={location} />
         <main className="flex-1 flex">
           <Outlet />

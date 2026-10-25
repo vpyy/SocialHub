@@ -65,6 +65,7 @@ public class SecurityConfig {
 
                 // Public read-only endpoints
                 .requestMatchers(HttpMethod.GET, "/api/posts/public").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/posts/following").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/posts/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/posts/search").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/search").permitAll()
