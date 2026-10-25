@@ -7,11 +7,47 @@ import { useTheme } from '../../hooks/useTheme'
 
 export default function Sidebar({ user, navigate, location }) {
   const [showUserDropdown, setShowUserDropdown] = useState(false)
+  const [showSwitchAccountModal, setShowSwitchAccountModal] = useState(false)
   const [searchInput, setSearchInput] = useState('')
   const [unreadNotifs, setUnreadNotifs] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
+  const [savedAccounts, setSavedAccounts] = useState([])
 
   const profilePath = user?.username ? `/profile/${user.username}` : '/profile/me'
+
+  // Load saved accounts from localStorage
+  useEffect(() => {
+    const accounts = JSON.parse(localStorage.getItem('savedAccounts') || '[]')
+    setSavedAccounts(accounts)
+  }, [])
+
+  // Save current account to savedAccounts if not already saved
+  useEffect(() => {
+    if (user?.id) {
+      const accounts = JSON.parse(localStorage.getItem('savedAccounts') || '[]')
+      const existingIndex = accounts.findIndex(acc => acc.id === user.id)
+      
+      const currentAccountData = {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+        token: localStorage.getItem('token'),
+        lastUsed: Date.now()
+      }
+
+      if (existingIndex >= 0) {
+        // Update existing account
+        accounts[existingIndex] = currentAccountData
+      } else {
+        // Add new account
+        accounts.push(currentAccountData)
+      }
+
+      localStorage.setItem('savedAccounts', JSON.stringify(accounts))
+      setSavedAccounts(accounts)
+    }
+  }, [user])
 
   // Poll unread notification count every 2s for real-time updates
   useEffect(() => {
@@ -54,7 +90,63 @@ export default function Sidebar({ user, navigate, location }) {
 
   const isActive = (path) => location.pathname === path
 
+  const handleGoToProfile = () => {
+    setShowUserDropdown(false)
+    navigate(profilePath)
+  }
+
+  const handleSwitchAccount = () => {
+    setShowUserDropdown(false)
+    setShowSwitchAccountModal(true)
+  }
+
+  const handleSelectAccount = (account) => {
+    // Switch to selected account
+    localStorage.setItem('token', account.token)
+    localStorage.setItem('user', JSON.stringify({
+      id: account.id,
+      username: account.username,
+      displayName: account.displayName,
+      avatarUrl: account.avatarUrl
+    }))
+    
+    // Update last used time
+    const accounts = JSON.parse(localStorage.getItem('savedAccounts') || '[]')
+    const updatedAccounts = accounts.map(acc => 
+      acc.id === account.id ? { ...acc, lastUsed: Date.now() } : acc
+    )
+    localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts))
+    
+    // Reload page to refresh with new account
+    window.location.href = '/'
+  }
+
+  const handleRemoveAccount = (accountId, e) => {
+    e.stopPropagation()
+    
+    if (accountId === user?.id) {
+      alert('Không thể xóa tài khoản đang sử dụng')
+      return
+    }
+
+    if (!confirm('Bạn có chắc muốn xóa tài khoản này khỏi danh sách?')) {
+      return
+    }
+
+    const accounts = JSON.parse(localStorage.getItem('savedAccounts') || '[]')
+    const updatedAccounts = accounts.filter(acc => acc.id !== accountId)
+    localStorage.setItem('savedAccounts', JSON.stringify(updatedAccounts))
+    setSavedAccounts(updatedAccounts)
+  }
+
+  const handleAddNewAccount = () => {
+    setShowSwitchAccountModal(false)
+    // Don't clear current account data, just navigate to login
+    navigate('/login?add=true')
+  }
+
   const handleLogout = () => {
+    // Don't remove from savedAccounts, just logout
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     navigate('/login')
@@ -159,11 +251,17 @@ export default function Sidebar({ user, navigate, location }) {
         {/* Dropdown */}
         {showUserDropdown && (
           <div className="absolute bottom-16 left-0 right-0 bg-surface-container-lowest border border-outline-variant/40 rounded-2xl shadow-xl p-2 flex flex-col gap-1 z-40">
-            <button className="flex items-center gap-2.5 px-3 py-2 text-label-md font-label-md text-on-surface hover:bg-surface-container rounded-xl transition-colors">
+            <button 
+              onClick={handleGoToProfile}
+              className="flex items-center gap-2.5 px-3 py-2 text-label-md font-label-md text-on-surface hover:bg-surface-container rounded-xl transition-colors"
+            >
               <span className="material-symbols-outlined text-outline">badge</span>
               <span>Hồ sơ tác giả</span>
             </button>
-            <button className="flex items-center gap-2.5 px-3 py-2 text-label-md font-label-md text-on-surface hover:bg-surface-container rounded-xl transition-colors">
+            <button 
+              onClick={handleSwitchAccount}
+              className="flex items-center gap-2.5 px-3 py-2 text-label-md font-label-md text-on-surface hover:bg-surface-container rounded-xl transition-colors"
+            >
               <span className="material-symbols-outlined text-outline">switch_account</span>
               <span>Chuyển tài khoản</span>
             </button>
@@ -178,6 +276,86 @@ export default function Sidebar({ user, navigate, location }) {
           </div>
         )}
       </div>
+
+      {/* Switch Account Modal */}
+      {showSwitchAccountModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowSwitchAccountModal(false)}>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                Chuyển tài khoản
+              </h2>
+              <button
+                onClick={() => setShowSwitchAccountModal(false)}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+              >
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-4 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-2">
+                {savedAccounts
+                  .sort((a, b) => b.lastUsed - a.lastUsed)
+                  .map((account) => (
+                    <div
+                      key={account.id}
+                      onClick={() => handleSelectAccount(account)}
+                      className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                        account.id === user?.id
+                          ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500'
+                          : 'hover:bg-gray-100 dark:hover:bg-gray-700 border-2 border-transparent'
+                      }`}
+                    >
+                      <img
+                        src={account.avatarUrl || 'https://via.placeholder.com/48'}
+                        alt={account.displayName}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                          {account.displayName}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                          @{account.username}
+                        </p>
+                      </div>
+                      {account.id === user?.id && (
+                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded-full">
+                          Đang dùng
+                        </span>
+                      )}
+                      {account.id !== user?.id && (
+                        <button
+                          onClick={(e) => handleRemoveAccount(account.id, e)}
+                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                          title="Xóa tài khoản"
+                        >
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  ))}
+              </div>
+
+              {/* Add New Account Button */}
+              <button
+                onClick={handleAddNewAccount}
+                className="w-full mt-4 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                <span className="font-medium">Thêm tài khoản mới</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }
