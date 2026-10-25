@@ -12,6 +12,7 @@ import com.socialhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -224,21 +225,50 @@ public class PostService {
         User currentUser = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + currentUserId));
 
-        // TODO: Get list of followed user IDs when Social feature is implemented
-        // For now, show user's own posts and all public posts
-        List<String> followingIds = new ArrayList<>();
-        followingIds.add(currentUserId); // Add current user to see their own posts
+        // Get more posts to account for filtering (fetch 3x to ensure enough results)
+        Pageable fetchPageable = PageRequest.of(0, size * 3, Sort.by("createdAt").descending());
+        Page<Post> allPosts = postRepository.findAll(fetchPageable);
 
-        // Fetch posts from followed users and public posts
-        List<String> visibilities = Arrays.asList("PUBLIC", "FOLLOWERS");
-        Page<Post> posts = postRepository.findByAuthorIdInAndVisibilityInOrderByCreatedAtDesc(
-                followingIds, visibilities, pageable);
+        // Filter and convert posts based on visibility rules
+        List<PostDto> filteredPosts = allPosts.getContent().stream()
+                .map(post -> {
+                    User author = userRepository.findById(post.getAuthorId()).orElse(null);
+                    
+                    // Skip if author not found
+                    if (author == null) {
+                        return null;
+                    }
 
-        // Convert to DTOs with author information
-        return posts.map(post -> {
-            User author = userRepository.findById(post.getAuthorId()).orElse(null);
-            return convertToDto(post, author);
-        });
+                    // Rule 1: User can see all their own posts
+                    if (post.getAuthorId().equals(currentUserId)) {
+                        return convertToDto(post, author);
+                    }
+
+                    // Rule 2: Everyone can see PUBLIC posts
+                    if ("PUBLIC".equals(post.getVisibility())) {
+                        return convertToDto(post, author);
+                    }
+
+                    // Rule 3: ONLY_ME posts are only visible to the author
+                    if ("ONLY_ME".equals(post.getVisibility())) {
+                        return null; // Hide from other users
+                    }
+
+                    // Rule 4: FOLLOWERS posts - TODO: check if current user follows the author
+                    // For now, show FOLLOWERS posts to everyone (will be fixed when Follow feature is implemented)
+                    if ("FOLLOWERS".equals(post.getVisibility())) {
+                        return convertToDto(post, author);
+                    }
+
+                    // Default: hide the post
+                    return null;
+                })
+                .filter(postDto -> postDto != null)
+                .limit(size)
+                .collect(Collectors.toList());
+
+        // Create a Page from the filtered list
+        return new PageImpl<>(filteredPosts, pageable, filteredPosts.size());
     }
 
     /**

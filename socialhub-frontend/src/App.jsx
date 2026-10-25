@@ -6,6 +6,7 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Feed from './pages/Feed'
 import Profile from './pages/Profile'
+import PostDetail from './pages/PostDetail'
 import Search from './pages/Search'
 import Notifications from './pages/Notifications'
 import Bookmarks from './pages/Bookmarks'
@@ -25,6 +26,7 @@ function App() {
           {/* Protected Routes — guarded by MainLayout */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Feed />} />
+            <Route path="/post/:id" element={<PostDetail />} />
             <Route path="/profile/:username" element={<Profile />} />
             <Route path="/search" element={<Search />} />
             <Route path="/notifications" element={<Notifications />} />

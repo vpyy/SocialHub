@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import likeService from "../services/likeService";
 import commentService from "../services/commentService";
@@ -14,8 +14,10 @@ export default function PostCard({
   onBookmark,
   onUpdate,
   onDelete,
+  showCommentsDefault = false,
+  noBorder = false,
 }) {
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(showCommentsDefault);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -35,11 +37,14 @@ export default function PostCard({
   const [showMenu, setShowMenu] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editContent, setEditContent] = useState(post.content);
+  const [editVisibility, setEditVisibility] = useState(post.visibility || "PUBLIC");
+  const [editImages, setEditImages] = useState(post.media || []);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Get current user
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const isAuthor = currentUser.id === post.author.id;
+  const isAuthor = currentUser.id === post.author?.id;
   const navigate = useNavigate();
 
   // Navigate to user profile
@@ -47,6 +52,48 @@ export default function PostCard({
     e.stopPropagation();
     navigate(`/profile/${post.author.username}`);
   };
+
+  // Navigate to post detail
+  const handlePostClick = (e) => {
+    e.stopPropagation();
+    
+    // Don't navigate if clicking on interactive elements
+    if (
+      e.target.closest('button') ||
+      e.target.closest('a') ||
+      e.target.closest('input') ||
+      e.target.closest('textarea')
+    ) {
+      return;
+    }
+    
+    // Check if post is viewable (not ONLY_ME from another user)
+    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (post.visibility === "ONLY_ME" && post.author?.id !== currentUser.id) {
+      // Don't navigate to posts user can't view
+      return;
+    }
+    
+    navigate(`/post/${post.id}`);
+  };
+
+  // Auto-load comments if showCommentsDefault is true
+  useEffect(() => {
+    if (showCommentsDefault) {
+      setShowComments(true);
+    }
+  }, [showCommentsDefault]);
+
+  // Early return if post or author data is invalid
+  if (!post || !post.author) {
+    return (
+      <article className="bg-white border-b border-gray-100 p-4 md:p-6">
+        <div className="text-center text-gray-500 py-8">
+          <p>Không thể hiển thị bài viết này</p>
+        </div>
+      </article>
+    );
+  }
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -195,14 +242,62 @@ export default function PostCard({
   // Handle edit post
   const handleEditPost = () => {
     setEditContent(post.content);
+    setEditVisibility(post.visibility || "PUBLIC");
+    setEditImages(post.media || []);
     setShowEditModal(true);
     setShowMenu(false);
   };
 
+  // Handle upload image for edit
+  const handleEditImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Vui lòng chọn file hình ảnh");
+      return;
+    }
+
+    setIsUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await fetch("https://api.imgur.com/3/image", {
+        method: "POST",
+        headers: {
+          Authorization: "Client-ID a18f7b37088b840",
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        const newImage = {
+          type: "IMAGE",
+          url: data.data.link,
+        };
+        setEditImages([...editImages, newImage]);
+      } else {
+        alert("Upload hình ảnh thất bại");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      alert("Lỗi khi upload hình ảnh");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
+  // Handle remove image from edit
+  const handleRemoveEditImage = (index) => {
+    setEditImages(editImages.filter((_, i) => i !== index));
+  };
+
   // Handle update post
   const handleUpdatePost = async () => {
-    if (!editContent.trim()) {
-      alert("Nội dung không được để trống");
+    if (!editContent.trim() && editImages.length === 0) {
+      alert("Bài viết phải có nội dung hoặc hình ảnh");
       return;
     }
 
@@ -210,7 +305,8 @@ export default function PostCard({
     try {
       await postService.updatePost(post.id, {
         content: editContent.trim(),
-        visibility: post.privacy.toUpperCase(),
+        visibility: editVisibility,
+        media: editImages,
       });
 
       setShowEditModal(false);
@@ -220,6 +316,7 @@ export default function PostCard({
       }
 
       alert("Cập nhật bài viết thành công!");
+      window.location.reload();
     } catch (error) {
       console.error("Error updating post:", error);
       alert("Không thể cập nhật bài viết. Vui lòng thử lại.");
@@ -256,13 +353,15 @@ export default function PostCard({
   };
 
   return (
-    <article className="bg-white border-b border-gray-100 hover:bg-gray-50/50 transition-colors duration-200 p-4 md:p-6">
+    <article 
+      className={`bg-white p-4 md:p-6 ${noBorder ? '' : 'border-b border-gray-100'}`}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <img
-            src={post.author.avatarUrl}
-            alt={post.author.displayName}
+            src={post.author?.avatarUrl || 'https://via.placeholder.com/44'}
+            alt={post.author?.displayName || 'User'}
             className="w-11 h-11 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
             onClick={handleProfileClick}
           />
@@ -272,9 +371,9 @@ export default function PostCard({
                 className="text-title-md font-title-md text-on-surface cursor-pointer hover:underline"
                 onClick={handleProfileClick}
               >
-                {post.author.displayName}
+                {post.author?.displayName || 'Unknown User'}
               </span>
-              {post.author.isVerified && (
+              {post.author?.isVerified && (
                 <span className="material-symbols-outlined fill-icon text-primary text-[18px]">
                   verified
                 </span>
@@ -285,7 +384,7 @@ export default function PostCard({
                 className="cursor-pointer hover:underline"
                 onClick={handleProfileClick}
               >
-                @{post.author.username}
+                @{post.author?.username || 'unknown'}
               </span>
               <span>•</span>
               <span>{post.createdAt}</span>
@@ -353,17 +452,23 @@ export default function PostCard({
       </div>
 
       {/* Content */}
-      <div className="mb-3 text-[15px] text-gray-800 leading-relaxed whitespace-pre-wrap">
+      <div 
+        className="mb-3 text-[15px] text-gray-800 leading-relaxed whitespace-pre-wrap cursor-pointer hover:bg-gray-50/30 rounded-lg p-2 -mx-2 transition-colors"
+        onClick={handlePostClick}
+      >
         {post.content}
       </div>
 
       {/* Media */}
       {post.imageUrl && (
-        <div className="mb-3 rounded-xl overflow-hidden border border-gray-200">
+        <div 
+          className="mb-3 rounded-xl overflow-hidden border border-gray-200 cursor-pointer hover:opacity-95 transition-opacity"
+          onClick={handlePostClick}
+        >
           <img
             src={post.imageUrl}
             alt={post.imageCaption || "Post image"}
-            className="w-full max-h-96 object-cover cursor-pointer hover:opacity-95 transition-opacity"
+            className="w-full max-h-96 object-cover"
           />
         </div>
       )}
@@ -393,16 +498,16 @@ export default function PostCard({
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
             />
           </svg>
-          <button
+          <span
             onClick={(e) => {
               e.stopPropagation()
               setEngagementModal({ type: 'likes', open: true })
             }}
-            className="text-sm font-semibold hover:underline"
+            className="text-sm font-semibold hover:underline cursor-pointer"
             style={{ color: localLiked ? '#ec4899' : '#4b5563' }}
           >
             {localLikeCount}
-          </button>
+          </span>
         </button>
 
         {/* Comment Button */}
@@ -423,15 +528,15 @@ export default function PostCard({
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
             />
           </svg>
-          <button
+          <span
             onClick={(e) => {
               e.stopPropagation()
               setEngagementModal({ type: 'comments', open: true })
             }}
-            className="text-sm font-semibold text-gray-600 hover:underline"
+            className="text-sm font-semibold text-gray-600 hover:underline cursor-pointer"
           >
             {localCommentCount}
-          </button>
+          </span>
         </button>
 
         {/* Repost Button */}
@@ -558,8 +663,8 @@ export default function PostCard({
       {/* Edit Post Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full shadow-2xl">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="bg-white rounded-2xl max-w-2xl w-full shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-gray-200 flex items-center justify-between sticky top-0 bg-white z-10">
               <h2 className="text-xl font-bold text-gray-900">
                 Chỉnh sửa bài viết
               </h2>
@@ -578,17 +683,94 @@ export default function PostCard({
               </button>
             </div>
 
-            <div className="p-4">
-              <textarea
-                value={editContent}
-                onChange={(e) => setEditContent(e.target.value)}
-                placeholder="Nội dung bài viết..."
-                disabled={isUpdating}
-                className="w-full min-h-[150px] p-3 bg-gray-50 text-gray-800 text-base resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg border border-gray-200 disabled:opacity-50"
-              />
+            <div className="p-4 space-y-4">
+              {/* Content Textarea */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nội dung
+                </label>
+                <textarea
+                  value={editContent}
+                  onChange={(e) => setEditContent(e.target.value)}
+                  placeholder="Bạn đang nghĩ gì?"
+                  disabled={isUpdating}
+                  className="w-full min-h-[150px] p-3 bg-gray-50 text-gray-800 text-base resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg border border-gray-200 disabled:opacity-50"
+                />
+              </div>
+
+              {/* Visibility Selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ai có thể xem bài viết này?
+                </label>
+                <select
+                  value={editVisibility}
+                  onChange={(e) => setEditVisibility(e.target.value)}
+                  disabled={isUpdating}
+                  className="w-full p-3 bg-gray-50 text-gray-800 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg border border-gray-200 disabled:opacity-50"
+                >
+                  <option value="PUBLIC">🌍 Công khai - Mọi người có thể xem</option>
+                  <option value="FOLLOWERS">👥 Người theo dõi - Chỉ người theo dõi tôi</option>
+                  <option value="ONLY_ME">🔒 Chỉ mình tôi</option>
+                </select>
+              </div>
+
+              {/* Current Images */}
+              {editImages.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Hình ảnh
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {editImages.map((img, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={img.url}
+                          alt={`Image ${index + 1}`}
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                        <button
+                          onClick={() => handleRemoveEditImage(index)}
+                          disabled={isUpdating}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Upload Image Button */}
+              <div>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleEditImageUpload}
+                  id="edit-image-upload"
+                  className="hidden"
+                  disabled={isUpdating || isUploadingImage}
+                />
+                <label
+                  htmlFor="edit-image-upload"
+                  className={`inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors cursor-pointer ${
+                    (isUpdating || isUploadingImage) ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                >
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="text-sm font-medium text-gray-700">
+                    {isUploadingImage ? "Đang tải lên..." : "Thêm hình ảnh"}
+                  </span>
+                </label>
+              </div>
             </div>
 
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2 sticky bottom-0 bg-white">
               <button
                 onClick={() => setShowEditModal(false)}
                 disabled={isUpdating}
@@ -598,7 +780,7 @@ export default function PostCard({
               </button>
               <button
                 onClick={handleUpdatePost}
-                disabled={isUpdating || !editContent.trim()}
+                disabled={isUpdating || isUploadingImage || (!editContent.trim() && editImages.length === 0)}
                 className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isUpdating ? "Đang lưu..." : "Lưu thay đổi"}
