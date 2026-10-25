@@ -165,6 +165,28 @@ public class UserService {
 
         List<Object> postDtos = new ArrayList<>();
         for (Post p : posts) {
+            // Filter posts based on visibility and viewer
+            boolean canView = false;
+            
+            if (isSelf) {
+                // User can see all their own posts
+                canView = true;
+            } else if ("PUBLIC".equals(p.getVisibility())) {
+                // Everyone can see public posts
+                canView = true;
+            } else if ("FOLLOWERS".equals(p.getVisibility()) && isFollowing) {
+                // Only followers can see FOLLOWERS posts
+                canView = true;
+            } else if ("ONLY_ME".equals(p.getVisibility())) {
+                // Only author can see ONLY_ME posts
+                canView = false;
+            }
+            
+            // Skip if current user cannot view this post
+            if (!canView) {
+                continue;
+            }
+
             String imageUrl = (p.getMedia() != null && !p.getMedia().isEmpty()) ? p.getMedia().get(0).getUrl() : null;
             postDtos.add(PostResponseDto.builder()
                     .id(p.getId())
