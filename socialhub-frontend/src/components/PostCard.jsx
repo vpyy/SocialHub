@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import likeService from "../services/likeService";
 import commentService from "../services/commentService";
@@ -14,8 +14,10 @@ export default function PostCard({
   onBookmark,
   onUpdate,
   onDelete,
+  showCommentsDefault = false,
+  noBorder = false,
 }) {
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(showCommentsDefault);
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
@@ -42,7 +44,7 @@ export default function PostCard({
 
   // Get current user
   const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const isAuthor = currentUser.id === post.author.id;
+  const isAuthor = currentUser.id === post.author?.id;
   const navigate = useNavigate();
 
   // Navigate to user profile
@@ -50,6 +52,48 @@ export default function PostCard({
     e.stopPropagation();
     navigate(`/profile/${post.author.username}`);
   };
+
+  // Navigate to post detail
+  const handlePostClick = (e) => {
+    e.stopPropagation();
+    
+    // Don't navigate if clicking on interactive elements
+    if (
+      e.target.closest('button') ||
+      e.target.closest('a') ||
+      e.target.closest('input') ||
+      e.target.closest('textarea')
+    ) {
+      return;
+    }
+    
+    // Check if post is viewable (not ONLY_ME from another user)
+    const currentUser = JSON.parse(localStorage.getItem("user") || "{}");
+    if (post.visibility === "ONLY_ME" && post.author?.id !== currentUser.id) {
+      // Don't navigate to posts user can't view
+      return;
+    }
+    
+    navigate(`/post/${post.id}`);
+  };
+
+  // Auto-load comments if showCommentsDefault is true
+  useEffect(() => {
+    if (showCommentsDefault) {
+      setShowComments(true);
+    }
+  }, [showCommentsDefault]);
+
+  // Early return if post or author data is invalid
+  if (!post || !post.author) {
+    return (
+      <article className="bg-white border-b border-gray-100 p-4 md:p-6">
+        <div className="text-center text-gray-500 py-8">
+          <p>Không thể hiển thị bài viết này</p>
+        </div>
+      </article>
+    );
+  }
 
   const handleLike = async () => {
     if (isLiking) return;
@@ -309,13 +353,15 @@ export default function PostCard({
   };
 
   return (
-    <article className="bg-white border-b border-gray-100 hover:bg-gray-50/50 transition-colors duration-200 p-4 md:p-6">
+    <article 
+      className={`bg-white p-4 md:p-6 ${noBorder ? '' : 'border-b border-gray-100'}`}
+    >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <img
-            src={post.author.avatarUrl}
-            alt={post.author.displayName}
+            src={post.author?.avatarUrl || 'https://via.placeholder.com/44'}
+            alt={post.author?.displayName || 'User'}
             className="w-11 h-11 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity"
             onClick={handleProfileClick}
           />
@@ -325,9 +371,9 @@ export default function PostCard({
                 className="text-title-md font-title-md text-on-surface cursor-pointer hover:underline"
                 onClick={handleProfileClick}
               >
-                {post.author.displayName}
+                {post.author?.displayName || 'Unknown User'}
               </span>
-              {post.author.isVerified && (
+              {post.author?.isVerified && (
                 <span className="material-symbols-outlined fill-icon text-primary text-[18px]">
                   verified
                 </span>
@@ -338,7 +384,7 @@ export default function PostCard({
                 className="cursor-pointer hover:underline"
                 onClick={handleProfileClick}
               >
-                @{post.author.username}
+                @{post.author?.username || 'unknown'}
               </span>
               <span>•</span>
               <span>{post.createdAt}</span>
@@ -406,17 +452,23 @@ export default function PostCard({
       </div>
 
       {/* Content */}
-      <div className="mb-3 text-[15px] text-gray-800 leading-relaxed whitespace-pre-wrap">
+      <div 
+        className="mb-3 text-[15px] text-gray-800 leading-relaxed whitespace-pre-wrap cursor-pointer hover:bg-gray-50/30 rounded-lg p-2 -mx-2 transition-colors"
+        onClick={handlePostClick}
+      >
         {post.content}
       </div>
 
       {/* Media */}
       {post.imageUrl && (
-        <div className="mb-3 rounded-xl overflow-hidden border border-gray-200">
+        <div 
+          className="mb-3 rounded-xl overflow-hidden border border-gray-200 cursor-pointer hover:opacity-95 transition-opacity"
+          onClick={handlePostClick}
+        >
           <img
             src={post.imageUrl}
             alt={post.imageCaption || "Post image"}
-            className="w-full max-h-96 object-cover cursor-pointer hover:opacity-95 transition-opacity"
+            className="w-full max-h-96 object-cover"
           />
         </div>
       )}
@@ -446,16 +498,16 @@ export default function PostCard({
               d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
             />
           </svg>
-          <button
+          <span
             onClick={(e) => {
               e.stopPropagation()
               setEngagementModal({ type: 'likes', open: true })
             }}
-            className="text-sm font-semibold hover:underline"
+            className="text-sm font-semibold hover:underline cursor-pointer"
             style={{ color: localLiked ? '#ec4899' : '#4b5563' }}
           >
             {localLikeCount}
-          </button>
+          </span>
         </button>
 
         {/* Comment Button */}
@@ -476,15 +528,15 @@ export default function PostCard({
               d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
             />
           </svg>
-          <button
+          <span
             onClick={(e) => {
               e.stopPropagation()
               setEngagementModal({ type: 'comments', open: true })
             }}
-            className="text-sm font-semibold text-gray-600 hover:underline"
+            className="text-sm font-semibold text-gray-600 hover:underline cursor-pointer"
           >
             {localCommentCount}
-          </button>
+          </span>
         </button>
 
         {/* Repost Button */}
