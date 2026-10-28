@@ -75,21 +75,21 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f8faff] via-white to-[#f1f5f9] flex">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8faff] via-white to-[#f1f5f9] dark:from-slate-950 dark:via-slate-900 dark:to-slate-900 flex">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-6 right-6 max-w-xs px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2 z-50 ${
           toast.type === 'success' 
-            ? 'bg-emerald-50 border border-emerald-200' 
-            : 'bg-red-50 border border-red-200'
+            ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800' 
+            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
         }`}>
           <span className={`material-symbols-outlined text-[20px] ${
-            toast.type === 'success' ? 'text-emerald-600' : 'text-red-600'
+            toast.type === 'success' ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
           }`}>
             {toast.type === 'success' ? 'check_circle' : 'error'}
           </span>
           <p className={`text-sm font-medium ${
-            toast.type === 'success' ? 'text-emerald-900' : 'text-red-900'
+            toast.type === 'success' ? 'text-emerald-900 dark:text-emerald-200' : 'text-red-900 dark:text-red-200'
           }`}>
             {toast.message}
           </p>
@@ -97,8 +97,8 @@ export default function Register() {
       )}
 
       {/* Animated Background */}
-      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-tr from-indigo-200/30 via-purple-100/20 to-pink-100/20 rounded-full blur-3xl pointer-events-none -z-10"></div>
-      <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-indigo-100/20 rounded-full blur-3xl pointer-events-none -z-10"></div>
+      <div className="fixed top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-gradient-to-tr from-indigo-200/30 via-purple-100/20 to-pink-100/20 dark:from-indigo-900/20 dark:via-purple-800/10 dark:to-pink-900/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
+      <div className="fixed bottom-0 right-0 w-[400px] h-[400px] bg-indigo-100/20 dark:bg-indigo-900/10 rounded-full blur-3xl pointer-events-none -z-10"></div>
 
       {/* Left Side - Form (Full Width) */}
       <div className="flex-1 flex flex-col justify-center px-6 md:px-8 py-12">
@@ -109,50 +109,50 @@ export default function Register() {
               <span className="material-symbols-outlined text-[22px]">hub</span>
             </div>
             <div>
-              <p className="text-xl font-extrabold text-slate-900">SocialHub</p>
-              <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Mạng xã hội thu nhỏ</p>
+              <p className="text-xl font-extrabold text-slate-900 dark:text-white">SocialHub</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider font-semibold">Mạng xã hội thu nhỏ</p>
             </div>
           </div>
 
           {/* Heading */}
           <div className="mb-8">
-            <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Tạo tài khoản</h1>
-            <p className="text-slate-500 text-sm">Tham gia SocialHub và kết nối với bạn bè ngay hôm nay</p>
+            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white mb-2">Tạo tài khoản</h1>
+            <p className="text-slate-500 dark:text-slate-400 text-sm">Tham gia SocialHub và kết nối với bạn bè ngay hôm nay</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleRegister} className="space-y-3.5 mb-6">
             {/* Full Name */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">Họ và tên</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Họ và tên</label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[20px]">badge</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 text-[20px]">badge</span>
                 <input
                   type="text"
                   name="displayName"
                   value={formData.displayName}
                   onChange={handleChange}
                   placeholder="Ví dụ: Hoàng Minh"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/15 outline-none transition text-sm text-slate-800 placeholder:text-slate-400"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/15 dark:focus:ring-indigo-500/15 outline-none transition text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   disabled={loading}
                   required
                 />
               </div>
-              <p className="text-xs text-slate-500">Username sẽ tự tạo từ tên của bạn</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Username sẽ tự tạo từ tên của bạn</p>
             </div>
 
             {/* Email */}
             <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">Email</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Email</label>
               <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[20px]">mail</span>
+                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 text-[20px]">mail</span>
                 <input
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="name@email.com"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/15 outline-none transition text-sm text-slate-800 placeholder:text-slate-400"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/15 dark:focus:ring-indigo-500/15 outline-none transition text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                   disabled={loading}
                   required
                 />
@@ -162,23 +162,23 @@ export default function Register() {
             {/* Password & Confirm (Grid 2 cột) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">Mật khẩu</label>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Mật khẩu</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[18px]">key</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 text-[18px]">key</span>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Tối thiểu 8 ký tự"
-                    className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/15 outline-none transition text-sm text-slate-800 placeholder:text-slate-400"
+                    className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/15 dark:focus:ring-indigo-500/15 outline-none transition text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     disabled={loading}
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 transition"
                   >
                     <span className="material-symbols-outlined text-[18px]">
                       {showPassword ? 'visibility_off' : 'visibility'}
@@ -187,23 +187,23 @@ export default function Register() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wide">Xác nhận mật khẩu</label>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wide">Xác nhận mật khẩu</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[18px]">check_circle</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 text-[18px]">check_circle</span>
                   <input
                     type={showConfirm ? 'text' : 'password'}
                     name="passwordConfirm"
                     value={formData.passwordConfirm}
                     onChange={handleChange}
                     placeholder="Nhập lại mật khẩu"
-                    className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-indigo-600 focus:ring-2 focus:ring-indigo-600/15 outline-none transition text-sm text-slate-800 placeholder:text-slate-400"
+                    className="w-full pl-9 pr-9 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:bg-white dark:focus:bg-slate-700 focus:border-indigo-600 dark:focus:border-indigo-500 focus:ring-2 focus:ring-indigo-600/15 dark:focus:ring-indigo-500/15 outline-none transition text-sm text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                     disabled={loading}
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-400 transition"
                   >
                     <span className="material-symbols-outlined text-[18px]">
                       {showConfirm ? 'visibility_off' : 'visibility'}
@@ -216,9 +216,9 @@ export default function Register() {
             {/* Terms */}
             <div className="pt-1">
               <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                <input type="checkbox" required className="mt-0.5 w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30" />
-                <span className="text-xs text-slate-600 leading-snug">
-                  Tôi đồng ý với <a className="text-indigo-600 font-semibold hover:underline" href="#">Điều khoản dịch vụ</a> và <a className="text-indigo-600 font-semibold hover:underline" href="#">Chính sách quyền riêng tư</a> của SocialHub.
+                <input type="checkbox" required className="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-indigo-600 dark:text-indigo-500 focus:ring-indigo-500/30 dark:focus:ring-indigo-400/30 dark:bg-slate-800" />
+                <span className="text-xs text-slate-600 dark:text-slate-400 leading-snug">
+                  Tôi đồng ý với <a className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline" href="#">Điều khoản dịch vụ</a> và <a className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline" href="#">Chính sách quyền riêng tư</a> của SocialHub.
                 </span>
               </label>
             </div>
@@ -227,7 +227,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:shadow-lg hover:shadow-indigo-500/25 disabled:opacity-50 text-white py-3 px-5 rounded-xl font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all mt-2"
+              className="w-full bg-gradient-to-r from-indigo-500 to-purple-500 hover:shadow-lg hover:shadow-indigo-500/25 dark:from-indigo-600 dark:to-purple-600 dark:hover:shadow-indigo-600/25 disabled:opacity-50 text-white py-3 px-5 rounded-xl font-bold text-sm shadow-md flex items-center justify-center gap-2 transition-all mt-2"
             >
               <span>{loading ? 'Đang tạo tài khoản...' : 'Tạo tài khoản SocialHub'}</span>
               {!loading && <span className="material-symbols-outlined text-[18px]">arrow_forward</span>}
@@ -235,12 +235,12 @@ export default function Register() {
           </form>
 
           {/* Switch to Login */}
-          <div className="text-center pt-3 border-t border-slate-200">
-            <p className="text-xs text-slate-500">
+          <div className="text-center pt-3 border-t border-slate-200 dark:border-slate-700">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Đã có tài khoản?
               <button
                 onClick={() => navigate('/login')}
-                className="text-indigo-600 font-bold hover:underline ml-1"
+                className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline ml-1"
               >
                 Đăng nhập
               </button>

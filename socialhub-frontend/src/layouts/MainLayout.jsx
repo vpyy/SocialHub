@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom'
-import Sidebar from '../components/common/Sidebar'
+import ResponsiveLayout from './ResponsiveLayout'
 
 export default function MainLayout() {
   const navigate  = useNavigate()
@@ -23,7 +23,7 @@ export default function MainLayout() {
 
   if (loading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-[#faf8ff]">
+      <div className="w-full h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-950">
         <div className="w-8 h-8 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
       </div>
     )
@@ -35,13 +35,8 @@ export default function MainLayout() {
   }
 
   return (
-    <div className="w-full flex min-h-screen bg-gray-50">
-      <div className="w-full flex min-h-screen">
-        <Sidebar user={user} navigate={navigate} location={location} />
-        <main className="flex-1 flex">
-          <Outlet />
-        </main>
-      </div>
-    </div>
+    <ResponsiveLayout user={user} navigate={navigate}>
+      <Outlet />
+    </ResponsiveLayout>
   )
 }

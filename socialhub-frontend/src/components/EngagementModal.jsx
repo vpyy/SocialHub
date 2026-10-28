@@ -42,13 +42,13 @@ export default function EngagementModal({ postId, type, count, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl max-h-96 flex flex-col">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full shadow-2xl max-h-96 flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between shrink-0">
-          <h2 className="text-lg font-bold text-gray-900">{getTitle()}</h2>
+        <div className="p-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between shrink-0">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-slate-100">{getTitle()}</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded-full transition-colors"
+            className="text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 p-1 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-full transition-colors"
           >
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
               <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
@@ -63,13 +63,13 @@ export default function EngagementModal({ postId, type, count, onClose }) {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
             </div>
           ) : error ? (
-            <div className="text-center py-8 text-red-500">{error}</div>
+            <div className="text-center py-8 text-red-500 dark:text-red-400">{error}</div>
           ) : users.length > 0 ? (
             <div className="space-y-2">
               {users.map((user) => (
                 <div
                   key={user.userId || user.id}
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
                 >
                   <img
                     src={user.avatarUrl || 'https://via.placeholder.com/32'}
@@ -77,10 +77,10 @@ export default function EngagementModal({ postId, type, count, onClose }) {
                     className="w-8 h-8 rounded-full object-cover"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">
                       {user.displayName}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">
+                    <p className="text-xs text-gray-500 dark:text-slate-400 truncate">
                       @{user.username}
                     </p>
                   </div>
@@ -89,7 +89,7 @@ export default function EngagementModal({ postId, type, count, onClose }) {
             </div>
           ) : (
             <div className="text-center py-8">
-              <p className="text-sm text-gray-500">Chưa có {getTitle().toLowerCase()}</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400">Chưa có {getTitle().toLowerCase()}</p>
             </div>
           )}
         </div>

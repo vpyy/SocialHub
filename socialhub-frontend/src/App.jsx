@@ -1,6 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { ThemeProvider } from './context/ThemeContext'
+import { ToastProvider } from './context/ToastContext'
+import ErrorBoundary from './components/ui/ErrorBoundary'
 import MainLayout from './layouts/MainLayout'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -17,30 +19,34 @@ import './App.css'
 
 function App() {
   return (
-    <ThemeProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <Routes>
-          {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ToastProvider>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Routes>
+              {/* Auth Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
-          {/* Protected Routes — guarded by MainLayout */}
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<Feed />} />
-            <Route path="/post/:id" element={<PostDetail />} />
-            <Route path="/profile/:username" element={<Profile />} />
-            <Route path="/search" element={<Search />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/bookmarks" element={<Bookmarks />} />
-            <Route path="/messages" element={<Messages />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
+              {/* Protected Routes — guarded by MainLayout */}
+              <Route element={<MainLayout />}>
+                <Route path="/" element={<Feed />} />
+                <Route path="/post/:id" element={<PostDetail />} />
+                <Route path="/profile/:username" element={<Profile />} />
+                <Route path="/search" element={<Search />} />
+                <Route path="/notifications" element={<Notifications />} />
+                <Route path="/bookmarks" element={<Bookmarks />} />
+                <Route path="/messages" element={<Messages />} />
+                <Route path="/settings" element={<Settings />} />
+              </Route>
 
-          {/* Catch all */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Router>
-    </ThemeProvider>
+              {/* Catch all */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </Router>
+        </ToastProvider>
+      </ThemeProvider>
+    </ErrorBoundary>
   )
 }
 

@@ -43,7 +43,7 @@ function Avatar({ src, name, size = 10 }) {
   
   return src
     ? <img src={src} alt={name} className={`${sizeClass} rounded-full object-cover shrink-0`} />
-    : <div className={`${sizeClass} rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0`}>{initials}</div>
+    : <div className={`${sizeClass} rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0`}>{initials}</div>
 }
 
 function NotificationItem({ notif, onRead, navigate }) {
@@ -65,31 +65,31 @@ function NotificationItem({ notif, onRead, navigate }) {
   return (
     <div
       onClick={handleClick}
-      className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-50 ${!notif.isRead ? 'bg-indigo-50/40' : ''}`}
+      className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-slate-800 border-b border-gray-50 dark:border-slate-700 ${!notif.isRead ? 'bg-indigo-50/40 dark:bg-indigo-900/20' : ''}`}
     >
       {/* Actor avatar + type icon */}
       <div className="relative shrink-0 mt-0.5">
         <Avatar src={notif.actorAvatarUrl} name={notif.actorDisplayName} size={10} />
-        <span className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full ${meta.bg} flex items-center justify-center`}>
-          <span className={`material-symbols-outlined text-[13px] ${meta.color}`}>{meta.icon}</span>
+        <span className={`absolute -bottom-1 -right-1 w-5 h-5 rounded-full ${meta.bg} dark:${meta.bg.replace('bg-', 'dark:bg-')}/20 flex items-center justify-center`}>
+          <span className={`material-symbols-outlined text-[13px] ${meta.color} dark:${meta.color.replace('text-', 'dark:text-')}`}>{meta.icon}</span>
         </span>
       </div>
 
       {/* Text */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-800 leading-snug">
+        <p className="text-sm text-gray-800 dark:text-slate-200 leading-snug">
           <span className="font-semibold">{notif.actorDisplayName || notif.actorUsername || 'Ai đó'}</span>
           {' '}{meta.label}
         </p>
         {notif.postContentPreview && (
-          <p className="text-xs text-gray-400 mt-0.5 truncate">"{notif.postContentPreview}"</p>
+          <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 truncate">"{notif.postContentPreview}"</p>
         )}
-        <p className="text-xs text-gray-400 mt-1">{formatTime(notif.createdAt)}</p>
+        <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">{formatTime(notif.createdAt)}</p>
       </div>
 
       {/* Unread dot */}
       {!notif.isRead && (
-        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 shrink-0 mt-1.5" />
+        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 dark:bg-indigo-400 shrink-0 mt-1.5" />
       )}
     </div>
   )
@@ -97,11 +97,11 @@ function NotificationItem({ notif, onRead, navigate }) {
 
 function SkeletonRow() {
   return (
-    <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50 animate-pulse">
-      <div className="w-10 h-10 rounded-full bg-gray-100 shrink-0" />
+    <div className="flex items-center gap-3 px-4 py-3.5 border-b border-gray-50 dark:border-slate-700 animate-pulse">
+      <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-700 shrink-0" />
       <div className="flex-1 space-y-2">
-        <div className="h-3 bg-gray-100 rounded w-3/4" />
-        <div className="h-3 bg-gray-100 rounded w-1/2" />
+        <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-3/4" />
+        <div className="h-3 bg-gray-100 dark:bg-slate-700 rounded w-1/2" />
       </div>
     </div>
   )
@@ -165,26 +165,26 @@ export default function Notifications() {
     : notifications
 
   return (
-    <section className="flex-1 max-w-[650px] border-r border-gray-100 min-h-screen flex flex-col">
+    <section className="flex-1 max-w-[650px] border-r border-gray-100 dark:border-slate-700 min-h-screen flex flex-col bg-white dark:bg-slate-950">
 
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-gray-900">Thông báo</h1>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white">Thông báo</h1>
           {unreadCount > 0 && (
-            <span className="px-2 py-0.5 bg-indigo-600 text-white text-xs font-bold rounded-full">
+            <span className="px-2 py-0.5 bg-indigo-600 dark:bg-indigo-500 text-white text-xs font-bold rounded-full">
               {unreadCount > 99 ? '99+' : unreadCount}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2">
           {/* Filter tabs */}
-          <div className="flex rounded-full bg-gray-100 p-0.5 text-xs">
+          <div className="flex rounded-full bg-gray-100 dark:bg-slate-800 p-0.5 text-xs">
             {['all','unread'].map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-3 py-1 rounded-full font-medium transition-all ${filter === f ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}
+                className={`px-3 py-1 rounded-full font-medium transition-all ${filter === f ? 'bg-white dark:bg-slate-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 dark:text-slate-400'}`}
               >
                 {f === 'all' ? 'Tất cả' : 'Chưa đọc'}
               </button>
@@ -193,7 +193,7 @@ export default function Notifications() {
           {unreadCount > 0 && (
             <button
               onClick={handleMarkAllRead}
-              className="text-xs text-indigo-600 hover:underline font-medium"
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
             >
               Đọc hết
             </button>

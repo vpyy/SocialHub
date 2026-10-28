@@ -52,21 +52,21 @@ export default function CommentItem({ comment, onDelete, onReply, currentUserId,
         <img
           src={comment.authorAvatarUrl || 'https://via.placeholder.com/32'}
           alt={comment.authorDisplayName}
-          className="w-8 h-8 rounded-full object-cover flex-shrink-0 border-2 border-white shadow-sm"
+          className="w-8 h-8 rounded-full object-cover flex-shrink-0 border-2 border-white dark:border-slate-700 shadow-sm"
         />
 
         <div className="flex-1">
           {/* Comment bubble */}
-          <div className="bg-gray-100 hover:bg-gray-200 transition-colors p-3 rounded-2xl rounded-tl-md">
+          <div className="bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors p-3 rounded-2xl rounded-tl-md">
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-semibold text-sm text-gray-900">
+              <span className="font-semibold text-sm text-gray-900 dark:text-slate-100">
                 {comment.authorDisplayName || comment.authorUsername || 'Unknown User'}
               </span>
-              <span className="text-gray-500 text-xs">
+              <span className="text-gray-500 dark:text-slate-400 text-xs">
                 {formatTimestamp(comment.createdAt)}
               </span>
             </div>
-            <p className="text-gray-800 text-sm leading-relaxed whitespace-pre-wrap">
+            <p className="text-gray-800 dark:text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
               {comment.content}
             </p>
           </div>
@@ -76,7 +76,7 @@ export default function CommentItem({ comment, onDelete, onReply, currentUserId,
             {!isReply && (
               <button
                 onClick={() => setShowReplyInput(!showReplyInput)}
-                className="text-xs text-blue-600 hover:text-blue-700 font-semibold transition-colors"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-semibold transition-colors"
               >
                 Trả lời
               </button>
@@ -85,7 +85,7 @@ export default function CommentItem({ comment, onDelete, onReply, currentUserId,
             {isAuthor && (
               <button
                 onClick={() => onDelete(comment.id)}
-                className="text-xs text-red-600 hover:text-red-700 font-semibold transition-colors"
+                className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-semibold transition-colors"
               >
                 Xóa
               </button>
@@ -94,7 +94,7 @@ export default function CommentItem({ comment, onDelete, onReply, currentUserId,
             {hasReplies && (
               <button
                 onClick={() => setShowReplies(!showReplies)}
-                className="text-xs text-gray-600 hover:text-gray-800 font-semibold transition-colors"
+                className="text-xs text-gray-600 dark:text-slate-400 hover:text-gray-800 dark:hover:text-slate-200 font-semibold transition-colors"
               >
                 {showReplies ? '▼ Ẩn' : '▶ Hiện'} {comment.replies.length} phản hồi
               </button>
@@ -107,7 +107,7 @@ export default function CommentItem({ comment, onDelete, onReply, currentUserId,
               <img
                 src="https://via.placeholder.com/32"
                 alt="Current user"
-                className="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm"
+                className="w-8 h-8 rounded-full object-cover border-2 border-white dark:border-slate-700 shadow-sm"
               />
               <div className="flex-1 relative">
                 <input
@@ -117,7 +117,7 @@ export default function CommentItem({ comment, onDelete, onReply, currentUserId,
                   onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmitReply()}
                   placeholder="Viết phản hồi..."
                   disabled={isSubmitting}
-                  className="w-full py-2 pl-4 pr-12 bg-white rounded-full text-sm border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50 transition-all"
+                  className="w-full py-2 pl-4 pr-12 bg-white dark:bg-slate-800 rounded-full text-sm border border-gray-300 dark:border-slate-600 text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 disabled:bg-gray-50 dark:disabled:bg-slate-700 transition-all"
                 />
                 <button
                   onClick={handleSubmitReply}

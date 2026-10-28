@@ -67,8 +67,8 @@ export default function RepostButton({
     <button
       onClick={handleRepost}
       disabled={loading}
-      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-100 transition-colors ${
-        isRepostedState ? "text-green-600" : "text-gray-600"
+      className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors ${
+        isRepostedState ? "text-green-600 dark:text-green-400" : "text-gray-600 dark:text-slate-400"
       }`}
       title={isRepostedState ? "Bỏ đăng lại" : "Đăng lại"}
     >
@@ -79,7 +79,7 @@ export default function RepostButton({
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
       )}
-      {count > 0 && <span className="text-sm font-medium">{count}</span>}
+      {count > 0 && <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{count}</span>}
     </button>
   );
 }

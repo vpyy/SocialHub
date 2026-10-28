@@ -1,6 +1,26 @@
-# SocialHub Frontend
+**SocialHub - Creator Network Platform**
+**Role:** Full-Stack Developer (Solo Project) | 10/2026 – Ongoing
 
-React + Vite + Tailwind CSS frontend cho SocialHub - Creator Network
+A scalable social media platform enabling creators to share content, engage with followers, and build communities with real-time messaging and notifications.
+
+Delivered 40+ RESTful endpoints with JWT authentication and RBAC for 3 user roles with comprehensive UI/UX optimization.
+Implemented 7 core features: Posts, Comments, Likes, Reposts, Bookmarks, Messaging, Notifications with real-time WebSocket (<100ms latency).
+Built responsive UI with harmonious design system (375px–1920px), complete dark mode, and 60fps animations with WCAG AA accessibility.
+Integrated optimistic UI updates, prefers-reduced-motion support, and i18n (Vietnamese/English).
+
+**Java 17
+Spring Boot 3.2
+Spring Security
+MySQL 8.0
+WebSocket/STOMP
+React 18.2
+Vite 5.0
+React Router 6
+Tailwind CSS 3.4
+TypeScript
+Axios**
+
+---
 
 ## 🚀 Quick Start
 
