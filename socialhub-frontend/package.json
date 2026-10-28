@@ -12,10 +12,10 @@
   "dependencies": {
     "@stomp/stompjs": "^7.5.0",
     "axios": "^1.6.0",
-    "i18next": "^26.5.10",
+    "i18next": "^26.5.11",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-i18next": "^17.1.8",
+    "react-i18next": "^17.1.9",
     "react-router-dom": "^6.20.0",
     "sockjs-client": "^1.6.1"
   },
