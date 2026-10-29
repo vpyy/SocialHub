@@ -589,45 +589,48 @@ export default function Profile() {
   const isFollowing = Boolean(profile.isFollowing);
 
   return (
-    <section className="flex-1 w-full max-w-4xl mx-auto border-r border-gray-200 dark:border-slate-700 min-h-screen pb-20 flex flex-col bg-white dark:bg-slate-950">
-      {/* Header bar */}
-      <div className="sticky top-0 z-20 bg-surface/85 backdrop-blur-md border-b border-outline-variant/30 px-4 md:px-6 py-2.5 flex items-center gap-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 rounded-full hover:bg-surface-container transition-colors text-on-surface"
-          title="Quay lại"
-        >
-          <span className="material-symbols-outlined">arrow_back</span>
-        </button>
-        <div>
-          <h1 className="text-title-md font-bold text-on-surface leading-tight flex items-center gap-1.5">
-            {profile.displayName || profile.username}
-          </h1>
-          <p className="text-body-sm text-outline">
-            {profile.postsCount ?? (profile.posts?.length || 0)} bài viết
-          </p>
+    <section className="flex-1 w-full max-w-4xl mx-auto border-r border-gray-200 dark:border-slate-700 flex flex-col overflow-hidden bg-white dark:bg-slate-950">
+      {/* Header bar - sticky */}
+      <div className="flex-shrink-0 sticky top-0 z-30 bg-surface/95 backdrop-blur-md border-b border-outline-variant/30 px-4 md:px-6 py-2.5 flex items-center gap-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 rounded-full hover:bg-surface-container transition-colors text-on-surface"
+            title="Quay lại"
+          >
+            <span className="material-symbols-outlined">arrow_back</span>
+          </button>
+          <div>
+            <h1 className="text-title-md font-bold text-on-surface leading-tight flex items-center gap-1.5">
+              {profile.displayName || profile.username}
+            </h1>
+            <p className="text-body-sm text-outline">
+              {profile.postsCount ?? (profile.posts?.length || 0)} bài viết
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Cover banner */}
-      <div className="relative h-48 md:h-56 bg-surface-container-high overflow-hidden select-none">
-        {profile.coverUrl ? (
-          <img
-            src={profile.coverUrl}
-            alt="Cover"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-r from-[#4648d4]/30 via-[#6b38d4]/20 to-[#dae2fd] flex items-center justify-center">
-            <span className="material-symbols-outlined text-outline/40 text-[64px]">
-              image
-            </span>
-          </div>
-        )}
-      </div>
+      {/* Scrollable area: Cover + Profile Info + Tabs + Content */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Cover banner */}
+        <div className="relative h-48 md:h-56 bg-surface-container-high overflow-hidden select-none flex-shrink-0">
+          {profile.coverUrl ? (
+            <img
+              src={profile.coverUrl}
+              alt="Cover"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-r from-[#4648d4]/30 via-[#6b38d4]/20 to-[#dae2fd] flex items-center justify-center">
+              <span className="material-symbols-outlined text-outline/40 text-[64px]">
+                image
+              </span>
+            </div>
+          )}
+        </div>
 
-      {/* Profile info section */}
-      <div className="px-4 md:px-6 relative pb-4 border-b border-outline-variant/30">
+        {/* Profile info section */}
+        <div className="px-4 md:px-6 relative pb-4 border-b border-outline-variant/30">
         {/* Avatar & Action Button Row */}
         <div className="flex items-end justify-between -mt-16 md:-mt-20 mb-4">
           <div className="relative group">
@@ -804,8 +807,10 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* 3 Tabs Bar */}
-      <div className="flex border-b border-outline-variant/30 sticky top-[57px] bg-surface/95 backdrop-blur-md z-10">
+      {/* Bottom section: Tabs + Content - Flex to fill remaining space */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* 3 Tabs Bar */}
+        <div className="flex border-b border-outline-variant/30 flex-shrink-0 bg-surface/95 backdrop-blur-md z-10">
         <button
           onClick={() => setActiveTab("posts")}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
@@ -856,7 +861,7 @@ export default function Profile() {
       </div>
 
       {/* Tab Content */}
-      <div className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         {/* ─── TAB 1: BÀI VIẾT ─── */}
         {activeTab === "posts" && (
           <div>

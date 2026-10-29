@@ -174,9 +174,9 @@ export default function Feed() {
   }
 
   return (
-    <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-700 min-h-screen pb-20 flex flex-col bg-white dark:bg-gray-950">
-      {/* Header */}
-      <header className="sticky top-0 z-20 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-3 flex items-center justify-between flex-shrink-0">
+    <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden bg-white dark:bg-gray-950">
+      {/* Header - Fixed at top */}
+      <header className="flex-shrink-0 sticky top-0 z-20 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-3 flex items-center justify-between">
         <h1 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white hidden sm:block">
           {user?.displayName ? `Welcome, ${user.displayName}` : 'Home Feed'}
         </h1>
@@ -215,76 +215,86 @@ export default function Feed() {
         </button>
       </header>
 
-      {/* Create Post Bar */}
-      <CreatePostBar onPostCreated={handlePostCreated} />
+      {/* Main Content - Scrollable */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Posts Feed */}
+        <div className="flex-1 flex flex-col min-w-0">
+          {/* Create Post Bar - Fixed */}
+          <div className="flex-shrink-0 sticky top-[73px] z-10 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md">
+            <CreatePostBar onPostCreated={handlePostCreated} />
+          </div>
 
-      {/* Posts Feed - Scrollable */}
-      <div className="flex-1 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
-        {loading && posts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
-            <p className="text-gray-500 dark:text-gray-400">Đang tải...</p>
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-12 px-4">
-            <span className="text-6xl mb-4">⚠️</span>
-            <p className="text-red-600 dark:text-red-400 text-center mb-4">{error}</p>
-            <button 
-              onClick={() => fetchFeed()}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors"
-            >
-              Thử lại
-            </button>
-          </div>
-        ) : posts.length > 0 ? (
-          <>
-            {posts.map(post => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onLike={handleLike}
-                onBookmark={handleBookmark}
-                onUpdate={fetchFeed}
-                onDelete={handlePostDeleted}
-              />
-            ))}
-            {/* Infinite scroll trigger element */}
-            {hasMore && (
-              <div ref={observerTarget} className="py-8 text-center">
-                {loading ? (
-                  <div className="flex justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          {/* Posts Feed - Scrollable */}
+          <div className="flex-1 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
+            {loading && posts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+                <p className="text-gray-500 dark:text-gray-400">Đang tải...</p>
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <span className="text-6xl mb-4">⚠️</span>
+                <p className="text-red-600 dark:text-red-400 text-center mb-4">{error}</p>
+                <button 
+                  onClick={() => fetchFeed()}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-full hover:bg-indigo-700 transition-colors"
+                >
+                  Thử lại
+                </button>
+              </div>
+            ) : posts.length > 0 ? (
+              <>
+                {posts.map(post => (
+                  <PostCard
+                    key={post.id}
+                    post={post}
+                    onLike={handleLike}
+                    onBookmark={handleBookmark}
+                    onUpdate={fetchFeed}
+                    onDelete={handlePostDeleted}
+                  />
+                ))}
+                {/* Infinite scroll trigger element */}
+                {hasMore && (
+                  <div ref={observerTarget} className="py-8 text-center">
+                    {loading ? (
+                      <div className="flex justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 dark:text-gray-400">Scroll to load more...</p>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-gray-500 dark:text-gray-400">Scroll to load more...</p>
                 )}
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 px-4">
+                <span className="material-symbols-outlined text-6xl text-outline-variant/40 mb-4">inbox</span>
+                <p className="text-on-surface-variant text-center mb-2">Chưa có bài viết nào</p>
+                <p className="text-body-sm text-on-surface-variant text-center">
+                  Hãy tạo bài viết đầu tiên của bạn!
+                </p>
               </div>
             )}
-          </>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-12 px-4">
-            <span className="material-symbols-outlined text-6xl text-outline-variant/40 mb-4">inbox</span>
-            <p className="text-on-surface-variant text-center mb-2">Chưa có bài viết nào</p>
-            <p className="text-body-sm text-on-surface-variant text-center">
-              Hãy tạo bài viết đầu tiên của bạn!
-            </p>
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Right Sidebar - Hide on mobile */}
-      <div className="hidden lg:block w-80 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4 flex-shrink-0">
-        <div className="rounded-2xl bg-white dark:bg-gray-800 p-4 shadow-sm dark:shadow-lg">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
-            Có thể bạn quan tâm
-          </h3>
-          <div className="space-y-3">
-            {['#WebDevelopment', '#ReactJS', '#MongoDB', '#FullStack'].map(tag => (
-              <div key={tag} className="p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
-                <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{tag}</p>
-                <p className="text-xs text-gray-600 dark:text-gray-400">127.5K posts</p>
+        {/* Right Sidebar - Hide on mobile, scrollable */}
+        <div className="hidden lg:flex lg:w-80 border-l border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex-col flex-shrink-0">
+          <div className="p-4 overflow-y-auto">
+            <div className="rounded-2xl bg-white dark:bg-gray-800 p-4 shadow-sm dark:shadow-lg">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
+                Có thể bạn quan tâm
+              </h3>
+              <div className="space-y-3">
+                {['#WebDevelopment', '#ReactJS', '#MongoDB', '#FullStack'].map(tag => (
+                  <div key={tag} className="p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                    <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{tag}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">127.5K posts</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
           </div>
         </div>
       </div>

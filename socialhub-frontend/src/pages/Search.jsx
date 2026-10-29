@@ -75,9 +75,9 @@ export default function Search() {
   };
 
   return (
-    <section className="flex-1 max-w-[700px] border-r border-gray-200 dark:border-slate-700 min-h-screen pb-20 bg-white dark:bg-slate-950">
+    <section className="flex-1 max-w-[700px] border-r border-gray-200 dark:border-slate-700 flex flex-col overflow-hidden bg-white dark:bg-slate-950">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-white dark:bg-slate-950 bg-opacity-95 dark:bg-opacity-95 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 px-4 md:px-6 py-4">
+      <div className="flex-shrink-0 sticky top-0 z-20 bg-white dark:bg-slate-950 bg-opacity-95 dark:bg-opacity-95 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 px-4 md:px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="flex-1 relative">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -95,7 +95,7 @@ export default function Search() {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-slate-700 sticky top-16 bg-white dark:bg-slate-950 bg-opacity-95 dark:bg-opacity-95 backdrop-blur-md z-10">
+      <div className="flex border-b border-gray-200 dark:border-slate-700 flex-shrink-0 bg-white dark:bg-slate-950 bg-opacity-95 dark:bg-opacity-95 backdrop-blur-md z-10">
         <button
           onClick={() => setActiveTab("users")}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
@@ -140,7 +140,7 @@ export default function Search() {
       </div>
 
       {/* Content */}
-      <div className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         {/* Loading state */}
         {loading && (
           <div className="p-8 text-center text-gray-500 dark:text-slate-400">

@@ -269,12 +269,12 @@ export default function Messages() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <section className="flex-1 border-r border-gray-100 dark:border-slate-700 flex min-h-screen" style={{ maxWidth: 900 }}>
+    <section className="flex-1 border-r border-gray-100 dark:border-slate-700 flex overflow-hidden" style={{ maxWidth: 900 }}>
 
       {/* ── Conversation list ── */}
-      <div className="w-72 shrink-0 border-r border-gray-100 dark:border-slate-700 flex flex-col bg-white dark:bg-slate-900">
+      <div className="w-72 shrink-0 border-r border-gray-100 dark:border-slate-700 flex flex-col overflow-hidden bg-white dark:bg-slate-900">
         {/* List header */}
-        <div className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+        <div className="flex-shrink-0 sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
           <h1 className="text-lg font-bold text-gray-900 dark:text-slate-50">Tin nhắn</h1>
           <button
             onClick={() => setShowSearch(s => !s)}
@@ -287,7 +287,7 @@ export default function Messages() {
 
         {/* Search new user */}
         {showSearch && (
-          <div className="px-3 py-2 border-b border-gray-100 dark:border-slate-700">
+          <div className="flex-shrink-0 px-3 py-2 border-b border-gray-100 dark:border-slate-700">
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 dark:text-slate-500 text-[18px]">search</span>
               <input
@@ -352,7 +352,7 @@ export default function Messages() {
         ) : (
           <>
             {/* Chat header */}
-            <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
+            <div className="flex-shrink-0 bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
               <Avatar src={otherUser?.avatarUrl} name={otherUser?.displayName} size={9} />
               <div>
                 <p className="font-semibold text-gray-900 dark:text-slate-50 text-sm">{otherUser?.displayName || 'User'}</p>
@@ -385,7 +385,7 @@ export default function Messages() {
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSend} className="bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center gap-2">
+            <form onSubmit={handleSend} className="flex-shrink-0 bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center gap-2">
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}

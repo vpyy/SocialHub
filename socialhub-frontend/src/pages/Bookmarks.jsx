@@ -143,10 +143,10 @@ export default function Bookmarks() {
   }
 
   return (
-    <section className="flex-1 max-w-[750px] border-r border-gray-100 dark:border-slate-700 min-h-screen flex flex-col">
+    <section className="flex-1 max-w-[750px] border-r border-gray-100 dark:border-slate-700 flex flex-col overflow-hidden">
 
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
+      <div className="flex-shrink-0 sticky top-0 z-20 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-gray-100 dark:border-slate-700 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-indigo-600 dark:text-indigo-400">bookmarks</span>
           <h1 className="text-lg font-bold text-gray-900 dark:text-white">Đã lưu</h1>
@@ -160,7 +160,7 @@ export default function Bookmarks() {
       </div>
 
       {/* Grid */}
-      <div className="p-4 flex-1 bg-white dark:bg-slate-950">
+      <div className="p-4 flex-1 overflow-y-auto bg-white dark:bg-slate-950">
         {loading && (
           <div className="grid grid-cols-2 gap-3">
             {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
