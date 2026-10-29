@@ -3,22 +3,9 @@
 
 A scalable social media platform enabling creators to share content, engage with followers, and build communities with real-time messaging and notifications.
 
-Delivered 40+ RESTful endpoints with JWT authentication and RBAC for 3 user roles with comprehensive UI/UX optimization.
-Implemented 7 core features: Posts, Comments, Likes, Reposts, Bookmarks, Messaging, Notifications with real-time WebSocket (<100ms latency).
-Built responsive UI with harmonious design system (375px–1920px), complete dark mode, and 60fps animations with WCAG AA accessibility.
-Integrated optimistic UI updates, prefers-reduced-motion support, and i18n (Vietnamese/English).
+**Delivered:** 40+ RESTful endpoints | 7 core features (Posts, Comments, Likes, Reposts, Bookmarks, Messaging, Notifications) | WebSocket real-time chat (<100ms) | Responsive 375px–1920px | Complete dark mode (200+ classes) | 14+ animations at 60fps | WCAG AA accessibility
 
-**Java 17
-Spring Boot 3.2
-Spring Security
-MySQL 8.0
-WebSocket/STOMP
-React 18.2
-Vite 5.0
-React Router 6
-Tailwind CSS 3.4
-TypeScript
-Axios**
+**Tech Stack:** Java 17 • Spring Boot 3.2 • MySQL 8.0 • React 18.2 • Vite 5.0 • Tailwind CSS • WebSocket/STOMP
 
 ---
 
@@ -109,19 +96,31 @@ Frontend giao tiếp với backend Spring Boot qua Axios (`src/services/api.js`)
 
 ## 🎯 Features
 
-- ✅ Authentication (Login / Register)
-- ✅ Protected routes (redirect về /login nếu chưa đăng nhập)
-- ✅ Feed với tab For You / Following + phân trang
-- ✅ Tạo bài viết (text + ảnh/video)
-- ✅ Like bài viết (optimistic update)
-- ✅ Comment + nested reply
-- ✅ Chỉnh sửa / xóa bài viết của bản thân
-- ✅ Upload ảnh qua Imgur
-- ⏳ Profile page
-- ⏳ Search
-- ⏳ Notifications
-- ⏳ Messages (WebSocket)
-- ⏳ Bookmarks
+### ✅ Phase 1-5: Complete
+- Authentication (Login / Register with dark mode)
+- Protected routes (redirect về /login)
+- Feed với tab For You / Following + phân trang + dark mode
+- Create posts (text + images) + dark mode
+- Like bài viết (optimistic update) + dark mode
+- Comment + nested replies + dark mode  
+- Edit / delete posts (own only)
+- Upload ảnh via Base64
+- Profile page (follow / unfollow / followers / following)
+- Search users / posts / hashtags
+- Notifications (real-time WebSocket)
+- Messages (WebSocket chat, real-time)
+- Bookmarks (save posts)
+- Settings (profile, password, avatar, cover)
+- **Complete dark mode on 10 pages**
+- **14+ smooth animations (60fps)**
+- **WCAG AA accessibility**
+
+### 🚀 Phase 6: Ready to start
+- Toast notifications (success / error / info)
+- User feedback on actions
+
+### 🎯 Phase 10: Ready to deploy
+- Production deployment
 
 ## 📱 Responsive Design
 

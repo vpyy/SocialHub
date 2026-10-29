@@ -75,38 +75,38 @@ export default function Search() {
   };
 
   return (
-    <section className="flex-1 max-w-[700px] border-r border-outline-variant/30 min-h-screen pb-20">
+    <section className="flex-1 max-w-[700px] border-r border-gray-200 dark:border-slate-700 min-h-screen pb-20 bg-white dark:bg-slate-950">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-surface/85 backdrop-blur-md border-b border-outline-variant/30 px-4 md:px-6 py-4">
+      <div className="sticky top-0 z-20 bg-white dark:bg-slate-950 bg-opacity-95 dark:bg-opacity-95 backdrop-blur-md border-b border-gray-200 dark:border-slate-700 px-4 md:px-6 py-4">
         <div className="flex items-center gap-3">
           <div className="flex-1 relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-outline material-symbols-outlined text-[20px]">
-              search
-            </span>
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
             <input
               type="text"
               value={query}
               onChange={handleSearchChange}
               placeholder="Tìm kiếm người dùng, bài viết, hashtag..."
-              className="w-full pl-10 pr-4 py-2.5 rounded-full bg-surface-container text-on-surface placeholder-outline text-body-sm outline-none focus:bg-surface-container-high transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 rounded-full bg-gray-100 dark:bg-slate-800 text-gray-900 dark:text-slate-50 placeholder-gray-500 dark:placeholder-slate-500 text-body-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all"
             />
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-outline-variant/30 sticky top-16 bg-surface/95 backdrop-blur-md z-10">
+      <div className="flex border-b border-gray-200 dark:border-slate-700 sticky top-16 bg-white dark:bg-slate-950 bg-opacity-95 dark:bg-opacity-95 backdrop-blur-md z-10">
         <button
           onClick={() => setActiveTab("users")}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
             activeTab === "users"
-              ? "text-primary font-bold"
-              : "text-outline hover:text-on-surface hover:bg-surface-container/50"
+              ? "text-indigo-600 dark:text-indigo-400 font-bold"
+              : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800/50"
           }`}
         >
           <span>Người dùng</span>
           {activeTab === "users" && (
-            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-primary rounded-full"></div>
+            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full"></div>
           )}
         </button>
 
@@ -114,13 +114,13 @@ export default function Search() {
           onClick={() => setActiveTab("posts")}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
             activeTab === "posts"
-              ? "text-primary font-bold"
-              : "text-outline hover:text-on-surface hover:bg-surface-container/50"
+              ? "text-indigo-600 dark:text-indigo-400 font-bold"
+              : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800/50"
           }`}
         >
           <span>Bài viết</span>
           {activeTab === "posts" && (
-            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-primary rounded-full"></div>
+            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full"></div>
           )}
         </button>
 
@@ -128,13 +128,13 @@ export default function Search() {
           onClick={() => setActiveTab("hashtags")}
           className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
             activeTab === "hashtags"
-              ? "text-primary font-bold"
-              : "text-outline hover:text-on-surface hover:bg-surface-container/50"
+              ? "text-indigo-600 dark:text-indigo-400 font-bold"
+              : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800/50"
           }`}
         >
           <span>Hashtag</span>
           {activeTab === "hashtags" && (
-            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-primary rounded-full"></div>
+            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full"></div>
           )}
         </button>
       </div>
@@ -143,16 +143,16 @@ export default function Search() {
       <div className="flex-1">
         {/* Loading state */}
         {loading && (
-          <div className="p-8 text-center text-outline">
-            <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
+          <div className="p-8 text-center text-gray-500 dark:text-slate-400">
+            <div className="inline-block w-6 h-6 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mb-2"></div>
             <p className="text-body-sm">Đang tìm kiếm...</p>
           </div>
         )}
 
         {/* Error state */}
         {error && !loading && (
-          <div className="p-6 m-4 rounded-2xl bg-error-container text-on-error-container text-body-sm flex items-center gap-3">
-            <span className="material-symbols-outlined text-[20px]">error</span>
+          <div className="p-6 m-4 rounded-2xl bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-body-sm flex items-center gap-3">
+            <span>⚠️</span>
             <span>{error}</span>
           </div>
         )}
@@ -160,15 +160,13 @@ export default function Search() {
         {/* Empty state */}
         {!loading && !error && results.length === 0 && query && (
           <div className="py-16 text-center px-4">
-            <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
-              <span className="material-symbols-outlined text-[30px]">
-                search_off
-              </span>
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-400 dark:text-slate-500 mx-auto mb-3">
+              🔍
             </div>
-            <h3 className="text-base font-bold text-on-surface">
+            <h3 className="text-base font-bold text-gray-900 dark:text-slate-50">
               Không tìm thấy kết quả
             </h3>
-            <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
+            <p className="text-gray-600 dark:text-slate-400 text-sm mt-1 max-w-xs mx-auto">
               Không có{" "}
               {activeTab === "users"
                 ? "người dùng"
@@ -183,15 +181,13 @@ export default function Search() {
         {/* No search query */}
         {!loading && !error && results.length === 0 && !query && (
           <div className="py-16 text-center px-4">
-            <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
-              <span className="material-symbols-outlined text-[30px]">
-                search
-              </span>
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-400 dark:text-slate-500 mx-auto mb-3">
+              🔎
             </div>
-            <h3 className="text-base font-bold text-on-surface">
+            <h3 className="text-base font-bold text-gray-900 dark:text-slate-50">
               Hãy tìm kiếm
             </h3>
-            <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
+            <p className="text-gray-600 dark:text-slate-400 text-sm mt-1 max-w-xs mx-auto">
               Nhập từ khóa để tìm kiếm người dùng, bài viết hoặc hashtag
             </p>
           </div>
@@ -199,12 +195,12 @@ export default function Search() {
 
         {/* Users results */}
         {activeTab === "users" && !loading && results.length > 0 && (
-          <div className="divide-y divide-outline-variant/20">
+          <div className="divide-y divide-gray-200 dark:divide-slate-800">
             {results.map((user) => (
               <Link
                 key={user.id}
                 to={`/profile/${user.username}`}
-                className="p-4 hover:bg-surface-container/40 transition-colors flex items-center justify-between gap-4"
+                className="p-4 hover:bg-gray-50 dark:hover:bg-slate-900 transition-colors flex items-center justify-between gap-4"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <img
@@ -212,19 +208,19 @@ export default function Search() {
                       user.avatarUrl || "https://via.placeholder.com/48?text=U"
                     }
                     alt={user.displayName}
-                    className="w-12 h-12 rounded-full object-cover border border-outline-variant flex-shrink-0"
+                    className="w-12 h-12 rounded-full object-cover border border-gray-200 dark:border-slate-700 flex-shrink-0"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-title-md font-bold text-on-surface truncate">
+                    <p className="text-title-md font-bold text-gray-900 dark:text-slate-50 truncate">
                       {user.displayName}
                     </p>
-                    <p className="text-body-sm text-outline truncate">
+                    <p className="text-body-sm text-gray-600 dark:text-slate-400 truncate">
                       @{user.username}
                     </p>
                   </div>
                 </div>
-                <span className="material-symbols-outlined text-outline text-[24px]">
-                  arrow_forward
+                <span className="text-gray-400 dark:text-slate-500 text-[24px]">
+                  →
                 </span>
               </Link>
             ))}
@@ -233,7 +229,7 @@ export default function Search() {
 
         {/* Posts results */}
         {activeTab === "posts" && !loading && results.length > 0 && (
-          <div className="divide-y divide-outline-variant/20">
+          <div className="divide-y divide-gray-200 dark:divide-slate-800">
             {results.map((post) => (
               <PostCard
                 key={post.id}
@@ -261,7 +257,7 @@ export default function Search() {
 
         {/* Hashtags results (same as posts) */}
         {activeTab === "hashtags" && !loading && results.length > 0 && (
-          <div className="divide-y divide-outline-variant/20">
+          <div className="divide-y divide-gray-200 dark:divide-slate-800">
             {results.map((post) => (
               <PostCard
                 key={post.id}

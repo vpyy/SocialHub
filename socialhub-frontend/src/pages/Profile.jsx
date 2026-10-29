@@ -589,7 +589,7 @@ export default function Profile() {
   const isFollowing = Boolean(profile.isFollowing);
 
   return (
-    <section className="flex-1 w-full max-w-4xl mx-auto border-r border-outline-variant/30 min-h-screen pb-20 flex flex-col">
+    <section className="flex-1 w-full max-w-4xl mx-auto border-r border-gray-200 dark:border-slate-700 min-h-screen pb-20 flex flex-col bg-white dark:bg-slate-950">
       {/* Header bar */}
       <div className="sticky top-0 z-20 bg-surface/85 backdrop-blur-md border-b border-outline-variant/30 px-4 md:px-6 py-2.5 flex items-center gap-4">
         <button
