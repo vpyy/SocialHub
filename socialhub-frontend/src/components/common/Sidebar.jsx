@@ -83,7 +83,7 @@ export default function Sidebar({ user, navigate, location }) {
 
   const navItems = [
     { icon: 'home',          labelKey: 'nav.home',          path: '/',              fill: true  },
-    { icon: 'tag',           labelKey: 'nav.explore',       path: '/search',        fill: false },
+    { icon: 'search',        labelKey: 'nav.discover',      path: '/discover',      fill: false },
     { icon: 'notifications', labelKey: 'nav.notifications', path: '/notifications', fill: false, badge: unreadNotifs > 0 ? String(unreadNotifs > 99 ? '99+' : unreadNotifs) : null },
     { icon: 'chat_bubble',   labelKey: 'nav.messages',      path: '/messages',      fill: false, badge: unreadMessages > 0 ? String(unreadMessages > 99 ? '99+' : unreadMessages) : null },
     { icon: 'bookmark',      labelKey: 'nav.bookmarks',     path: '/bookmarks',     fill: false },
@@ -261,60 +261,12 @@ export default function Sidebar({ user, navigate, location }) {
         {/* Dropdown */}
         {showUserDropdown && (
           <div className="absolute bottom-16 left-0 right-0 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2 flex flex-col gap-1 z-40">
-            {/* Language Switcher */}
-            <div className="relative">
-              <button 
-                onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-xl">{currentLanguage.flag}</span>
-                  <span>{currentLanguage.name}</span>
-                </div>
-                <svg 
-                  className={`w-4 h-4 transition-transform ${showLanguageMenu ? 'rotate-180' : ''}`}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </button>
-              
-              {/* Language submenu */}
-              {showLanguageMenu && (
-                <div className="mt-1 ml-2 bg-gray-50 dark:bg-gray-900 rounded-md overflow-hidden">
-                  {languages.map((lang) => (
-                    <button
-                      key={lang.code}
-                      onClick={() => changeLanguage(lang.code)}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                        lang.code === i18n.language 
-                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' 
-                          : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
-                      }`}
-                    >
-                      <span className="text-lg">{lang.flag}</span>
-                      <span className="flex-1 text-left">{lang.name}</span>
-                      {lang.code === i18n.language && (
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <div className="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
-            
             <button 
               onClick={handleSwitchAccount}
               className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
             >
               <span className="material-symbols-outlined text-gray-600 dark:text-gray-400">switch_account</span>
-              <span>{i18n.language === 'vi' ? 'Chuyển tài khoản' : 'Switch Account'}</span>
+              <span>Chuyển tài khoản</span>
             </button>
             <div className="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
             <button
@@ -322,7 +274,7 @@ export default function Sidebar({ user, navigate, location }) {
               className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors w-full"
             >
               <span className="material-symbols-outlined">logout</span>
-              <span>{i18n.language === 'vi' ? 'Đăng xuất' : 'Logout'}</span>
+              <span>Đăng xuất</span>
             </button>
           </div>
         )}

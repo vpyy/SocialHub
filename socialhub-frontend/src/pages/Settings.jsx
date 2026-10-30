@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { useTheme } from '../hooks/useTheme'
 import userService from '../services/userService'
 
 export default function Settings() {
   const navigate = useNavigate()
+  const { i18n, t } = useTranslation()
+  const { isDark, toggleTheme } = useTheme()
+  
   const [user, setUser] = useState(null)
-  const [activeTab, setActiveTab] = useState('profile') // profile | password | avatar | cover
-
-  // Profile tab state
-  const [displayName, setDisplayName] = useState('')
-  const [bio, setBio] = useState('')
-  const [profileLoading, setProfileLoading] = useState(false)
-  const [profileError, setProfileError] = useState('')
-  const [profileSuccess, setProfileSuccess] = useState('')
+  const [activeTab, setActiveTab] = useState('display') // display | language | notifications | password
 
   // Password tab state
   const [currentPassword, setCurrentPassword] = useState('')
@@ -23,19 +21,16 @@ export default function Settings() {
   const [passwordSuccess, setPasswordSuccess] = useState('')
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false })
 
-  // Avatar tab state
-  const [avatarUrl, setAvatarUrl] = useState('')
-  const [avatarPreview, setAvatarPreview] = useState('')
-  const [avatarLoading, setAvatarLoading] = useState(false)
-  const [avatarError, setAvatarError] = useState('')
-  const [avatarSuccess, setAvatarSuccess] = useState('')
-
-  // Cover tab state
-  const [coverUrl, setCoverUrl] = useState('')
-  const [coverPreview, setCoverPreview] = useState('')
-  const [coverLoading, setCoverLoading] = useState(false)
-  const [coverError, setCoverError] = useState('')
-  const [coverSuccess, setCoverSuccess] = useState('')
+  // Notifications state
+  const [notifSettings, setNotifSettings] = useState({
+    likeNotif: true,
+    commentNotif: true,
+    followNotif: true,
+    messageNotif: true,
+  })
+  const [notifLoading, setNotifLoading] = useState(false)
+  const [notifError, setNotifError] = useState('')
+  const [notifSuccess, setNotifSuccess] = useState('')
 
   // Load user data on mount
   useEffect(() => {
@@ -44,52 +39,22 @@ export default function Settings() {
       try {
         const u = JSON.parse(raw)
         setUser(u)
-        setDisplayName(u.displayName || '')
-        setBio(u.bio || '')
-        setAvatarUrl(u.avatarUrl || '')
-        setAvatarPreview(u.avatarUrl || '')
-        setCoverUrl(u.coverUrl || '')
-        setCoverPreview(u.coverUrl || '')
       } catch (e) {
         console.error('Parse error:', e)
       }
     }
+
+    // Load notification settings from localStorage
+    const saved = localStorage.getItem('notifSettings')
+    if (saved) {
+      try {
+        setNotifSettings(JSON.parse(saved))
+      } catch (e) {
+        console.error('Parse notif settings error:', e)
+      }
+    }
   }, [])
 
-  // ── Profile handlers ──
-  const handleProfileSave = async () => {
-    if (!displayName.trim()) {
-      setProfileError('Tên hiển thị là bắt buộc')
-      return
-    }
-    if (displayName.length > 50) {
-      setProfileError('Tên hiển thị tối đa 50 ký tự')
-      return
-    }
-    if (bio.length > 500) {
-      setProfileError('Bio tối đa 500 ký tự')
-      return
-    }
-
-    setProfileLoading(true)
-    setProfileError('')
-    setProfileSuccess('')
-
-    try {
-      const res = await userService.updateProfile(displayName, bio)
-      const updated = res?.data?.data || res?.data || res
-      const newUser = { ...user, displayName: updated.displayName, bio: updated.bio }
-      localStorage.setItem('user', JSON.stringify(newUser))
-      setUser(newUser)
-      setProfileSuccess('✅ Hồ sơ đã cập nhật')
-      setTimeout(() => setProfileSuccess(''), 3000)
-    } catch (error) {
-      console.error('Error:', error)
-      setProfileError(error.response?.data?.message || 'Cập nhật thất bại. Thử lại.')
-    } finally {
-      setProfileLoading(false)
-    }
-  }
 
   // ── Password handlers ──
   const handlePasswordChange = async () => {
@@ -133,117 +98,34 @@ export default function Settings() {
     }
   }
 
-  // ── File upload handlers (Base64) ──
-  const fileToBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-
-  const handleAvatarUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setAvatarError('Chỉ hỗ trợ hình ảnh')
-      return
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setAvatarError('Tối đa 5 MB')
-      return
-    }
-
-    setAvatarLoading(true)
-    setAvatarError('')
-    try {
-      const dataUrl = await fileToBase64(file)
-      setAvatarPreview(dataUrl)
-      setAvatarUrl(dataUrl)
-      setAvatarSuccess('Preview: Nhấn Lưu để cập nhật')
-    } catch (err) {
-      setAvatarError('Lỗi đọc file')
-    } finally {
-      setAvatarLoading(false)
-    }
+  // ── Notification handlers ──
+  const handleNotifToggle = (key) => {
+    const updated = { ...notifSettings, [key]: !notifSettings[key] }
+    setNotifSettings(updated)
   }
 
-  const handleAvatarSave = async () => {
-    if (!avatarUrl) {
-      setAvatarError('Chọn ảnh trước')
-      return
-    }
-
-    setAvatarLoading(true)
-    setAvatarError('')
-    setAvatarSuccess('')
+  const handleNotifSave = async () => {
+    setNotifLoading(true)
+    setNotifError('')
+    setNotifSuccess('')
 
     try {
-      const res = await userService.updateAvatar(avatarUrl)
-      const updated = res?.data?.data || res?.data || res
-      const newUser = { ...user, avatarUrl: updated.avatarUrl }
-      localStorage.setItem('user', JSON.stringify(newUser))
-      setUser(newUser)
-      setAvatarSuccess('✅ Avatar đã cập nhật')
-      setTimeout(() => setAvatarSuccess(''), 3000)
+      // Save to localStorage (backend integration can be added later)
+      localStorage.setItem('notifSettings', JSON.stringify(notifSettings))
+      setNotifSuccess('✅ Cài đặt thông báo đã lưu')
+      setTimeout(() => setNotifSuccess(''), 3000)
     } catch (error) {
       console.error('Error:', error)
-      setAvatarError(error.response?.data?.message || 'Cập nhật thất bại. Thử lại.')
+      setNotifError('Lưu cài đặt thất bại')
     } finally {
-      setAvatarLoading(false)
+      setNotifLoading(false)
     }
   }
 
-  const handleCoverUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith('image/')) {
-      setCoverError('Chỉ hỗ trợ hình ảnh')
-      return
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setCoverError('Tối đa 10 MB')
-      return
-    }
-
-    setCoverLoading(true)
-    setCoverError('')
-    try {
-      const dataUrl = await fileToBase64(file)
-      setCoverPreview(dataUrl)
-      setCoverUrl(dataUrl)
-      setCoverSuccess('Preview: Nhấn Lưu để cập nhật')
-    } catch (err) {
-      setCoverError('Lỗi đọc file')
-    } finally {
-      setCoverLoading(false)
-    }
-  }
-
-  const handleCoverSave = async () => {
-    if (!coverUrl) {
-      setCoverError('Chọn ảnh trước')
-      return
-    }
-
-    setCoverLoading(true)
-    setCoverError('')
-    setCoverSuccess('')
-
-    try {
-      const res = await userService.updateCover(coverUrl)
-      const updated = res?.data?.data || res?.data || res
-      const newUser = { ...user, coverUrl: updated.coverUrl }
-      localStorage.setItem('user', JSON.stringify(newUser))
-      setUser(newUser)
-      setCoverSuccess('✅ Cover đã cập nhật')
-      setTimeout(() => setCoverSuccess(''), 3000)
-    } catch (error) {
-      console.error('Error:', error)
-      setCoverError(error.response?.data?.message || 'Cập nhật thất bại. Thử lại.')
-    } finally {
-      setCoverLoading(false)
-    }
+  // ── Language handler ──
+  const handleLanguageChange = (lang) => {
+    i18n.changeLanguage(lang)
+    localStorage.setItem('language', lang)
   }
 
   if (!user) {
@@ -267,10 +149,10 @@ export default function Settings() {
       {/* Tabs */}
       <div className="flex gap-0 border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 sticky top-[61px] z-10 bg-white dark:bg-gray-950 overflow-x-auto">
         {[
-          { key: 'profile', label: 'Hồ sơ' },
+          { key: 'display', label: 'Hiển thị' },
+          { key: 'language', label: 'Ngôn ngữ' },
+          { key: 'notifications', label: 'Thông báo' },
           { key: 'password', label: 'Mật khẩu' },
-          { key: 'avatar', label: 'Avatar' },
-          { key: 'cover', label: 'Cover' },
         ].map(tab => (
           <button
             key={tab.key}
@@ -288,56 +170,113 @@ export default function Settings() {
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto p-4 md:p-6">
-        {/* Profile Tab */}
-        {activeTab === 'profile' && (
+        {/* Display Tab - Dark Mode */}
+        {activeTab === 'display' && (
           <div className="max-w-2xl space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Cập nhật thông tin cá nhân</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Chế độ hiển thị</h2>
 
-            {profileError && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 text-sm rounded-lg">
-                {profileError}
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">Chế độ tối</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    {isDark ? '✅ Đang bật' : '⚪ Đang tắt'}
+                  </p>
+                </div>
+                <button
+                  onClick={toggleTheme}
+                  className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                    isDark ? 'bg-indigo-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                      isDark ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
               </div>
-            )}
-            {profileSuccess && (
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 text-sm rounded-lg">
-                {profileSuccess}
-              </div>
-            )}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Tên hiển thị
-              </label>
-              <input
-                type="text"
-                value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
-                disabled={profileLoading}
-                className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 rounded-lg text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 dark:text-white"
-              />
-              <p className="text-xs text-gray-400 mt-1">{displayName.length}/50</p>
             </div>
+          </div>
+        )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Bio
-              </label>
-              <textarea
-                value={bio}
-                onChange={e => setBio(e.target.value)}
-                disabled={profileLoading}
-                rows="4"
-                className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 rounded-lg text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none disabled:opacity-50 dark:text-white"
-              />
-              <p className="text-xs text-gray-400 mt-1">{bio.length}/500</p>
+        {/* Language Tab */}
+        {activeTab === 'language' && (
+          <div className="max-w-2xl space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Ngôn ngữ</h2>
+
+            <div className="space-y-3">
+              {[
+                { code: 'vi', name: '🇻🇳 Tiếng Việt' },
+                { code: 'en', name: '🇬🇧 English' },
+              ].map(lang => (
+                <button
+                  key={lang.code}
+                  onClick={() => handleLanguageChange(lang.code)}
+                  className={`w-full p-4 rounded-lg border-2 transition-all text-left font-medium ${
+                    i18n.language === lang.code
+                      ? 'border-indigo-600 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white hover:border-indigo-400 dark:hover:border-indigo-500'
+                  }`}
+                >
+                  {lang.name}
+                  {i18n.language === lang.code && ' ✓'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && (
+          <div className="max-w-2xl space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Cài đặt thông báo</h2>
+
+            {notifError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 text-sm rounded-lg">
+                {notifError}
+              </div>
+            )}
+            {notifSuccess && (
+              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 text-sm rounded-lg">
+                {notifSuccess}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              {[
+                { key: 'likeNotif', label: '❤️ Thích bài viết', desc: 'Nhận thông báo khi bài viết được thích' },
+                { key: 'commentNotif', label: '💬 Bình luận', desc: 'Nhận thông báo khi có bình luận mới' },
+                { key: 'followNotif', label: '👥 Người theo dõi mới', desc: 'Nhận thông báo khi có người theo dõi' },
+                { key: 'messageNotif', label: '✉️ Tin nhắn', desc: 'Nhận thông báo khi có tin nhắn mới' },
+              ].map(item => (
+                <div key={item.key} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-white">{item.label}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">{item.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => handleNotifToggle(item.key)}
+                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+                      notifSettings[item.key] ? 'bg-indigo-600' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                        notifSettings[item.key] ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
             </div>
 
             <button
-              onClick={handleProfileSave}
-              disabled={profileLoading}
+              onClick={handleNotifSave}
+              disabled={notifLoading}
               className="w-full py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors dark:bg-indigo-600 dark:hover:bg-indigo-700"
             >
-              {profileLoading ? 'Đang lưu...' : 'Lưu thay đổi'}
+              {notifLoading ? 'Đang lưu...' : 'Lưu cài đặt'}
             </button>
           </div>
         )}
@@ -432,114 +371,6 @@ export default function Settings() {
               className="w-full py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors dark:bg-indigo-600 dark:hover:bg-indigo-700"
             >
               {passwordLoading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
-            </button>
-          </div>
-        )}
-
-        {/* Avatar Tab */}
-        {activeTab === 'avatar' && (
-          <div className="max-w-2xl space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Cập nhật Avatar</h2>
-
-            {avatarError && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 text-sm rounded-lg">
-                {avatarError}
-              </div>
-            )}
-            {avatarSuccess && (
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 text-sm rounded-lg">
-                {avatarSuccess}
-              </div>
-            )}
-
-            {avatarPreview && (
-              <div className="flex flex-col items-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Preview:</p>
-                <img
-                  src={avatarPreview}
-                  alt="Avatar preview"
-                  className="w-24 h-24 rounded-full object-cover border-4 border-indigo-100 dark:border-indigo-900 shadow-md"
-                />
-              </div>
-            )}
-
-            <label className="w-full cursor-pointer">
-              <div className="flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
-                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Chọn ảnh hoặc kéo vào đây</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">PNG, JPG, GIF — Tối đa 5 MB</p>
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                disabled={avatarLoading}
-                className="hidden"
-              />
-            </label>
-
-            <button
-              onClick={handleAvatarSave}
-              disabled={avatarLoading || !avatarUrl}
-              className="w-full py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors dark:bg-indigo-600 dark:hover:bg-indigo-700"
-            >
-              {avatarLoading ? 'Đang lưu...' : 'Lưu Avatar'}
-            </button>
-          </div>
-        )}
-
-        {/* Cover Tab */}
-        {activeTab === 'cover' && (
-          <div className="max-w-2xl space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Cập nhật Cover</h2>
-
-            {coverError && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 text-sm rounded-lg">
-                {coverError}
-              </div>
-            )}
-            {coverSuccess && (
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 text-green-700 dark:text-green-400 text-sm rounded-lg">
-                {coverSuccess}
-              </div>
-            )}
-
-            {coverPreview && (
-              <div className="flex flex-col items-center">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Preview:</p>
-                <img
-                  src={coverPreview}
-                  alt="Cover preview"
-                  className="w-full h-48 rounded-lg object-cover border-2 border-indigo-100 dark:border-indigo-900 shadow-md"
-                />
-              </div>
-            )}
-
-            <label className="w-full cursor-pointer">
-              <div className="flex flex-col items-center justify-center py-8 px-4 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-indigo-400 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
-                <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Chọn ảnh hoặc kéo vào đây</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">PNG, JPG, GIF — Tối đa 10 MB</p>
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleCoverUpload}
-                disabled={coverLoading}
-                className="hidden"
-              />
-            </label>
-
-            <button
-              onClick={handleCoverSave}
-              disabled={coverLoading || !coverUrl}
-              className="w-full py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium transition-colors dark:bg-indigo-600 dark:hover:bg-indigo-700"
-            >
-              {coverLoading ? 'Đang lưu...' : 'Lưu Cover'}
             </button>
           </div>
         )}

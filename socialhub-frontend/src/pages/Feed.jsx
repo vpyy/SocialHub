@@ -69,7 +69,13 @@ export default function Feed() {
       const feedData = response.data || response
       
       if (feedData && feedData.content) {
-        const newPosts = feedData.content.map(post => convertToFrontendFormat(post))
+        let newPosts = feedData.content.map(post => convertToFrontendFormat(post))
+        
+        // Shuffle posts on first load (page 0) for randomized feed
+        if (page === 0) {
+          newPosts = shuffleArray(newPosts)
+        }
+        
         console.log('Converted posts:', newPosts)
         setPosts(page === 0 ? newPosts : [...posts, ...newPosts])
         setHasMore(!feedData.last)
@@ -134,6 +140,16 @@ export default function Feed() {
     if (diffHours < 24) return `${diffHours} giờ trước`
     if (diffDays < 7) return `${diffDays} ngày trước`
     return postTime.toLocaleDateString('vi-VN')
+  }
+
+  // Fisher-Yates shuffle algorithm
+  const shuffleArray = (array) => {
+    const shuffled = [...array]
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    }
+    return shuffled
   }
 
   const handleLike = (postId) => {

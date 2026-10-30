@@ -5,6 +5,7 @@ import MainLayout from './layouts/MainLayout'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Feed from './pages/Feed'
+import Discover from './pages/Discover'
 import Profile from './pages/Profile'
 import PostDetail from './pages/PostDetail'
 import Search from './pages/Search'
@@ -27,6 +28,7 @@ function App() {
           {/* Protected Routes — guarded by MainLayout */}
           <Route element={<MainLayout />}>
             <Route path="/" element={<Feed />} />
+            <Route path="/discover" element={<Discover />} />
             <Route path="/post/:id" element={<PostDetail />} />
             <Route path="/profile/:username" element={<Profile />} />
             <Route path="/search" element={<Search />} />

@@ -145,12 +145,12 @@ public class DevSeedController {
     /** POST /api/dev/seed */
     @PostMapping("/seed")
     public ResponseEntity<ApiResponse<Map<String, Object>>> seed(
-            @RequestParam(defaultValue = "20")  int users,
-            @RequestParam(defaultValue = "200") int posts,
-            @RequestParam(defaultValue = "5")   int commentsPerPost,
-            @RequestParam(defaultValue = "8")   int likesPerPost,
-            @RequestParam(defaultValue = "3")   int bookmarksPerPost,
-            @RequestParam(defaultValue = "30")  int conversations) {
+            @RequestParam(defaultValue = "50")  int users,
+            @RequestParam(defaultValue = "500") int posts,
+            @RequestParam(defaultValue = "8")   int commentsPerPost,
+            @RequestParam(defaultValue = "12")  int likesPerPost,
+            @RequestParam(defaultValue = "5")   int bookmarksPerPost,
+            @RequestParam(defaultValue = "80")  int conversations) {
 
         log.info("🌱 Starting seed: {} users, {} posts", users, posts);
         long t0 = System.currentTimeMillis();
@@ -207,8 +207,8 @@ public class DevSeedController {
     /** DELETE /api/dev/seed/reset — xóa hết + seed lại */
     @DeleteMapping("/seed/reset")
     public ResponseEntity<ApiResponse<String>> reset(
-            @RequestParam(defaultValue = "20")  int users,
-            @RequestParam(defaultValue = "200") int posts) {
+            @RequestParam(defaultValue = "50")  int users,
+            @RequestParam(defaultValue = "500") int posts) {
 
         log.warn("⚠️  Resetting ALL collections...");
         notificationRepository.deleteAll();
@@ -225,7 +225,7 @@ public class DevSeedController {
                 .forEach(u -> userRepository.delete(u));
 
         log.warn("⚠️  All collections cleared");
-        seed(users, posts, 5, 8, 3, 30);
+        seed(users, posts, 8, 12, 5, 80);
         return ResponseEntity.ok(ApiResponse.success("Reset + reseed done", "OK"));
     }
 
@@ -260,6 +260,7 @@ public class DevSeedController {
                     .bio(BIOS[i % BIOS.length])
                     .avatarUrl("https://ui-avatars.com/api/?name=" +
                             name.replace(" ", "+") + "&background=" + color + "&color=fff&size=128")
+                    .coverUrl("https://picsum.photos/1200/300?random=" + (i * 7919))
                     .role("USER")
                     .status("ACTIVE")
                     .createdAt(created)
@@ -317,10 +318,26 @@ public class DevSeedController {
             Instant created = Instant.now().minus(RNG.nextInt(180), ChronoUnit.DAYS)
                     .minus(RNG.nextInt(1440), ChronoUnit.MINUTES);
 
+            // Generate 0-2 random media items
+            List<Post.MediaItem> mediaItems = new ArrayList<>();
+            if (RNG.nextDouble() < 0.6) { // 60% of posts have media
+                int mediaCount = 1 + RNG.nextInt(2); // 1-2 items
+                for (int m = 0; m < mediaCount; m++) {
+                    String mediaType = RNG.nextBoolean() ? "IMAGE" : "VIDEO";
+                    String mediaUrl = mediaType.equals("IMAGE")
+                            ? "https://picsum.photos/600/400?random=" + (i * 1009 + m)
+                            : "https://commondatastorage.googleapis.com/gtv-videos-library/sample/sintel.mp4";
+                    mediaItems.add(Post.MediaItem.builder()
+                            .type(mediaType)
+                            .url(mediaUrl)
+                            .build());
+                }
+            }
+
             Post p = postRepository.save(Post.builder()
                     .authorId(author.getId())
                     .content(content)
-                    .media(new ArrayList<>())
+                    .media(mediaItems)
                     .hashtags(tags)
                     .visibility(visibility)
                     .likeCount(0)

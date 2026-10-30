@@ -35,5 +35,9 @@ public interface PostRepository extends MongoRepository<Post, String> {
     @Query("{ 'content': { $regex: ?0, $options: 'i' }, 'visibility': { $in: ?1 } }")
     Page<Post> searchByContentAndVisibilities(String keyword, List<String> visibilities, Pageable pageable);
 
+    // Get popular posts from specific date range (for discovery/trending)
+    @Query("{ 'visibility': ?0, 'createdAt': { $gte: ?1 } }")
+    Page<Post> findByVisibilityAndCreatedAtAfter(String visibility, java.time.Instant createdAtAfter, Pageable pageable);
+
     long countByAuthorId(String authorId);
 }

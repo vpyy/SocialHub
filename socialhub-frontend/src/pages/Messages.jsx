@@ -54,7 +54,8 @@ function ConvItem({ conv, currentUserId, isActive, onClick }) {
   return (
     <div
       onClick={onClick}
-      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-50 ${isActive ? 'bg-indigo-50' : ''}`}
+      data-active={isActive}
+      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-gray-50 border-b border-gray-50 ${isActive ? 'bg-indigo-50' : ''}`}
     >
       <div className="relative cursor-pointer hover:opacity-80" onClick={handleAvatarClick}>
         <Avatar src={other?.avatarUrl} name={other?.displayName} size={11} />
@@ -150,8 +151,10 @@ export default function Messages() {
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching]   = useState(false)
 
-  const bottomRef = useRef(null)
   const searchDebounce = useRef(null)
+  const isUserAtBottom = useRef(true)
+  const messagesEndRef = useRef(null)
+  const conversationListRef = useRef(null)
 
   // ── Load conversations ────────────────────────────────────────────────────
 
@@ -175,11 +178,16 @@ export default function Messages() {
     setActiveConvId(convId)
     setMessages([])
     setLoadingMsgs(true)
+    isUserAtBottom.current = true  // Reset to bottom when opening new conversation
     try {
       const res = await chatService.getMessages(convId, 0, 100)
       const data = res?.data ?? res
       const msgs = data?.content ?? []
       setMessages(msgs)
+      // Auto scroll to bottom after setting messages
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
       await chatService.markRead(convId)
       // clear unread badge locally
       setConversations(prev => prev.map(c =>
@@ -190,6 +198,7 @@ export default function Messages() {
   }
 
   // Auto-refresh messages every 3 seconds when conversation is open
+  // BUT only update if user is at bottom, to avoid interrupting scrolling up
   useEffect(() => {
     if (!activeConvId) return
     
@@ -198,17 +207,42 @@ export default function Messages() {
         const res = await chatService.getMessages(activeConvId, 0, 100)
         const data = res?.data ?? res
         const msgs = data?.content ?? []
-        setMessages(msgs)
+        // Only update if user is at bottom
+        if (isUserAtBottom.current) {
+          setMessages(msgs)
+        }
+        // Also update conversation list - move to top and smooth scroll
+        setConversations(prev => {
+          const active = prev.find(c => c.id === activeConvId)
+          if (!active) return prev
+          const updated = prev.filter(c => c.id !== activeConvId)
+          const withNewData = [{...active, lastMessageAt: active.lastMessageAt}, ...updated]
+          setTimeout(() => {
+            const el = conversationListRef.current?.querySelector('[data-active="true"]')
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          }, 50)
+          return withNewData
+        })
       } catch (e) { console.error('Refresh messages error:', e) }
     }, 3000)
     
     return () => clearInterval(interval)
   }, [activeConvId])
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change - ONLY if user is at bottom
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (isUserAtBottom.current) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      }, 0)
+    }
+  }, [messages.length])
+
+  // Track if user is at bottom
+  const handleMessageScroll = (e) => {
+    const el = e.target
+    isUserAtBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 50
+  }
 
   // ── Send message ──────────────────────────────────────────────────────────
 
@@ -222,10 +256,23 @@ export default function Messages() {
       const res = await chatService.sendMessage(activeConvId, { messageType: 'TEXT', content: text })
       const msg = res?.data ?? res
       setMessages(prev => [...prev, msg])
-      // update conversation preview
-      setConversations(prev => prev.map(c =>
-        c.id === activeConvId ? { ...c, lastMessage: text, lastMessageAt: msg.createdAt } : c
-      ))
+      // update conversation preview and move to top
+      setConversations(prev => {
+        const updated = prev.map(c =>
+          c.id === activeConvId ? { ...c, lastMessage: text, lastMessageAt: msg.createdAt } : c
+        )
+        // Move active conversation to top with smooth scroll
+        const active = updated.find(c => c.id === activeConvId)
+        if (active) {
+          updated.splice(updated.indexOf(active), 1)
+          updated.unshift(active)
+          setTimeout(() => {
+            const el = conversationListRef.current?.querySelector('[data-active="true"]')
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+          }, 0)
+        }
+        return updated
+      })
     } catch (e) {
       console.error(e)
       setInput(text)   // restore on error
@@ -269,10 +316,10 @@ export default function Messages() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-700 flex min-h-screen bg-white dark:bg-gray-950" style={{ maxWidth: 'none' }}>
+    <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-700 flex min-h-screen h-screen bg-white dark:bg-gray-950 overflow-hidden" style={{ maxWidth: 'none' }}>
 
       {/* ── Conversation list ── */}
-      <div className="w-72 shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-900 hidden md:flex">
+      <div className="w-72 shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-900 hidden md:flex h-screen overflow-hidden">
         {/* List header */}
         <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
           <h1 className="text-lg font-bold text-gray-900 dark:text-white">Tin nhắn</h1>
@@ -316,7 +363,7 @@ export default function Messages() {
         )}
 
         {/* List */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto" ref={conversationListRef}>
           {loadingConvs && (
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500" />
@@ -342,7 +389,7 @@ export default function Messages() {
       </div>
 
       {/* ── Chat panel ── */}
-      <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/50">
+      <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/50 h-screen overflow-hidden">
         {!activeConvId ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
             <span className="material-symbols-outlined text-7xl text-gray-200 dark:text-gray-700 mb-4">forum</span>
@@ -361,7 +408,7 @@ export default function Messages() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4">
+            <div className="flex-1 overflow-y-auto px-4 py-4" onScroll={handleMessageScroll}>
               {loadingMsgs && (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-400" />
@@ -381,7 +428,7 @@ export default function Messages() {
                   navigate={navigate}
                 />
               ))}
-              <div ref={bottomRef} />
+              <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}

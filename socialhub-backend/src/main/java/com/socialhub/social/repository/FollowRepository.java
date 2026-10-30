@@ -35,4 +35,10 @@ public interface FollowRepository extends MongoRepository<Follow, String> {
     /** Lấy list followingId để build feed */
     @Query(value = "{ 'followerId': ?0 }", fields = "{ 'followingId': 1 }")
     List<Follow> findFollowingIdsByFollowerId(String followerId);
+
+    /** Get all users that userId is following */
+    List<Follow> findByFollowerId(String followerId);
+
+    /** Get all users that are following userId */
+    List<Follow> findByFollowingId(String followingId);
 }
