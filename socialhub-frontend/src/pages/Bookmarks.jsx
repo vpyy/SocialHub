@@ -143,24 +143,24 @@ export default function Bookmarks() {
   }
 
   return (
-    <section className="flex-1 max-w-[750px] border-r border-gray-100 min-h-screen flex flex-col">
+    <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-700 min-h-screen pb-20 flex flex-col bg-white dark:bg-gray-950">
 
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-20 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-indigo-600">bookmarks</span>
-          <h1 className="text-lg font-bold text-gray-900">Đã lưu</h1>
+          <span className="material-symbols-outlined text-indigo-600 dark:text-indigo-400">bookmarks</span>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white">Đã lưu</h1>
           {items.length > 0 && (
             <span className="text-xs text-gray-400 font-normal">({items.length}{hasMore ? '+' : ''})</span>
           )}
         </div>
-        <button onClick={() => load(0)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors">
+        <button onClick={() => load(0)} className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
           <span className="material-symbols-outlined text-[20px]">refresh</span>
         </button>
       </div>
 
       {/* Grid */}
-      <div className="p-4 flex-1">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
         {loading && (
           <div className="grid grid-cols-2 gap-3">
             {[...Array(6)].map((_, i) => <SkeletonCard key={i} />)}
@@ -184,7 +184,7 @@ export default function Bookmarks() {
         )}
 
         {!loading && items.length > 0 && (
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {items.map(item => (
               <BookmarkCard
                 key={item.id}

@@ -165,10 +165,10 @@ export default function Notifications() {
     : notifications
 
   return (
-    <section className="flex-1 max-w-[650px] border-r border-gray-100 min-h-screen flex flex-col">
+    <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-700 min-h-screen pb-20 flex flex-col bg-white dark:bg-gray-950">
 
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border-b border-gray-100 px-4 py-3 flex items-center justify-between">
+      <div className="sticky top-0 z-20 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2">
           <h1 className="text-lg font-bold text-gray-900">Thông báo</h1>
           {unreadCount > 0 && (
@@ -205,7 +205,7 @@ export default function Notifications() {
       </div>
 
       {/* Content */}
-      <div className="flex-1">
+      <div className="flex-1 overflow-y-auto divide-y divide-gray-200 dark:divide-gray-700">
         {loading && [...Array(6)].map((_, i) => <SkeletonRow key={i} />)}
 
         {error && !loading && (

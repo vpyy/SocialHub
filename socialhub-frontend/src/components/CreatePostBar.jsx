@@ -178,7 +178,7 @@ export default function CreatePostBar({ onPostCreated }) {
   return (
     <>
       {/* Trigger bar */}
-      <div className="bg-white rounded-xl p-4 mb-4 shadow-sm border border-gray-200">
+      <div className="bg-white dark:bg-gray-900 rounded-xl p-4 mb-4 shadow-sm border border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-3">
           <img
             src={
@@ -186,11 +186,11 @@ export default function CreatePostBar({ onPostCreated }) {
               "https://ui-avatars.com/api/?name=U&background=4648d4&color=fff"
             }
             alt="avatar"
-            className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+            className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm"
           />
           <button
             onClick={() => setShowModal(true)}
-            className="flex-1 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-500 text-left rounded-full transition-colors text-sm"
+            className="flex-1 py-2.5 px-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 text-left rounded-full transition-colors text-sm"
           >
             Bạn đang nghĩ gì?
           </button>
@@ -200,13 +200,13 @@ export default function CreatePostBar({ onPostCreated }) {
       {/* Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between shrink-0">
-              <h2 className="text-xl font-bold text-gray-900">Tạo bài viết</h2>
+            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tạo bài viết</h2>
               <button
                 onClick={handleClose}
-                className="text-gray-500 hover:text-gray-700 p-1 hover:bg-gray-100 rounded-full transition-colors"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
               >
                 <svg
                   className="w-6 h-6"
@@ -228,17 +228,17 @@ export default function CreatePostBar({ onPostCreated }) {
                     "https://ui-avatars.com/api/?name=U&background=4648d4&color=fff"
                   }
                   alt="avatar"
-                  className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white dark:border-gray-700 shadow-sm"
                 />
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">
+                  <p className="font-semibold text-gray-900 dark:text-white text-sm">
                     {currentUser.displayName || currentUser.username || "User"}
                   </p>
                   <select
                     value={visibility}
                     onChange={(e) => setVisibility(e.target.value)}
                     disabled={isSubmitting}
-                    className="text-xs text-gray-600 bg-gray-100 hover:bg-gray-200 rounded px-2 py-0.5 mt-0.5 border-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                    className="text-xs text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded px-2 py-0.5 mt-0.5 border-none focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors dark:text-white"
                   >
                     <option value="PUBLIC">🌍 Công khai</option>
                     <option value="FOLLOWERS">👥 Người theo dõi</option>
@@ -253,7 +253,7 @@ export default function CreatePostBar({ onPostCreated }) {
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="Bạn đang nghĩ gì?"
                 disabled={isSubmitting}
-                className="w-full min-h-[120px] p-2 bg-transparent text-gray-800 text-base resize-none focus:outline-none placeholder:text-gray-400"
+                className="w-full min-h-[120px] p-2 bg-transparent text-gray-800 dark:text-white text-base resize-none focus:outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
               />
 
               {/* Image previews */}
@@ -270,7 +270,7 @@ export default function CreatePostBar({ onPostCreated }) {
                   {imageUrls.map((url, i) => (
                     <div
                       key={i}
-                      className="relative group rounded-lg overflow-hidden border border-gray-200"
+                      className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700"
                     >
                       <img
                         src={url}
@@ -303,21 +303,21 @@ export default function CreatePostBar({ onPostCreated }) {
               )}
 
               {/* Media section */}
-              <div className="p-3 bg-gray-50 rounded-lg border border-gray-200 mb-3">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-gray-600">
+                  <p className="text-xs font-semibold text-gray-600 dark:text-gray-400">
                     Thêm vào bài viết
                   </p>
 
                   {/* Image Size Options */}
                   {imageUrls.length > 0 && (
                     <div className="flex items-center gap-1">
-                      <span className="text-xs text-gray-600">Kích thước:</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">Kích thước:</span>
                       <select
                         value={imageSize}
                         onChange={(e) => setImageSize(e.target.value)}
                         disabled={isSubmitting}
-                        className="text-xs bg-white border border-gray-300 rounded px-2 py-0.5 focus:outline-none focus:border-blue-500"
+                        className="text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded px-2 py-0.5 focus:outline-none focus:border-indigo-500 dark:text-white"
                       >
                         <option value="small">Nhỏ</option>
                         <option value="medium">Vừa</option>
@@ -329,7 +329,7 @@ export default function CreatePostBar({ onPostCreated }) {
 
                 <div className="flex flex-wrap gap-2 items-center">
                   {/* File picker */}
-                  <label className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-100 border border-gray-300 rounded-lg cursor-pointer transition-colors text-sm font-medium text-gray-700">
+                  <label className="flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer transition-colors text-sm font-medium text-gray-700 dark:text-gray-300">
                     <svg
                       className="w-5 h-5 text-green-600"
                       fill="currentColor"
@@ -350,8 +350,8 @@ export default function CreatePostBar({ onPostCreated }) {
                   </label>
 
                   {uploadingImage && (
-                    <div className="flex items-center gap-1.5 text-sm text-blue-600">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
+                    <div className="flex items-center gap-1.5 text-sm text-indigo-600 dark:text-indigo-400">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 dark:border-indigo-400" />
                       Đang đọc file...
                     </div>
                   )}
@@ -366,12 +366,12 @@ export default function CreatePostBar({ onPostCreated }) {
                     onKeyDown={(e) => e.key === "Enter" && handleAddImageUrl()}
                     placeholder="Hoặc dán URL hình ảnh"
                     disabled={isSubmitting}
-                    className="flex-1 py-2 px-3 bg-white rounded-lg text-sm border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                    className="flex-1 py-2 px-3 bg-white dark:bg-gray-800 rounded-lg text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 dark:text-white dark:placeholder-gray-500"
                   />
                   <button
                     onClick={handleAddImageUrl}
                     disabled={isSubmitting || !imageUrlInput.trim()}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
+                    className="px-4 py-2 bg-indigo-600 dark:bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-sm"
                   >
                     Thêm
                   </button>
@@ -385,23 +385,23 @@ export default function CreatePostBar({ onPostCreated }) {
                 onChange={(e) => setVideoUrl(e.target.value)}
                 placeholder="Nhập URL video (YouTube, Vimeo…)"
                 disabled={isSubmitting}
-                className="w-full py-2 px-4 bg-gray-50 rounded-full text-sm border border-gray-300 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+                className="w-full py-2 px-4 bg-gray-50 dark:bg-gray-800 rounded-full text-sm border border-gray-300 dark:border-gray-700 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 dark:text-white dark:placeholder-gray-500"
               />
 
               {/* Hashtag input */}
               <div className="mt-3">
-                <div className="flex items-center gap-1.5 flex-wrap min-h-[40px] px-3 py-2 bg-gray-50 rounded-xl border border-gray-200 focus-within:border-indigo-400 focus-within:ring-1 focus-within:ring-indigo-300 transition-all">
+                <div className="flex items-center gap-1.5 flex-wrap min-h-[40px] px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus-within:border-indigo-400 dark:focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-300 dark:focus-within:ring-indigo-400 transition-all">
                   <span className="text-indigo-400 text-sm font-bold select-none">#</span>
                   {hashtags.map((tag) => (
                     <span
                       key={tag}
-                      className="flex items-center gap-1 px-2.5 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium"
+                      className="flex items-center gap-1 px-2.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full text-xs font-medium"
                     >
                       #{tag}
                       <button
                         type="button"
                         onClick={() => removeHashtag(tag)}
-                        className="text-indigo-400 hover:text-indigo-700 leading-none"
+                        className="text-indigo-400 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-200 leading-none"
                       >
                         ×
                       </button>
@@ -415,21 +415,21 @@ export default function CreatePostBar({ onPostCreated }) {
                     onBlur={() => hashtagInput.trim() && addHashtag(hashtagInput)}
                     placeholder={hashtags.length === 0 ? "Thêm hashtag (Enter để xác nhận)" : ""}
                     disabled={isSubmitting}
-                    className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-gray-400 disabled:opacity-50"
+                    className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 disabled:opacity-50 dark:text-white"
                   />
                 </div>
-                <p className="text-xs text-gray-400 mt-1 ml-1">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 ml-1">
                   Gõ hashtag + Enter hoặc Space để thêm. Backend cũng tự trích xuất #tags từ nội dung.
                 </p>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-2 shrink-0">
+            <div className="p-4 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-2 shrink-0">
               <button
                 onClick={handleClose}
                 disabled={isSubmitting || uploadingImage}
-                className="px-6 py-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors disabled:opacity-50 font-medium"
+                className="px-6 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors disabled:opacity-50 font-medium"
               >
                 Hủy
               </button>
@@ -440,7 +440,7 @@ export default function CreatePostBar({ onPostCreated }) {
                   uploadingImage ||
                   (!content.trim() && imageUrls.length === 0 && !videoUrl)
                 }
-                className="px-6 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
+                className="px-6 py-2 bg-indigo-600 dark:bg-indigo-600 text-white rounded-full hover:bg-indigo-700 dark:hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 {isSubmitting ? "Đang đăng…" : "Đăng"}
               </button>

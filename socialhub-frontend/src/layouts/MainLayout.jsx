@@ -23,8 +23,8 @@ export default function MainLayout() {
 
   if (loading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-[#faf8ff]">
-        <div className="w-8 h-8 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
+      <div className="w-full h-screen flex items-center justify-center bg-white dark:bg-gray-950">
+        <div className="w-8 h-8 border-4 border-indigo-300 dark:border-indigo-700 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
       </div>
     )
   }
@@ -35,7 +35,7 @@ export default function MainLayout() {
   }
 
   return (
-    <div className="w-full flex min-h-screen bg-gray-50">
+    <div className="w-full flex min-h-screen bg-white dark:bg-gray-950">
       <div className="w-full flex min-h-screen">
         <Sidebar user={user} navigate={navigate} location={location} />
         <main className="flex-1 flex">

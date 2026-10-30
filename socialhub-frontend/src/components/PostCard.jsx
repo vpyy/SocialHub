@@ -84,11 +84,10 @@ export default function PostCard({
     }
   }, [showCommentsDefault]);
 
-  // Early return if post or author data is invalid
   if (!post || !post.author) {
     return (
-      <article className="bg-white border-b border-gray-100 p-4 md:p-6">
-        <div className="text-center text-gray-500 py-8">
+      <article className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 p-4 md:p-6">
+        <div className="text-center text-gray-500 dark:text-gray-400 py-8">
           <p>Không thể hiển thị bài viết này</p>
         </div>
       </article>
@@ -360,7 +359,7 @@ export default function PostCard({
 
   return (
     <article 
-      className={`bg-white dark:bg-slate-950 ${noBorder ? 'p-3 md:p-4' : 'p-4 md:p-6 border-b border-gray-100 dark:border-slate-800'}`}
+      className={`bg-white dark:bg-gray-900 ${noBorder ? 'p-3 md:p-4' : 'p-4 md:p-6 border-b border-gray-100 dark:border-gray-800'}`}
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
@@ -374,18 +373,18 @@ export default function PostCard({
           <div>
             <div className="flex items-center gap-1.5">
               <span 
-                className="text-title-md font-title-md text-on-surface cursor-pointer hover:underline"
+                className="text-base font-semibold text-gray-900 dark:text-white cursor-pointer hover:underline"
                 onClick={handleProfileClick}
               >
                 {post.author?.displayName || 'Unknown User'}
               </span>
               {post.author?.isVerified && (
-                <span className="material-symbols-outlined fill-icon text-primary text-[18px]">
+                <span className="material-symbols-outlined fill-icon text-indigo-600 dark:text-indigo-400 text-[18px]">
                   verified
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-2 text-body-sm font-body-sm text-outline">
+            <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
               <span 
                 className="cursor-pointer hover:underline"
                 onClick={handleProfileClick}

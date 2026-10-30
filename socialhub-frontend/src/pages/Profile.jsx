@@ -543,14 +543,14 @@ export default function Profile() {
   // ──────────────────────────────────────────────────────
   if (loading) {
     return (
-      <section className="flex-1 max-w-[700px] border-r border-outline-variant/30 min-h-screen pb-20">
-        <div className="h-48 bg-surface-container animate-pulse"></div>
+      <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-800 min-h-screen pb-20 bg-white dark:bg-gray-950">
+        <div className="h-48 bg-gray-200 dark:bg-gray-800 animate-pulse"></div>
         <div className="px-6 relative">
-          <div className="w-28 h-28 rounded-full bg-surface-container-high border-4 border-surface -mt-14 animate-pulse"></div>
+          <div className="w-28 h-28 rounded-full bg-gray-300 dark:bg-gray-700 border-4 border-white dark:border-gray-900 -mt-14 animate-pulse"></div>
           <div className="mt-4 space-y-2">
-            <div className="h-6 w-48 bg-surface-container rounded animate-pulse"></div>
-            <div className="h-4 w-32 bg-surface-container rounded animate-pulse"></div>
-            <div className="h-4 w-full bg-surface-container rounded animate-pulse"></div>
+            <div className="h-6 w-48 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+            <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
+            <div className="h-4 w-full bg-gray-200 dark:bg-gray-800 rounded animate-pulse"></div>
           </div>
         </div>
       </section>
@@ -559,22 +559,22 @@ export default function Profile() {
 
   if (error || !profile) {
     return (
-      <section className="flex-1 max-w-[700px] border-r border-outline-variant/30 min-h-screen p-8 text-center flex flex-col items-center justify-center">
-        <div className="w-16 h-16 rounded-2xl bg-surface-container flex items-center justify-center text-outline mb-4">
+      <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-800 min-h-screen p-8 text-center flex flex-col items-center justify-center bg-white dark:bg-gray-950">
+        <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 mb-4">
           <span className="material-symbols-outlined text-[36px]">
             person_off
           </span>
         </div>
-        <h2 className="text-xl font-bold text-on-surface mb-2">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
           Người dùng không tồn tại
         </h2>
-        <p className="text-on-surface-variant text-sm mb-6 max-w-sm">
+        <p className="text-gray-600 dark:text-gray-400 text-sm mb-6 max-w-sm">
           {error ||
             `Tài khoản @${username} không tồn tại hoặc đã đổi tên người dùng.`}
         </p>
         <button
           onClick={() => navigate("/")}
-          className="btn-primary flex items-center gap-2"
+          className="px-4 py-2 bg-indigo-600 dark:bg-indigo-600 text-white rounded-full hover:bg-indigo-700 dark:hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2"
         >
           <span className="material-symbols-outlined text-[18px]">
             arrow_back
@@ -589,28 +589,28 @@ export default function Profile() {
   const isFollowing = Boolean(profile.isFollowing);
 
   return (
-    <section className="flex-1 w-full max-w-4xl mx-auto border-r border-outline-variant/30 min-h-screen pb-20 flex flex-col">
+    <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-800 min-h-screen pb-20 flex flex-col bg-white dark:bg-gray-950">
       {/* Header bar */}
-      <div className="sticky top-0 z-20 bg-surface/85 backdrop-blur-md border-b border-outline-variant/30 px-4 md:px-6 py-2.5 flex items-center gap-4">
+      <div className="sticky top-0 z-20 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-4 md:px-6 py-2.5 flex items-center gap-4">
         <button
           onClick={() => navigate(-1)}
-          className="p-2 rounded-full hover:bg-surface-container transition-colors text-on-surface"
+          className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-white"
           title="Quay lại"
         >
           <span className="material-symbols-outlined">arrow_back</span>
         </button>
         <div>
-          <h1 className="text-title-md font-bold text-on-surface leading-tight flex items-center gap-1.5">
+          <h1 className="text-lg font-bold text-gray-900 dark:text-white leading-tight flex items-center gap-1.5">
             {profile.displayName || profile.username}
           </h1>
-          <p className="text-body-sm text-outline">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             {profile.postsCount ?? (profile.posts?.length || 0)} bài viết
           </p>
         </div>
       </div>
 
       {/* Cover banner */}
-      <div className="relative h-48 md:h-56 bg-surface-container-high overflow-hidden select-none">
+      <div className="relative h-48 md:h-56 bg-gray-200 dark:bg-gray-800 overflow-hidden select-none">
         {profile.coverUrl ? (
           <img
             src={profile.coverUrl}
@@ -618,8 +618,8 @@ export default function Profile() {
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-r from-[#4648d4]/30 via-[#6b38d4]/20 to-[#dae2fd] flex items-center justify-center">
-            <span className="material-symbols-outlined text-outline/40 text-[64px]">
+          <div className="w-full h-full bg-gradient-to-r from-indigo-100 dark:from-indigo-900/30 via-indigo-50 dark:via-indigo-900/20 to-indigo-50 dark:to-indigo-900/10 flex items-center justify-center">
+            <span className="material-symbols-outlined text-gray-300 dark:text-gray-700 text-[64px]">
               image
             </span>
           </div>
@@ -627,7 +627,7 @@ export default function Profile() {
       </div>
 
       {/* Profile info section */}
-      <div className="px-4 md:px-6 relative pb-4 border-b border-outline-variant/30">
+      <div className="px-4 md:px-6 relative pb-4 border-b border-gray-200 dark:border-gray-800">
         {/* Avatar & Action Button Row */}
         <div className="flex items-end justify-between -mt-16 md:-mt-20 mb-4">
           <div className="relative group">
@@ -637,13 +637,13 @@ export default function Profile() {
                 "https://via.placeholder.com/120?text=Avatar"
               }
               alt={profile.displayName || profile.username}
-              className="w-28 h-28 md:w-32 md:h-32 rounded-full object-cover border-4 border-surface shadow-md bg-surface"
+              className="w-28 h-28 md:w-32 md:h-32 rounded-full object-cover border-4 border-white dark:border-gray-900 shadow-md bg-gray-100 dark:bg-gray-800"
             />
             {isSelf && (
               <button
                 type="button"
                 onClick={() => setIsEditOpen(true)}
-                className="absolute bottom-1 right-1 p-2 bg-primary text-on-primary rounded-full shadow-lg hover:bg-primary-container transition-all hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer"
+                className="absolute bottom-1 right-1 p-2 bg-indigo-600 dark:bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 dark:hover:bg-indigo-700 transition-all hover:scale-110 active:scale-95 flex items-center justify-center cursor-pointer"
                 title="Thay đổi ảnh đại diện"
               >
                 <span className="material-symbols-outlined text-[18px]">
@@ -657,7 +657,7 @@ export default function Profile() {
             {isSelf ? (
               <button
                 onClick={() => setIsEditOpen(true)}
-                className="px-5 py-2 rounded-full border border-outline font-semibold text-on-surface text-label-md hover:bg-surface-container transition-all flex items-center gap-1.5 active:scale-95 shadow-sm"
+                className="px-5 py-2 rounded-full border border-gray-300 dark:border-gray-600 font-semibold text-gray-900 dark:text-white text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-all flex items-center gap-1.5 active:scale-95 shadow-sm"
               >
                 <span className="material-symbols-outlined text-[18px]">
                   edit
@@ -670,10 +670,10 @@ export default function Profile() {
                 <button
                   onClick={handleToggleFollowProfile}
                   disabled={actionLoadingId === profile.id}
-                  className={`px-6 py-2 rounded-full font-bold text-label-md transition-all flex items-center gap-1.5 active:scale-95 shadow-sm ${
+                  className={`px-6 py-2 rounded-full font-bold text-sm transition-all flex items-center gap-1.5 active:scale-95 shadow-sm ${
                     isFollowing
-                      ? "border border-outline text-on-surface hover:border-error hover:text-error hover:bg-error-container/20"
-                      : "bg-primary text-on-primary hover:bg-primary-container hover:shadow-md"
+                      ? "border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:border-red-500 dark:hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      : "bg-indigo-600 dark:bg-indigo-600 text-white hover:bg-indigo-700 dark:hover:bg-indigo-700 hover:shadow-md"
                   }`}
                 >
                 {actionLoadingId === profile.id ? (
@@ -700,7 +700,7 @@ export default function Profile() {
                   <button
                     onClick={handleSendMessage}
                     disabled={messageSending}
-                    className="px-6 py-2 rounded-full bg-secondary text-on-secondary font-bold text-label-md hover:bg-secondary-container transition-all flex items-center gap-1.5 active:scale-95 shadow-sm disabled:opacity-50"
+                    className="px-6 py-2 rounded-full bg-indigo-500 dark:bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-600 dark:hover:bg-indigo-700 transition-all flex items-center gap-1.5 active:scale-95 shadow-sm disabled:opacity-50"
                     title="Gửi tin nhắn"
                   >
                     {messageSending ? (
@@ -718,7 +718,7 @@ export default function Profile() {
                 <div className="relative">
                   <button
                     onClick={() => setShowMenuOptions(!showMenuOptions)}
-                    className="p-2 rounded-full border border-outline text-on-surface hover:bg-surface-container transition-all"
+                    className="p-2 rounded-full border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
                     title="Thêm tùy chọn"
                   >
                     <span className="material-symbols-outlined">more_vert</span>
@@ -726,10 +726,10 @@ export default function Profile() {
 
                   {/* Menu dropdown */}
                   {showMenuOptions && (
-                    <div className="absolute right-0 top-full mt-2 bg-surface-container-lowest border border-outline-variant/40 rounded-lg shadow-xl z-50">
+                    <div className="absolute right-0 top-full mt-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-50">
                       <button
                         onClick={handleToggleBlock}
-                        className="w-full px-4 py-2.5 text-left text-error hover:bg-error-container/20 flex items-center gap-2.5 text-label-md rounded-lg transition-colors first:rounded-t-lg last:rounded-b-lg"
+                        className="w-full px-4 py-2.5 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2.5 text-sm rounded-lg transition-colors first:rounded-t-lg last:rounded-b-lg"
                       >
                         <span className="material-symbols-outlined text-[18px]">block</span>
                         <span>{isBlocked ? 'Bỏ chặn' : 'Chặn người dùng'}</span>
@@ -745,25 +745,25 @@ export default function Profile() {
         {/* User Details */}
         <div className="space-y-3">
           <div>
-            <h2 className="text-xl md:text-2xl font-extrabold text-on-surface leading-tight flex items-center gap-1.5">
+            <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 dark:text-white leading-tight flex items-center gap-1.5">
               <span>{profile.displayName || profile.username}</span>
             </h2>
-            <p className="text-outline text-body-sm font-medium">
+            <p className="text-gray-600 dark:text-gray-400 text-sm font-medium">
               @{profile.username}
             </p>
           </div>
 
           {/* Bio */}
           {profile.bio ? (
-            <p className="text-on-surface text-body-md whitespace-pre-wrap leading-relaxed">
+            <p className="text-gray-800 dark:text-gray-200 text-base whitespace-pre-wrap leading-relaxed">
               {profile.bio}
             </p>
           ) : (
-            <p className="text-outline text-body-sm italic">Chưa có tiểu sử</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm italic">Chưa có tiểu sử</p>
           )}
 
           {/* Joined date & meta */}
-          <div className="flex flex-wrap items-center gap-4 text-outline text-body-sm pt-1">
+          <div className="flex flex-wrap items-center gap-4 text-gray-600 dark:text-gray-400 text-sm pt-1">
             <div className="flex items-center gap-1.5">
               <span className="material-symbols-outlined text-[16px]">
                 calendar_month
@@ -781,42 +781,42 @@ export default function Profile() {
           </div>
 
           {/* Followers & Following counts */}
-          <div className="flex items-center gap-6 pt-1 text-body-sm">
+          <div className="flex items-center gap-6 pt-1 text-sm">
             <button
               onClick={() => setModalType("following")}
               className="hover:underline flex items-center gap-1 group text-left"
             >
-              <strong className="font-bold text-on-surface group-hover:text-primary">
+              <strong className="font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                 {profile.followingCount ?? 0}
               </strong>
-              <span className="text-outline">Đang theo dõi</span>
+              <span className="text-gray-600 dark:text-gray-400">Đang theo dõi</span>
             </button>
             <button
               onClick={() => setModalType("followers")}
               className="hover:underline flex items-center gap-1 group text-left"
             >
-              <strong className="font-bold text-on-surface group-hover:text-primary">
+              <strong className="font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                 {profile.followersCount ?? 0}
               </strong>
-              <span className="text-outline">Người theo dõi</span>
+              <span className="text-gray-600 dark:text-gray-400">Người theo dõi</span>
             </button>
           </div>
         </div>
       </div>
 
       {/* 3 Tabs Bar */}
-      <div className="flex border-b border-outline-variant/30 sticky top-[57px] bg-surface/95 backdrop-blur-md z-10">
+      <div className="flex border-b border-gray-200 dark:border-gray-800 sticky top-[57px] bg-white dark:bg-gray-900 backdrop-blur-md z-10">
         <button
           onClick={() => setActiveTab("posts")}
-          className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
+          className={`flex-1 py-3.5 text-center text-sm font-semibold transition-all relative ${
             activeTab === "posts"
-              ? "text-primary font-bold"
-              : "text-outline hover:text-on-surface hover:bg-surface-container/50"
+              ? "text-indigo-600 dark:text-indigo-400 font-bold"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
         >
           <span>Bài viết</span>
           {activeTab === "posts" && (
-            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-primary rounded-full"></div>
+            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full"></div>
           )}
         </button>
 
@@ -825,15 +825,15 @@ export default function Profile() {
             setActiveTab("reposts");
             setRepostsLoaded(false); // Force reload
           }}
-          className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
+          className={`flex-1 py-3.5 text-center text-sm font-semibold transition-all relative ${
             activeTab === "reposts"
-              ? "text-primary font-bold"
-              : "text-outline hover:text-on-surface hover:bg-surface-container/50"
+              ? "text-indigo-600 dark:text-indigo-400 font-bold"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
         >
           <span>Bài viết đã đăng lại</span>
           {activeTab === "reposts" && (
-            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-primary rounded-full"></div>
+            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full"></div>
           )}
         </button>
 
@@ -842,15 +842,15 @@ export default function Profile() {
             setActiveTab("liked");
             setLikedPostsLoaded(false); // Force reload
           }}
-          className={`flex-1 py-3.5 text-center text-label-md font-semibold transition-all relative ${
+          className={`flex-1 py-3.5 text-center text-sm font-semibold transition-all relative ${
             activeTab === "liked"
-              ? "text-primary font-bold"
-              : "text-outline hover:text-on-surface hover:bg-surface-container/50"
+              ? "text-indigo-600 dark:text-indigo-400 font-bold"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800"
           }`}
         >
           <span>Bài viết đã thích</span>
           {activeTab === "liked" && (
-            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-primary rounded-full"></div>
+            <div className="absolute bottom-0 left-1/4 right-1/4 h-1 bg-indigo-600 dark:bg-indigo-400 rounded-full"></div>
           )}
         </button>
       </div>
@@ -861,7 +861,7 @@ export default function Profile() {
         {activeTab === "posts" && (
           <div>
             {profile.posts && profile.posts.length > 0 ? (
-              <div className="divide-y divide-outline-variant/20">
+              <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {profile.posts.map((post) => (
                   <PostCard
                     key={post.id}
@@ -887,15 +887,15 @@ export default function Profile() {
               </div>
             ) : (
               <div className="py-16 text-center px-4">
-                <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 mx-auto mb-3">
                   <span className="material-symbols-outlined text-[30px]">
                     post_add
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-on-surface">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">
                   Chưa có bài viết nào
                 </h3>
-                <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
+                <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 max-w-xs mx-auto">
                   {isSelf
                     ? "Bạn chưa đăng bài viết nào. Hãy chia sẻ suy nghĩ đầu tiên của bạn!"
                     : `Người dùng @${profile.username} chưa đăng bài viết nào.`}
@@ -909,16 +909,16 @@ export default function Profile() {
         {activeTab === "reposts" && (
           <div>
             {repostsLoading ? (
-              <div className="p-8 text-center text-outline">
-                <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-                <p className="text-body-sm">Đang tải bài viết đã đăng lại...</p>
+              <div className="p-8 text-center text-gray-600 dark:text-gray-400">
+                <div className="inline-block w-6 h-6 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mb-2"></div>
+                <p className="text-sm">Đang tải bài viết đã đăng lại...</p>
               </div>
             ) : reposts && reposts.length > 0 ? (
               <>
                 <div className="p-2 bg-yellow-100 text-xs">
                   DEBUG: Found {reposts.length} reposts
                 </div>
-                <div className="divide-y divide-outline-variant/20">
+                <div className="divide-y divide-gray-200 dark:divide-gray-800">
                   {reposts.map((post) => (
                     <PostCard
                       key={post.id}
@@ -939,15 +939,15 @@ export default function Profile() {
               </>
             ) : (
               <div className="py-16 text-center px-4">
-                <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 mx-auto mb-3">
                   <span className="material-symbols-outlined text-[30px]">
                     repeat
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-on-surface">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">
                   Chưa có bài viết đã đăng lại
                 </h3>
-                <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
+                <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 max-w-xs mx-auto">
                   {isSelf
                     ? "Bạn chưa đăng lại bài viết nào."
                     : `@${profile.username} chưa đăng lại bài viết nào.`}
@@ -961,12 +961,12 @@ export default function Profile() {
         {activeTab === "liked" && (
           <div>
             {likedPostsLoading ? (
-              <div className="p-8 text-center text-outline">
-                <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-                <p className="text-body-sm">Đang tải bài viết đã thích...</p>
+              <div className="p-8 text-center text-gray-600 dark:text-gray-400">
+                <div className="inline-block w-6 h-6 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mb-2"></div>
+                <p className="text-sm">Đang tải bài viết đã thích...</p>
               </div>
             ) : likedPosts && likedPosts.length > 0 ? (
-              <div className="divide-y divide-outline-variant/20">
+              <div className="divide-y divide-gray-200 dark:divide-gray-800">
                 {likedPosts.map((post) => (
                   <PostCard
                     key={post.id}
@@ -986,15 +986,15 @@ export default function Profile() {
               </div>
             ) : (
               <div className="py-16 text-center px-4">
-                <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
+                <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 mx-auto mb-3">
                   <span className="material-symbols-outlined text-[30px]">
                     favorite
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-on-surface">
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">
                   Chưa có bài viết đã thích
                 </h3>
-                <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
+                <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 max-w-xs mx-auto">
                   {isSelf
                     ? "Bạn chưa thích bài viết nào."
                     : `@${profile.username} chưa thích bài viết nào.`}
@@ -1012,19 +1012,19 @@ export default function Profile() {
           onClick={() => setModalType(null)}
         >
           <div
-            className="bg-surface w-full max-w-lg rounded-3xl shadow-2xl border border-outline-variant/30 overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-150"
+            className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[80vh] animate-in fade-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between sticky top-0 bg-surface z-10">
-              <h3 className="text-title-md font-bold text-on-surface">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-900 z-10">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 {modalType === "followers"
                   ? `Người theo dõi (${profile.followersCount ?? 0})`
                   : `Đang theo dõi (${profile.followingCount ?? 0})`}
               </h3>
               <button
                 onClick={() => setModalType(null)}
-                className="p-1 rounded-full text-outline hover:text-on-surface hover:bg-surface-container transition-colors"
+                className="p-1 rounded-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -1034,14 +1034,14 @@ export default function Profile() {
             <div className="overflow-y-auto flex-1">
               {modalType === "followers" ? (
                 followersLoading ? (
-                  <div className="p-8 text-center text-outline">
-                    <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-                    <p className="text-body-sm">
+                  <div className="p-8 text-center text-gray-600 dark:text-gray-400">
+                    <div className="inline-block w-6 h-6 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mb-2"></div>
+                    <p className="text-sm">
                       Đang tải danh sách người theo dõi...
                     </p>
                   </div>
                 ) : followers.length > 0 ? (
-                  <div className="divide-y divide-outline-variant/20">
+                  <div className="divide-y divide-gray-200 dark:divide-gray-800">
                     {followers.map((u) => (
                       <UserFollowCard
                         key={u.id}
@@ -1054,15 +1054,15 @@ export default function Profile() {
                   </div>
                 ) : (
                   <div className="py-16 text-center px-4">
-                    <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
+                    <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 mx-auto mb-3">
                       <span className="material-symbols-outlined text-[30px]">
                         group
                       </span>
                     </div>
-                    <h3 className="text-base font-bold text-on-surface">
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white">
                       Chưa có người theo dõi
                     </h3>
-                    <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 max-w-xs mx-auto">
                       {isSelf
                         ? "Khi có người theo dõi bạn, họ sẽ xuất hiện tại đây."
                         : `Chưa có ai theo dõi @${profile.username}.`}
@@ -1070,14 +1070,14 @@ export default function Profile() {
                   </div>
                 )
               ) : followingLoading ? (
-                <div className="p-8 text-center text-outline">
-                  <div className="inline-block w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"></div>
-                  <p className="text-body-sm">
+                <div className="p-8 text-center text-gray-600 dark:text-gray-400">
+                  <div className="inline-block w-6 h-6 border-2 border-indigo-600 dark:border-indigo-400 border-t-transparent rounded-full animate-spin mb-2"></div>
+                  <p className="text-sm">
                     Đang tải danh sách đang theo dõi...
                   </p>
                 </div>
               ) : following.length > 0 ? (
-                <div className="divide-y divide-outline-variant/20">
+                <div className="divide-y divide-gray-200 dark:divide-gray-800">
                   {following.map((u) => (
                     <UserFollowCard
                       key={u.id}
@@ -1090,15 +1090,15 @@ export default function Profile() {
                 </div>
               ) : (
                 <div className="py-16 text-center px-4">
-                  <div className="w-14 h-14 rounded-2xl bg-surface-container flex items-center justify-center text-outline mx-auto mb-3">
+                  <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-400 dark:text-gray-500 mx-auto mb-3">
                     <span className="material-symbols-outlined text-[30px]">
                       person_search
                     </span>
                   </div>
-                  <h3 className="text-base font-bold text-on-surface">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">
                     Chưa theo dõi ai
                   </h3>
-                  <p className="text-outline text-sm mt-1 max-w-xs mx-auto">
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mt-1 max-w-xs mx-auto">
                     {isSelf
                       ? "Bạn chưa theo dõi người dùng nào. Hãy tìm kiếm và kết nối bạn bè!"
                       : `@${profile.username} chưa theo dõi ai.`}
@@ -1113,15 +1113,15 @@ export default function Profile() {
       {/* ─── EDIT PROFILE MODAL ─── */}
       {isEditOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface w-full max-w-lg rounded-3xl shadow-2xl border border-outline-variant/30 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white dark:bg-gray-900 w-full max-w-lg rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-outline-variant/30 flex items-center justify-between">
-              <h3 className="text-title-md font-bold text-on-surface">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                 Chỉnh sửa trang cá nhân
               </h3>
               <button
                 onClick={() => setIsEditOpen(false)}
-                className="p-1 rounded-full text-outline hover:text-on-surface hover:bg-surface-container"
+                className="p-1 rounded-full text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -1133,7 +1133,7 @@ export default function Profile() {
               className="p-6 overflow-y-auto space-y-4"
             >
               {editError && (
-                <div className="p-3 rounded-xl bg-error-container text-on-error-container text-body-sm flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-900 dark:text-red-200 text-sm flex items-center gap-2">
                   <span className="material-symbols-outlined text-[18px]">
                     error
                   </span>
@@ -1143,7 +1143,7 @@ export default function Profile() {
 
               {/* Display Name */}
               <div>
-                <label className="block text-label-md font-semibold text-on-surface mb-1">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1">
                   Tên hiển thị
                 </label>
                 <input
@@ -1154,17 +1154,17 @@ export default function Profile() {
                     setEditForm({ ...editForm, displayName: e.target.value })
                   }
                   placeholder="Nhập tên hiển thị của bạn..."
-                  className="input-field"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-600 dark:focus:ring-indigo-400 outline-none transition-colors"
                 />
               </div>
 
               {/* Bio */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-label-md font-semibold text-on-surface">
+                  <label className="text-sm font-semibold text-gray-900 dark:text-white">
                     Tiểu sử (Bio)
                   </label>
-                  <span className="text-body-sm text-outline">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
                     {editForm.bio.length}/500
                   </span>
                 </div>
@@ -1176,13 +1176,13 @@ export default function Profile() {
                     setEditForm({ ...editForm, bio: e.target.value })
                   }
                   placeholder="Giới thiệu đôi nét về bản thân bạn..."
-                  className="input-field resize-none"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-600 dark:focus:ring-indigo-400 outline-none transition-colors resize-none"
                 />
               </div>
 
               {/* Avatar Upload Section */}
               <div>
-                <label className="block text-label-md font-semibold text-on-surface mb-2">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                   Ảnh đại diện
                 </label>
 
@@ -1195,8 +1195,8 @@ export default function Profile() {
                   className="hidden"
                 />
 
-                <div className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant/30 flex items-center gap-4">
-                  <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-primary/20 flex-shrink-0 bg-surface flex items-center justify-center shadow-sm">
+                <div className="p-3.5 rounded-2xl bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 flex items-center gap-4">
+                  <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-indigo-600/20 flex-shrink-0 bg-white dark:bg-gray-700 flex items-center justify-center shadow-sm">
                     {editForm.avatarUrl ? (
                       <img
                         src={editForm.avatarUrl}
@@ -1207,7 +1207,7 @@ export default function Profile() {
                         }}
                       />
                     ) : (
-                      <span className="material-symbols-outlined text-outline text-[32px]">
+                      <span className="material-symbols-outlined text-gray-400 dark:text-gray-500 text-[32px]">
                         person
                       </span>
                     )}
@@ -1218,7 +1218,7 @@ export default function Profile() {
                       <button
                         type="button"
                         onClick={() => avatarFileInputRef.current?.click()}
-                        className="px-4 py-1.5 rounded-full bg-primary text-on-primary hover:bg-primary-container text-label-sm font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                        className="px-4 py-1.5 rounded-full bg-indigo-600 dark:bg-indigo-600 text-white dark:text-white hover:bg-indigo-700 dark:hover:bg-indigo-700 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
                       >
                         <span className="material-symbols-outlined text-[18px]">
                           upload_file
@@ -1232,13 +1232,13 @@ export default function Profile() {
                           onClick={() =>
                             setEditForm((prev) => ({ ...prev, avatarUrl: "" }))
                           }
-                          className="px-3 py-1.5 rounded-full border border-outline text-error hover:bg-error-container/20 text-label-sm font-semibold transition-colors"
+                          className="px-3 py-1.5 rounded-full border border-gray-400 dark:border-gray-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-semibold transition-colors"
                         >
                           Xóa ảnh
                         </button>
                       )}
                     </div>
-                    <p className="text-body-sm text-outline mt-1.5 truncate">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5 truncate">
                       Chọn file JPG, PNG, WebP từ máy tính
                     </p>
                   </div>
@@ -1253,14 +1253,14 @@ export default function Profile() {
                       setEditForm({ ...editForm, avatarUrl: e.target.value })
                     }
                     placeholder="Hoặc dán URL ảnh đại diện..."
-                    className="input-field text-body-sm"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-600 dark:focus:ring-indigo-400 outline-none transition-colors text-xs"
                   />
                 </div>
               </div>
 
               {/* Cover Upload Section */}
               <div>
-                <label className="block text-label-md font-semibold text-on-surface mb-2">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                   Ảnh bìa (Cover)
                 </label>
 
@@ -1273,8 +1273,8 @@ export default function Profile() {
                   className="hidden"
                 />
 
-                <div className="p-3.5 rounded-2xl bg-surface-container-low border border-outline-variant/30 space-y-3">
-                  <div className="relative h-24 w-full rounded-xl overflow-hidden border border-outline-variant/30 bg-surface flex items-center justify-center">
+                <div className="p-3.5 rounded-2xl bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 space-y-3">
+                  <div className="relative h-24 w-full rounded-xl overflow-hidden border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 flex items-center justify-center">
                     {editForm.coverUrl ? (
                       <img
                         src={editForm.coverUrl}
@@ -1285,7 +1285,7 @@ export default function Profile() {
                         }}
                       />
                     ) : (
-                      <span className="material-symbols-outlined text-outline/40 text-[40px]">
+                      <span className="material-symbols-outlined text-gray-300 dark:text-gray-600 text-[40px]">
                         image
                       </span>
                     )}
@@ -1295,7 +1295,7 @@ export default function Profile() {
                     <button
                       type="button"
                       onClick={() => coverFileInputRef.current?.click()}
-                      className="px-4 py-1.5 rounded-full bg-primary/10 text-primary hover:bg-primary/20 text-label-sm font-bold flex items-center gap-1.5 transition-all active:scale-95"
+                      className="px-4 py-1.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95"
                     >
                       <span className="material-symbols-outlined text-[18px]">
                         upload_file
@@ -1309,7 +1309,7 @@ export default function Profile() {
                         onClick={() =>
                           setEditForm((prev) => ({ ...prev, coverUrl: "" }))
                         }
-                        className="px-3 py-1.5 rounded-full border border-outline text-error hover:bg-error-container/20 text-label-sm font-semibold transition-colors"
+                        className="px-3 py-1.5 rounded-full border border-gray-400 dark:border-gray-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-semibold transition-colors"
                       >
                         Xóa ảnh bìa
                       </button>
@@ -1326,25 +1326,25 @@ export default function Profile() {
                       setEditForm({ ...editForm, coverUrl: e.target.value })
                     }
                     placeholder="Hoặc dán URL ảnh bìa..."
-                    className="input-field text-body-sm"
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-indigo-600 dark:focus:border-indigo-400 focus:ring-1 focus:ring-indigo-600 dark:focus:ring-indigo-400 outline-none transition-colors text-xs"
                   />
                 </div>
               </div>
 
               {/* Modal Footer Actions */}
-              <div className="pt-4 flex items-center justify-end gap-3 border-t border-outline-variant/30">
+              <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-200 dark:border-gray-800">
                 <button
                   type="button"
                   onClick={() => setIsEditOpen(false)}
                   disabled={editSaving}
-                  className="px-5 py-2 rounded-full border border-outline font-semibold text-on-surface text-label-md hover:bg-surface-container"
+                  className="px-5 py-2 rounded-full border border-gray-400 dark:border-gray-600 font-semibold text-gray-900 dark:text-white text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 >
                   Hủy
                 </button>
                 <button
                   type="submit"
                   disabled={editSaving}
-                  className="px-6 py-2 rounded-full bg-primary text-on-primary font-bold text-label-md hover:bg-primary-container shadow-md flex items-center gap-2 disabled:opacity-50"
+                  className="px-6 py-2 rounded-full bg-indigo-600 dark:bg-indigo-600 text-white font-bold text-sm hover:bg-indigo-700 dark:hover:bg-indigo-700 shadow-md flex items-center gap-2 disabled:opacity-50 transition-colors"
                 >
                   {editSaving ? (
                     <>
@@ -1374,7 +1374,7 @@ function UserFollowCard({
   onToggleFollow,
 }) {
   return (
-    <div className="p-4 hover:bg-surface-container/40 transition-colors flex items-center justify-between gap-4">
+    <div className="p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-between gap-4">
       <Link
         to={`/profile/${user.username}`}
         className="flex items-center gap-3 flex-1 min-w-0 group"
@@ -1386,15 +1386,15 @@ function UserFollowCard({
             "https://via.placeholder.com/48?text=U"
           }
           alt={user.displayName || user.username}
-          className="w-12 h-12 rounded-full object-cover border border-outline-variant flex-shrink-0"
+          className="w-12 h-12 rounded-full object-cover border border-gray-300 dark:border-gray-700 flex-shrink-0"
         />
         <div className="min-w-0 flex-1">
-          <p className="text-title-md font-bold text-on-surface group-hover:text-primary transition-colors truncate">
+          <p className="text-base font-bold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
             {user.displayName || user.username}
           </p>
-          <p className="text-body-sm text-outline truncate">@{user.username}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 truncate">@{user.username}</p>
           {user.bio && (
-            <p className="text-body-sm text-on-surface-variant truncate mt-0.5">
+            <p className="text-sm text-gray-700 dark:text-gray-300 truncate mt-0.5">
               {user.bio}
             </p>
           )}
@@ -1405,10 +1405,10 @@ function UserFollowCard({
         <button
           onClick={onToggleFollow}
           disabled={actionLoading}
-          className={`px-4 py-1.5 rounded-full text-label-sm font-semibold transition-all flex items-center gap-1 active:scale-95 flex-shrink-0 ${
+          className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1 active:scale-95 flex-shrink-0 ${
             user.isFollowing
-              ? "border border-outline text-on-surface hover:border-error hover:text-error hover:bg-error-container/20"
-              : "bg-primary text-on-primary hover:bg-primary-container"
+              ? "border border-gray-400 dark:border-gray-600 text-gray-900 dark:text-white hover:border-red-500 dark:hover:border-red-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+              : "bg-indigo-600 dark:bg-indigo-600 text-white hover:bg-indigo-700 dark:hover:bg-indigo-700"
           }`}
         >
           {actionLoading ? (

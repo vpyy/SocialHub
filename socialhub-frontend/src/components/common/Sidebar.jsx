@@ -176,18 +176,18 @@ export default function Sidebar({ user, navigate, location }) {
   }
 
   return (
-    <aside className="w-64 flex-shrink-0 h-screen sticky top-0 border-r border-outline-variant/30 flex flex-col justify-between p-4 bg-surface z-30 select-none overflow-y-auto">
+    <aside className="w-64 flex-shrink-0 h-screen sticky top-0 border-r border-gray-200 dark:border-gray-800 flex flex-col justify-between p-4 bg-white dark:bg-gray-900 z-30 select-none overflow-y-auto">
       <div className="flex flex-col gap-5">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:opacity-80">
-          <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center text-white shadow-sm flex-shrink-0">
+        <Link to="/" className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:opacity-80 transition-opacity">
+          <div className="w-10 h-10 rounded-lg bg-indigo-600 dark:bg-indigo-500 flex items-center justify-center text-white shadow-sm flex-shrink-0">
             <span className="material-symbols-outlined fill-icon text-white">hub</span>
           </div>
           <div>
-            <span className="text-headline-md font-headline-md font-bold text-gray-900 dark:text-white block leading-tight tracking-tight">
+            <span className="text-lg font-bold text-gray-900 dark:text-white block leading-tight tracking-tight">
               SocialHub
             </span>
-            <span className="text-label-sm font-label-sm text-gray-600 dark:text-gray-400 block leading-none">
+            <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 block leading-none">
               Creator Network
             </span>
           </div>
@@ -195,13 +195,13 @@ export default function Sidebar({ user, navigate, location }) {
 
         {/* Search bar */}
         <form onSubmit={handleSearch} className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-500 text-[18px]">search</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-500 dark:text-gray-400 text-[18px]">search</span>
           <input
             type="text"
             value={searchInput}
             onChange={e => setSearchInput(e.target.value)}
             placeholder={t('common.searchPlaceholder')}
-            className="w-full pl-9 pr-3 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm text-gray-900 dark:text-white placeholder:text-gray-500 outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+            className="w-full pl-9 pr-3 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-indigo-500/30 dark:focus:ring-indigo-400/30 transition-all"
           />
         </form>
 
@@ -213,18 +213,18 @@ export default function Sidebar({ user, navigate, location }) {
               to={item.path}
               className={`flex items-center justify-between px-4 py-3 rounded-lg font-medium transition-all duration-150 active:scale-[0.98] ${
                 isActive(item.path)
-                  ? 'bg-blue-500 text-white font-semibold'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'bg-indigo-600 dark:bg-indigo-600 text-white font-semibold'
+                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               <div className="flex items-center gap-3">
                 <span className={`material-symbols-outlined ${item.fill ? 'fill-icon' : ''}`}>
                   {item.icon}
                 </span>
-                <span className="text-label-md font-label-md">{t(item.labelKey)}</span>
+                <span className="text-sm font-semibold">{t(item.labelKey)}</span>
               </div>
               {item.badge && (
-                <span className="bg-red-500 text-white text-xs font-medium px-2 py-0.5 rounded-md">
+                <span className="bg-red-500 dark:bg-red-600 text-white text-xs font-medium px-2 py-0.5 rounded-md">
                   {item.badge}
                 </span>
               )}
@@ -234,7 +234,7 @@ export default function Sidebar({ user, navigate, location }) {
       </div>
 
       {/* User Card */}
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-3 relative">
+      <div className="border-t border-gray-200 dark:border-gray-800 pt-3 relative">
         <div className="flex items-center justify-between px-2 py-2">
           <ThemeToggle />
           <div
@@ -254,7 +254,7 @@ export default function Sidebar({ user, navigate, location }) {
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">@{user?.username || 'user'}</p>
               </div>
             </div>
-            <span className="ml-1">⋮</span>
+            <span className="ml-1 text-gray-600 dark:text-gray-400">⋮</span>
           </div>
         </div>
 
@@ -290,7 +290,7 @@ export default function Sidebar({ user, navigate, location }) {
                       onClick={() => changeLanguage(lang.code)}
                       className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
                         lang.code === i18n.language 
-                          ? 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 font-medium' 
+                          ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 font-medium' 
                           : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}
                     >
@@ -319,7 +319,7 @@ export default function Sidebar({ user, navigate, location }) {
             <div className="h-px bg-gray-200 dark:bg-gray-700 my-1"></div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors w-full"
+              className="flex items-center gap-2.5 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors w-full"
             >
               <span className="material-symbols-outlined">logout</span>
               <span>{i18n.language === 'vi' ? 'Đăng xuất' : 'Logout'}</span>
@@ -338,7 +338,7 @@ export default function Sidebar({ user, navigate, location }) {
               </h2>
               <button
                 onClick={() => setShowSwitchAccountModal(false)}
-                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
@@ -356,7 +356,7 @@ export default function Sidebar({ user, navigate, location }) {
                       onClick={() => handleSelectAccount(account)}
                       className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
                         account.id === user?.id
-                          ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500'
+                          ? 'bg-indigo-50 dark:bg-indigo-900/20 border-2 border-indigo-500'
                           : 'hover:bg-gray-100 dark:hover:bg-gray-700 border-2 border-transparent'
                       }`}
                     >
@@ -374,7 +374,7 @@ export default function Sidebar({ user, navigate, location }) {
                         </p>
                       </div>
                       {account.id === user?.id && (
-                        <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/40 px-2 py-1 rounded-md">
+                        <span className="text-xs font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-900/40 px-2 py-1 rounded-md">
                           Đang dùng
                         </span>
                       )}
@@ -396,7 +396,7 @@ export default function Sidebar({ user, navigate, location }) {
               {/* Add New Account Button */}
               <button
                 onClick={handleAddNewAccount}
-                className="w-full mt-4 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                className="w-full mt-4 flex items-center justify-center gap-2 p-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
               >
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

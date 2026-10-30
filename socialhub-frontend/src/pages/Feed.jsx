@@ -263,9 +263,9 @@ export default function Feed() {
           </>
         ) : (
           <div className="flex flex-col items-center justify-center py-12 px-4">
-            <span className="material-symbols-outlined text-6xl text-outline-variant/40 mb-4">inbox</span>
-            <p className="text-on-surface-variant text-center mb-2">Chưa có bài viết nào</p>
-            <p className="text-body-sm text-on-surface-variant text-center">
+            <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-700 mb-4">inbox</span>
+            <p className="text-gray-700 dark:text-gray-300 text-center mb-2">Chưa có bài viết nào</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
               Hãy tạo bài viết đầu tiên của bạn!
             </p>
           </div>
