@@ -1,152 +1,153 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import PostCard from "../components/PostCard";
-
-const API_BASE = "http://localhost:8080/api";
+import { useState, useEffect } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import postService from '../services/postService'
+import PostCard from '../components/PostCard'
 
 export default function PostDetail() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [post, setPost] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [post, setPost] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    fetchPost();
-  }, [id]);
-
-  const fetchPost = async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      // Get current user ID from localStorage
-      const user = JSON.parse(localStorage.getItem("user") || "{}");
-      const userId = user.id || "temp-user-id";
-
-      const headers = {
-        "Content-Type": "application/json",
-        "X-User-Id": userId,
-      };
-
-      const token = localStorage.getItem("token");
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const res = await fetch(`${API_BASE}/posts/${id}`, { headers });
-      const data = await res.json();
-
-      if (data.success) {
-        // Transform API response to match PostCard expected format
-        const postData = data.data;
-        const transformedPost = {
-          ...postData,
-          author: {
-            id: postData.authorId,
-            username: postData.authorUsername,
-            displayName: postData.authorDisplayName,
-            avatarUrl: postData.authorAvatarUrl,
-            isVerified: postData.authorIsVerified || false,
-          },
-          // Map media array to imageUrl for backwards compatibility
-          imageUrl: postData.media && postData.media.length > 0 ? postData.media[0].url : null,
-          media: postData.media || [], // Keep original media array for editing
-          visibility: postData.visibility || 'PUBLIC', // Keep original visibility
-          likes: postData.likeCount || 0,
-          comments: postData.commentCount || 0,
-          shares: postData.shareCount || 0,
-          isLiked: postData.likedByCurrentUser || false,
-          isReposted: postData.repostedByCurrentUser || false,
-        };
-        setPost(transformedPost);
-      } else {
-        setError(data.message || "Không thể tải bài viết");
-      }
-    } catch (err) {
-      console.error("Error fetching post:", err);
-      setError("Lỗi kết nối. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
+    if (!id) {
+      setError('Post ID is missing')
+      return
     }
-  };
 
-  const handlePostUpdate = () => {
-    fetchPost();
-  };
+    const fetchPost = async () => {
+      try {
+        setLoading(true)
+        setError(null)
 
-  const handlePostDelete = () => {
-    navigate("/");
-  };
+        // Fetch post by ID
+        const response = await postService.getPostById(id)
+        const postData = response?.data || response
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-12 h-12 border-3 border-gray-200 dark:border-slate-800 rounded-full"></div>
-            <div className="absolute top-0 left-0 w-12 h-12 border-3 border-blue-500 dark:border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-          <p className="text-gray-600 dark:text-slate-400 text-sm">Đang tải...</p>
-        </div>
-      </div>
-    );
+        if (!postData) {
+          setError('Không tìm thấy bài viết')
+          return
+        }
+
+        // Convert to frontend format
+        const convertedPost = convertToFrontendFormat(postData)
+        setPost(convertedPost)
+      } catch (err) {
+        console.error('Error fetching post:', err)
+        setError('Không thể tải bài viết. Vui lòng thử lại.')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchPost()
+  }, [id])
+
+  const convertToFrontendFormat = (backendPost) => {
+    const images = (backendPost.media || [])
+      .filter(m => m.type === 'IMAGE')
+      .map(m => m.url)
+    const videoItem = (backendPost.media || []).find(m => m.type === 'VIDEO')
+
+    return {
+      id: backendPost.id,
+      author: {
+        id: backendPost.authorId,
+        displayName: backendPost.authorDisplayName || backendPost.authorUsername || 'Unknown User',
+        username: backendPost.authorUsername || 'unknown',
+        avatarUrl: backendPost.authorAvatarUrl || 'https://via.placeholder.com/40',
+        isVerified: false
+      },
+      content: backendPost.content,
+      imageUrl: images.length > 0 ? images[0] : null,
+      videoUrl: videoItem ? videoItem.url : null,
+      media: backendPost.media || [],
+      visibility: backendPost.visibility || 'PUBLIC',
+      likes: backendPost.likeCount || 0,
+      comments: backendPost.commentCount || 0,
+      shares: backendPost.shareCount || 0,
+      isLiked: backendPost.likedByCurrentUser || false,
+      isBookmarked: backendPost.isBookmarkedByCurrentUser || false,
+      createdAt: formatTimestamp(backendPost.createdAt),
+      privacy: backendPost.visibility?.toLowerCase() || 'public',
+      hashtags: backendPost.hashtags || []
+    }
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-white dark:bg-slate-950 flex items-center justify-center p-4">
-        <div className="max-w-sm text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-50 dark:bg-red-950/50 flex items-center justify-center">
-            <svg className="w-8 h-8 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-50 mb-2">Không tìm thấy</h2>
-          <p className="text-gray-500 dark:text-slate-400 text-sm mb-6">{error}</p>
-          <button
-            onClick={() => navigate("/")}
-            className="px-5 py-2.5 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            Về trang chủ
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!post) {
-    return null;
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return 'Vừa xong'
+    
+    const now = new Date()
+    const postTime = new Date(timestamp)
+    const diffMs = now - postTime
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    
+    if (diffMins < 1) return 'Vừa xong'
+    if (diffMins < 60) return `${diffMins} phút trước`
+    if (diffHours < 24) return `${diffHours} giờ trước`
+    if (diffDays < 7) return `${diffDays} ngày trước`
+    return postTime.toLocaleDateString('vi-VN')
   }
 
   return (
-    <div className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-slate-700 min-h-screen bg-white dark:bg-slate-950">
+    <section className="flex-1 w-full max-w-3xl mx-auto border-x border-gray-200 dark:border-gray-700 min-h-screen pb-20 bg-white dark:bg-gray-950">
       {/* Header */}
-      <div className="sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur-sm border-b border-gray-200 dark:border-slate-700 z-20">
-        <div className="px-4 md:px-6 py-2.5 flex items-center gap-3">
-          <button
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors -ml-2"
-            aria-label="Quay lại"
-          >
-            <svg className="w-5 h-5 text-gray-700 dark:text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-50">Bài viết</h1>
-        </div>
+      <div className="sticky top-0 z-20 bg-white/85 dark:bg-gray-900/85 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 md:px-6 py-3 flex items-center gap-3 flex-shrink-0">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+          title="Quay lại"
+        >
+          <span className="material-symbols-outlined text-[22px]">arrow_back</span>
+        </button>
+        <h1 className="text-lg font-bold text-gray-900 dark:text-white">Chi tiết bài viết</h1>
       </div>
 
-      {/* Content with better padding */}
-      <div className="px-2 md:px-4">
-        <PostCard
-          post={post}
-          onUpdate={handlePostUpdate}
-          onDelete={handlePostDelete}
-          showCommentsDefault={true}
-          noBorder={true}
-        />
+      {/* Content */}
+      <div className="px-4 md:px-6 py-6">
+        {loading && (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
+          </div>
+        )}
+
+        {error && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <span className="material-symbols-outlined text-4xl text-red-200 dark:text-red-900">error</span>
+            <p className="text-sm text-red-500 dark:text-red-400">{error}</p>
+            <button 
+              onClick={() => navigate('/')} 
+              className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline"
+            >
+              Quay lại trang chủ
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && post && (
+          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-100 dark:border-gray-800 overflow-hidden">
+            <PostCard
+              post={post}
+              showCommentsDefault={true}
+              noBorder={true}
+              onLike={() => {}}
+              onBookmark={() => {}}
+              onUpdate={() => {}}
+              onDelete={() => navigate('/')}
+            />
+          </div>
+        )}
+
+        {!loading && !error && !post && (
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <span className="material-symbols-outlined text-4xl text-gray-200 dark:text-gray-700">article</span>
+            <p className="text-sm text-gray-400 dark:text-gray-500">Không tìm thấy bài viết</p>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    </section>
+  )
 }

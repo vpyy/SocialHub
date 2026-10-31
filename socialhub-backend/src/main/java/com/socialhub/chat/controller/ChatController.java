@@ -74,4 +74,15 @@ public class ChatController {
         chatService.markMessagesRead(id, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "OK"));
     }
+
+    /** POST /api/conversations/group — create group chat */
+    @PostMapping("/group")
+    public ResponseEntity<ApiResponse<ConversationDto>> createGroupChat(
+            @RequestHeader("X-User-Id") String userId,
+            @Valid @RequestBody CreateGroupChatRequest req) {
+
+        ConversationDto dto = chatService.createGroupChat(userId, req);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success(dto, "Nhóm chat đã được tạo"));
+    }
 }

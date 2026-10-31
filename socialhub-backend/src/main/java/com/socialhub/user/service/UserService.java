@@ -15,6 +15,12 @@ import com.socialhub.user.dto.CreateUserDto;
 import com.socialhub.user.dto.UpdateProfileDto;
 import com.socialhub.user.dto.UserDto;
 import com.socialhub.user.dto.UserProfileDto;
+import com.socialhub.user.document.Block;
+import com.socialhub.user.document.Nickname;
+import com.socialhub.user.dto.BlockedUserDto;
+import com.socialhub.user.dto.SetNicknameRequest;
+import com.socialhub.user.repository.BlockRepository;
+import com.socialhub.user.repository.NicknameRepository;
 import com.socialhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +33,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -35,6 +42,8 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final BlockRepository blockRepository;
+    private final NicknameRepository nicknameRepository;
     private final FollowRepository followRepository;
     private final PostRepository postRepository;
     private final LikeRepository likeRepository;
@@ -95,15 +104,38 @@ public class UserService {
         return userRepository.findByEmailIgnoreCase(email);
     }
 
+    public List<UserDto> searchUsers(String keyword, String currentUserId) {
+        List<User> allResults = userRepository.searchByKeyword(keyword);
+        
+        // If not authenticated, return all results
+        if (currentUserId == null) {
+            return allResults.stream()
+                    .map(this::toDto)
+                    .toList();
+        }
+        
+        // Get current user's blocked users
+        Set<String> blockedByMe = blockRepository.findByUserId(currentUserId).stream()
+                .map(Block::getBlockedUserId)
+                .collect(Collectors.toSet());
+        
+        // Get users who blocked current user
+        Set<String> blockedMeUsers = blockRepository.findByBlockedUserId(currentUserId).stream()
+                .map(Block::getUserId)
+                .collect(Collectors.toSet());
+        
+        // Filter results: exclude blocked users and users who blocked current user
+        return allResults.stream()
+                .filter(user -> !blockedByMe.contains(user.getId()) && !blockedMeUsers.contains(user.getId()))
+                .map(this::toDto)
+                .toList();
+    }
+
     public List<UserDto> searchUsers(String keyword) {
         return userRepository.searchByKeyword(keyword)
                 .stream()
                 .map(this::toDto)
                 .toList();
-    }
-
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsernameIgnoreCase(username);
     }
 
     /**
@@ -428,5 +460,124 @@ public class UserService {
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
                 .build();
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Block/Unblock users
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * Block a user
+     */
+    public void blockUser(String currentUserId, String blockedUserId) {
+        if (currentUserId.equals(blockedUserId)) {
+            throw new ValidationException("Không thể chặn chính mình");
+        }
+
+        // Check user exists
+        findUserById(blockedUserId);
+
+        // Check if already blocked
+        if (blockRepository.existsByUserIdAndBlockedUserId(currentUserId, blockedUserId)) {
+            log.warn("User {} already blocked {}", currentUserId, blockedUserId);
+            return;
+        }
+
+        Block block = Block.builder()
+                .userId(currentUserId)
+                .blockedUserId(blockedUserId)
+                .createdAt(Instant.now())
+                .build();
+        blockRepository.save(block);
+        log.info("User {} blocked {}", currentUserId, blockedUserId);
+    }
+
+    /**
+     * Unblock a user
+     */
+    public void unblockUser(String currentUserId, String blockedUserId) {
+        blockRepository.deleteByUserIdAndBlockedUserId(currentUserId, blockedUserId);
+        log.info("User {} unblocked {}", currentUserId, blockedUserId);
+    }
+
+    /**
+     * Get all blocked users
+     */
+    public List<BlockedUserDto> getBlockedUsers(String currentUserId) {
+        List<Block> blocks = blockRepository.findByUserId(currentUserId);
+        return blocks.stream()
+                .map(b -> {
+                    User blockedUser = userRepository.findById(b.getBlockedUserId()).orElse(null);
+                    if (blockedUser == null) return null;
+                    return BlockedUserDto.builder()
+                            .id(blockedUser.getId())
+                            .username(blockedUser.getUsername())
+                            .displayName(blockedUser.getDisplayName())
+                            .avatarUrl(blockedUser.getAvatarUrl())
+                            .blockedAt(b.getCreatedAt())
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Check if user is blocked
+     */
+    public boolean isBlocked(String currentUserId, String targetUserId) {
+        return blockRepository.existsByUserIdAndBlockedUserId(currentUserId, targetUserId);
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Nicknames
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * Set nickname for a user
+     */
+    public void setNickname(String currentUserId, String targetUserId, String nickname) {
+        if (currentUserId.equals(targetUserId)) {
+            throw new ValidationException("Không thể đặt biệt danh cho chính mình");
+        }
+
+        // Check target user exists
+        findUserById(targetUserId);
+
+        if (nickname == null || nickname.trim().isEmpty()) {
+            // Remove nickname
+            nicknameRepository.deleteByUserIdAndTargetUserId(currentUserId, targetUserId);
+            log.info("Nickname removed for user {} by {}", targetUserId, currentUserId);
+            return;
+        }
+
+        // Trim and validate
+        String trimmedNickname = nickname.trim();
+        if (trimmedNickname.length() > 50) {
+            throw new ValidationException("Biệt danh không được quá 50 ký tự");
+        }
+
+        // Find existing or create new
+        Nickname nick = nicknameRepository.findByUserIdAndTargetUserId(currentUserId, targetUserId)
+                .orElse(Nickname.builder()
+                        .userId(currentUserId)
+                        .targetUserId(targetUserId)
+                        .build());
+
+        nick.setNickname(trimmedNickname);
+        nick.setUpdatedAt(Instant.now());
+        if (nick.getCreatedAt() == null) {
+            nick.setCreatedAt(Instant.now());
+        }
+
+        nicknameRepository.save(nick);
+        log.info("Nickname set for user {} by {}: {}", targetUserId, currentUserId, trimmedNickname);
+    }
+
+    /**
+     * Get nickname if exists
+     */
+    public String getNickname(String currentUserId, String targetUserId) {
+        return nicknameRepository.findByUserIdAndTargetUserId(currentUserId, targetUserId)
+                .map(Nickname::getNickname)
+                .orElse(null);
     }
 }

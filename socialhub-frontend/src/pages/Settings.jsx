@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../hooks/useTheme'
 import userService from '../services/userService'
+import blockService from '../services/blockService'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -10,7 +11,12 @@ export default function Settings() {
   const { isDark, toggleTheme } = useTheme()
   
   const [user, setUser] = useState(null)
-  const [activeTab, setActiveTab] = useState('display') // display | language | notifications | password
+  const [activeTab, setActiveTab] = useState('display') // display | language | notifications | password | blocked
+
+  // Blocked users state
+  const [blockedUsers, setBlockedUsers] = useState([])
+  const [blockedLoading, setBlockedLoading] = useState(false)
+  const [blockedError, setBlockedError] = useState('')
 
   // Password tab state
   const [currentPassword, setCurrentPassword] = useState('')
@@ -53,7 +59,37 @@ export default function Settings() {
         console.error('Parse notif settings error:', e)
       }
     }
+
+    // Load blocked users
+    loadBlockedUsers()
   }, [])
+
+  // Load blocked users from API
+  const loadBlockedUsers = async () => {
+    setBlockedLoading(true)
+    setBlockedError('')
+    try {
+      const res = await blockService.getBlockedUsers()
+      const data = res?.data || res
+      setBlockedUsers(Array.isArray(data) ? data : [])
+    } catch (error) {
+      console.error('Error loading blocked users:', error)
+      setBlockedError('Không thể tải danh sách chặn')
+    } finally {
+      setBlockedLoading(false)
+    }
+  }
+
+  // Unblock user handler
+  const handleUnblock = async (userId) => {
+    try {
+      await blockService.unblockUser(userId)
+      setBlockedUsers(prev => prev.filter(u => u.id !== userId))
+    } catch (error) {
+      console.error('Error unblocking user:', error)
+      setBlockedError('Không thể bỏ chặn người dùng')
+    }
+  }
 
 
   // ── Password handlers ──
@@ -152,6 +188,7 @@ export default function Settings() {
           { key: 'display', label: 'Hiển thị' },
           { key: 'language', label: 'Ngôn ngữ' },
           { key: 'notifications', label: 'Thông báo' },
+          { key: 'blocked', label: 'Người bị chặn' },
           { key: 'password', label: 'Mật khẩu' },
         ].map(tab => (
           <button
@@ -278,6 +315,64 @@ export default function Settings() {
             >
               {notifLoading ? 'Đang lưu...' : 'Lưu cài đặt'}
             </button>
+          </div>
+        )}
+
+        {/* Blocked Users Tab */}
+        {activeTab === 'blocked' && (
+          <div className="max-w-2xl space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Người dùng bị chặn</h2>
+            
+            {blockedError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 text-sm rounded-lg">
+                {blockedError}
+              </div>
+            )}
+
+            {blockedLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600" />
+              </div>
+            ) : blockedUsers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="material-symbols-outlined text-5xl text-gray-200 dark:text-gray-700 mb-2">person_off</span>
+                <p className="text-gray-600 dark:text-gray-400">Chưa chặn ai</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {blockedUsers.map(blockedUser => (
+                  <div key={blockedUser.id} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      {blockedUser.avatarUrl ? (
+                        <img 
+                          src={blockedUser.avatarUrl} 
+                          alt={blockedUser.displayName}
+                          className="w-10 h-10 rounded-full object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-sm shrink-0">
+                          {(blockedUser.displayName || blockedUser.username || 'U').charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 dark:text-white truncate">
+                          {blockedUser.displayName || blockedUser.username}
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                          @{blockedUser.username}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleUnblock(blockedUser.id)}
+                      className="ml-2 px-3 py-1.5 text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors font-medium whitespace-nowrap shrink-0"
+                    >
+                      Bỏ chặn
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -17,11 +17,11 @@ function formatTime(ts) {
 }
 
 const TYPE_META = {
-  LIKE:    { icon: 'favorite',      color: 'text-red-500',    bg: 'bg-red-50',    label: 'đã thích bài viết của bạn' },
-  COMMENT: { icon: 'chat_bubble',   color: 'text-blue-500',   bg: 'bg-blue-50',   label: 'đã bình luận bài viết của bạn' },
-  FOLLOW:  { icon: 'person_add',    color: 'text-indigo-500', bg: 'bg-indigo-50', label: 'đã theo dõi bạn' },
-  MENTION: { icon: 'alternate_email',color:'text-purple-500', bg: 'bg-purple-50', label: 'đã đề cập đến bạn' },
-  MESSAGE: { icon: 'mail',          color: 'text-green-500',  bg: 'bg-green-50',  label: 'đã gửi tin nhắn cho bạn' },
+  LIKE:    { icon: 'favorite',      color: 'text-red-500',    bg: 'bg-red-50 dark:bg-red-900/20',    label: 'đã thích bài viết của bạn' },
+  COMMENT: { icon: 'chat_bubble',   color: 'text-blue-500',   bg: 'bg-blue-50 dark:bg-blue-900/20',   label: 'đã bình luận bài viết của bạn' },
+  FOLLOW:  { icon: 'person_add',    color: 'text-indigo-500', bg: 'bg-indigo-50 dark:bg-indigo-900/20', label: 'đã theo dõi bạn' },
+  MENTION: { icon: 'alternate_email',color:'text-purple-500', bg: 'bg-purple-50 dark:bg-purple-900/20', label: 'đã đề cập đến bạn' },
+  MESSAGE: { icon: 'mail',          color: 'text-green-500',  bg: 'bg-green-50 dark:bg-green-900/20',  label: 'đã gửi tin nhắn cho bạn' },
 }
 
 function Avatar({ src, name, size = 10 }) {
@@ -54,7 +54,11 @@ function NotificationItem({ notif, onRead, navigate }) {
     
     // Navigate to source based on type
     if (notif.type === 'LIKE' || notif.type === 'COMMENT') {
-      navigate(`/`)  // Navigate to feed, post will show in there
+      if (notif.postId) {
+        navigate(`/post/${notif.postId}`)
+      } else {
+        navigate(`/`)
+      }
     } else if (notif.type === 'FOLLOW' || notif.type === 'MENTION') {
       navigate(`/profile/${notif.actorUsername}`)
     } else if (notif.type === 'MESSAGE') {
@@ -65,7 +69,7 @@ function NotificationItem({ notif, onRead, navigate }) {
   return (
     <div
       onClick={handleClick}
-      className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-50 ${!notif.isRead ? 'bg-indigo-50/40' : ''}`}
+      className={`flex items-start gap-3 px-4 md:px-6 py-4 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 ${!notif.isRead ? 'bg-indigo-50/50 dark:bg-indigo-900/10' : 'bg-white dark:bg-gray-900'}`}
     >
       {/* Actor avatar + type icon */}
       <div className="relative shrink-0 mt-0.5">
@@ -77,14 +81,14 @@ function NotificationItem({ notif, onRead, navigate }) {
 
       {/* Text */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-800 leading-snug">
+        <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">
           <span className="font-semibold">{notif.actorDisplayName || notif.actorUsername || 'Ai đó'}</span>
-          {' '}{meta.label}
+          {' '}<span className="text-gray-600 dark:text-gray-400">{meta.label}</span>
         </p>
         {notif.postContentPreview && (
-          <p className="text-xs text-gray-400 mt-0.5 truncate">"{notif.postContentPreview}"</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">&quot;{notif.postContentPreview}&quot;</p>
         )}
-        <p className="text-xs text-gray-400 mt-1">{formatTime(notif.createdAt)}</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{formatTime(notif.createdAt)}</p>
       </div>
 
       {/* Unread dot */}

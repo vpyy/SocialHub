@@ -6,6 +6,7 @@ import postService from "../services/postService";
 import bookmarkService from "../services/bookmarkService";
 import CommentItem from "./CommentItem";
 import RepostButton from "./RepostButton";
+import ShareButton from "./ShareButton";
 import EngagementModal from "./EngagementModal";
 
 export default function PostCard({
@@ -546,6 +547,12 @@ export default function PostCard({
           postId={post.id}
           shareCount={post.shares || 0}
           isReposted={post.isReposted || false}
+        />
+
+        {/* Share Button */}
+        <ShareButton
+          postId={post.id}
+          post={post}
         />
 
         {/* Bookmark Button */}

@@ -179,8 +179,11 @@ public class UserController {
 
     /** GET /api/users/search?q=keyword */
     @GetMapping("/search")
-    public ResponseEntity<ApiResponse<List<UserDto>>> search(@RequestParam String q) {
-        List<UserDto> results = userService.searchUsers(q);
+    public ResponseEntity<ApiResponse<List<UserDto>>> search(
+            @RequestParam String q,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        List<UserDto> results = userService.searchUsers(q, currentUserId);
         return ResponseEntity.ok(ApiResponse.success(results, "OK"));
     }
 
@@ -196,5 +199,88 @@ public class UserController {
             return null;
         }
         return principal.toString();
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Block/Unblock Users
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * POST /api/users/{id}/block — Block a user
+     */
+    @PostMapping("/{id}/block")
+    public ResponseEntity<ApiResponse<Void>> blockUser(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        userService.blockUser(currentUserId, id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Đã chặn người dùng"));
+    }
+
+    /**
+     * DELETE /api/users/{id}/block — Unblock a user
+     */
+    @DeleteMapping("/{id}/block")
+    public ResponseEntity<ApiResponse<Void>> unblockUser(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        userService.unblockUser(currentUserId, id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Đã bỏ chặn người dùng"));
+    }
+
+    /**
+     * GET /api/users/me/blocked — Get all blocked users
+     */
+    @GetMapping("/me/blocked")
+    public ResponseEntity<ApiResponse<List<BlockedUserDto>>> getBlockedUsers(
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        List<BlockedUserDto> blocked = userService.getBlockedUsers(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(blocked, "OK"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Nicknames
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * POST /api/users/{id}/nickname — Set nickname
+     */
+    @PostMapping("/{id}/nickname")
+    public ResponseEntity<ApiResponse<Void>> setNickname(
+            @PathVariable String id,
+            @Valid @RequestBody SetNicknameRequest req,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        userService.setNickname(currentUserId, id, req.getNickname());
+        return ResponseEntity.ok(ApiResponse.success(null, "Biệt danh đã được lưu"));
+    }
+
+    /**
+     * GET /api/users/{id}/nickname — Get nickname
+     */
+    @GetMapping("/{id}/nickname")
+    public ResponseEntity<ApiResponse<String>> getNickname(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        String nickname = userService.getNickname(currentUserId, id);
+        return ResponseEntity.ok(ApiResponse.success(nickname, "OK"));
     }
 }

@@ -40,6 +40,11 @@ public class Conversation {
     @Builder.Default
     private List<String> participantIds = new ArrayList<>();
 
+    /** Group chat info */
+    private boolean isGroup;  // true for group, false for 1-1 chat
+    private String groupName;
+    private String groupAvatarUrl;
+
     /** Nội dung preview tin nhắn cuối */
     private String lastMessage;
 

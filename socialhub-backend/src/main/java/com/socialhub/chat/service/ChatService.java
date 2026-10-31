@@ -219,4 +219,43 @@ public class ChatService {
                     : m.getContent();
         };
     }
+
+    // ── Create group chat ────────────────────────────────────────────────
+
+    @Transactional
+    public ConversationDto createGroupChat(String currentUserId, CreateGroupChatRequest req) {
+        if (req.getGroupName() == null || req.getGroupName().trim().isEmpty()) {
+            throw new ValidationException("Tên nhóm không được để trống");
+        }
+        if (req.getMemberIds() == null || req.getMemberIds().isEmpty()) {
+            throw new ValidationException("Nhóm phải có ít nhất 1 thành viên");
+        }
+        if (req.getMemberIds().size() > 100) {
+            throw new ValidationException("Nhóm không được quá 100 thành viên");
+        }
+
+        // Validate all members exist
+        for (String memberId : req.getMemberIds()) {
+            userRepository.findById(memberId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found: " + memberId));
+        }
+
+        // Create conversation with all participants
+        List<String> participantIds = new java.util.ArrayList<>(req.getMemberIds());
+        if (!participantIds.contains(currentUserId)) {
+            participantIds.add(0, currentUserId);
+        }
+
+        Conversation conv = Conversation.builder()
+                .participantIds(participantIds)
+                .isGroup(true)
+                .groupName(req.getGroupName().trim())
+                .groupAvatarUrl(req.getGroupAvatarUrl())
+                .createdAt(Instant.now())
+                .build();
+
+        Conversation saved = conversationRepository.save(conv);
+        log.info("Group chat created: {} with {} members", saved.getId(), participantIds.size());
+        return toConversationDto(saved, currentUserId);
+    }
 }
