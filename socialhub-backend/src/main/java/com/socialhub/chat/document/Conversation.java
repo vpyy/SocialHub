@@ -45,6 +45,22 @@ public class Conversation {
     private String groupName;
     private String groupAvatarUrl;
 
+    /** Danh sách admin của nhóm */
+    @Builder.Default
+    private List<String> adminIds = new ArrayList<>();
+
+    /** Danh sách userId bị xóa khỏi nhóm */
+    @Builder.Default
+    private List<String> removedMemberIds = new ArrayList<>();
+
+    /** Typing indicator - users currently typing */
+    @Builder.Default
+    private List<String> typingUserIds = new ArrayList<>();
+
+    /** Pinned messages IDs */
+    @Builder.Default
+    private List<String> pinnedMessageIds = new ArrayList<>();
+
     /** Nội dung preview tin nhắn cuối */
     private String lastMessage;
 

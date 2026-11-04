@@ -21,6 +21,12 @@ public class ConversationDto {
     private Instant lastMessageAt;
     private Instant createdAt;
     private long unreadCount;
+    
+    // Group chat info
+    private boolean isGroup;
+    private String groupName;
+    private String groupAvatarUrl;
+    private List<String> adminIds;
 
     @Data
     @NoArgsConstructor

@@ -1,12 +1,432 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import chatService from '../services/chatService'
 import userService from '../services/userService'
-import blockService from '../services/blockService'
-import nicknameService from '../services/nicknameService'
 import groupChatService from '../services/groupChatService'
 
-// ─── helpers ────────────────────────────────────────────────────────────────
+const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '🔥', '💯', '✨']
+
+// Create Group Modal
+function CreateGroupModal({ onClose, onCreated, allUsers, currentUserId, conversations }) {
+  const [groupName, setGroupName] = useState('')
+  const [selectedMembers, setSelectedMembers] = useState([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('suggested') // 'suggested' or 'all'
+
+  // Get suggested users (people you've chatted with)
+  const getChatPartners = () => {
+    const chatPartnerIds = new Set()
+    conversations.forEach(conv => {
+      if (!conv.isGroup) {
+        const partner = conv.participants?.find(p => p.userId !== currentUserId)
+        if (partner) chatPartnerIds.add(partner.userId)
+      }
+    })
+    return Array.from(chatPartnerIds)
+  }
+
+  const chatPartnerIds = getChatPartners()
+  
+  // Get suggested users (chat partners + remove already selected)
+  const suggestedUsers = allUsers.filter(u => 
+    u.id !== currentUserId && 
+    chatPartnerIds.includes(u.id) &&
+    !selectedMembers.includes(u.id)
+  )
+
+  // Filtered users based on search and tab
+  const filteredUsers = (() => {
+    let users = activeTab === 'suggested' ? suggestedUsers : allUsers
+    
+    if (searchTerm.trim()) {
+      users = users.filter(u => 
+        u.displayName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        u.username?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+    
+    return users.filter(u => u.id !== currentUserId)
+  })()
+
+  const toggleMember = (userId) => {
+    setSelectedMembers(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    )
+  }
+
+  const handleCreate = async () => {
+    if (!groupName.trim()) {
+      alert('Tên nhóm không được để trống')
+      return
+    }
+    if (selectedMembers.length < 1) {
+      alert('Cần ít nhất 1 thành viên khác (bạn + 1)')
+      return
+    }
+
+    setLoading(true)
+    try {
+      const res = await chatService.createGroup({
+        groupName: groupName.trim(),
+        memberIds: selectedMembers
+      })
+      const newConv = res.data ?? res
+      onCreated?.(newConv)
+      onClose?.()
+    } catch (e) {
+      console.error(e)
+      alert('Không thể tạo nhóm: ' + (e?.response?.data?.message || e.message))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-screen overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h2 className="font-bold text-gray-900 dark:text-white">Tạo nhóm chat</h2>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+            <span className="material-symbols-outlined text-gray-600 dark:text-gray-400">close</span>
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div>
+            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 block">Tên nhóm</label>
+            <input
+              value={groupName}
+              onChange={e => setGroupName(e.target.value)}
+              placeholder="Nhập tên nhóm..."
+              className="w-full px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 block">Chọn thành viên ({selectedMembers.length})</label>
+            
+            <div className="relative mb-3">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-sm">search</span>
+              <input
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Tìm người dùng..."
+                className="w-full pl-8 pr-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            {/* Tab: Suggested vs All */}
+            <div className="flex gap-2 mb-3 border-b border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setActiveTab('suggested')}
+                className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'suggested'
+                    ? 'text-indigo-600 border-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-600 dark:text-gray-400 border-transparent'
+                }`}
+              >
+                Đã chat ({suggestedUsers.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('all')}
+                className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'all'
+                    ? 'text-indigo-600 border-indigo-600 dark:text-indigo-400'
+                    : 'text-gray-600 dark:text-gray-400 border-transparent'
+                }`}
+              >
+                Tất cả ({allUsers.length - 1})
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {filteredUsers.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  {activeTab === 'suggested' ? 'Chưa chat với ai' : 'Không tìm thấy người dùng'}
+                </p>
+              ) : (
+                filteredUsers.map(user => (
+                  <button
+                    key={user.id}
+                    onClick={() => toggleMember(user.id)}
+                    className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                      selectedMembers.includes(user.id)
+                        ? 'bg-indigo-100 dark:bg-indigo-900/30'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedMembers.includes(user.id)}
+                      onChange={() => {}}
+                      className="w-4 h-4"
+                    />
+                    <Avatar src={user.avatarUrl} name={user.displayName} size="xs" />
+                    <div className="flex-1 text-left">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{user.displayName}</p>
+                      <p className="text-xs text-gray-500">@{user.username}</p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gray-50 dark:bg-gray-700/50 px-4 py-3 flex gap-2 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 disabled:opacity-50 font-medium"
+          >
+            Hủy
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={loading || !groupName.trim() || selectedMembers.length < 1}
+            className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium"
+          >
+            {loading ? '...' : 'Tạo nhóm'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Group Management Modal
+function GroupManagementModal({ conversation, currentUserId, onClose, onUpdate, onDelete, onLeave }) {
+  const [tab, setTab] = useState('members')
+  const [loading, setLoading] = useState(false)
+  const [groupName, setGroupName] = useState(conversation?.groupName || '')
+  const [members, setMembers] = useState(conversation?.participants || [])
+  const [searchUser, setSearchUser] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+
+  const searchDebounce = useRef(null)
+  const isAdmin = members.find(m => m.userId === currentUserId)?.role === 'ADMIN'
+
+  const handleSearchUsers = (val) => {
+    setSearchUser(val)
+    clearTimeout(searchDebounce.current)
+    if (!val.trim()) {
+      setSearchResults([])
+      return
+    }
+    searchDebounce.current = setTimeout(async () => {
+      setSearching(true)
+      try {
+        const res = await userService.searchUsers(val)
+        const allUsers = Array.isArray(res) ? res : (res?.data ?? [])
+        const alreadyInGroup = members.map(m => m.userId)
+        setSearchResults(allUsers.filter(u => !alreadyInGroup.includes(u.id)))
+      } catch (e) { console.error(e) }
+      finally { setSearching(false) }
+    }, 400)
+  }
+
+  const handleAddMember = async (userId) => {
+    setLoading(true)
+    try {
+      const updatedConv = await chatService.updateConversation(conversation.id, {
+        ...conversation,
+        participants: [...members.map(m => m.userId), userId]
+      })
+      setMembers(updatedConv.participants || conversation.participants)
+      setSearchUser('')
+      setSearchResults([])
+      onUpdate?.(updatedConv)
+    } catch (e) {
+      console.error(e)
+      alert('Không thể thêm thành viên')
+    } finally { setLoading(false) }
+  }
+
+  const handleRemoveMember = async (userId) => {
+    if (!window.confirm('Loại bỏ thành viên khỏi nhóm?')) return
+    setLoading(true)
+    try {
+      const updatedMembers = members.filter(m => m.userId !== userId)
+      const updatedConv = await chatService.updateConversation(conversation.id, {
+        ...conversation,
+        participants: updatedMembers.map(m => m.userId)
+      })
+      setMembers(updatedConv.participants || updatedMembers)
+      onUpdate?.(updatedConv)
+    } catch (e) {
+      console.error(e)
+      alert('Không thể loại bỏ thành viên')
+    } finally { setLoading(false) }
+  }
+
+  const handleUpdateGroupName = async () => {
+    if (!groupName.trim()) {
+      alert('Tên nhóm không được để trống')
+      return
+    }
+    setLoading(true)
+    try {
+      const updatedConv = await chatService.updateConversation(conversation.id, {
+        ...conversation,
+        groupName: groupName.trim()
+      })
+      onUpdate?.(updatedConv)
+      alert('Cập nhật tên nhóm thành công')
+    } catch (e) {
+      console.error(e)
+      alert('Không thể cập nhật tên nhóm')
+    } finally { setLoading(false) }
+  }
+
+  const handleDeleteGroup = async () => {
+    if (!window.confirm('Xóa nhóm này vĩnh viễn? Hành động này không thể hoàn tác!')) return
+    setLoading(true)
+    try {
+      await chatService.deleteConversation(conversation.id)
+      onDelete?.()
+      onClose?.()
+    } catch (e) {
+      console.error(e)
+      alert('Không thể xóa nhóm')
+    } finally { setLoading(false) }
+  }
+
+  const handleLeaveGroup = async () => {
+    if (!window.confirm('Rời nhóm này?')) return
+    setLoading(true)
+    try {
+      await chatService.leaveConversation(conversation.id)
+      onLeave?.()
+      onClose?.()
+    } catch (e) {
+      console.error(e)
+      alert('Không thể rời nhóm')
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-96 overflow-hidden flex flex-col">
+        <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h2 className="font-bold text-gray-900 dark:text-white">{conversation?.groupName}</h2>
+          <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">
+            <span className="material-symbols-outlined text-gray-600 dark:text-gray-400">close</span>
+          </button>
+        </div>
+
+        <div className="flex border-b border-gray-200 dark:border-gray-700">
+          <button onClick={() => setTab('members')} className={`flex-1 py-3 text-center font-medium ${tab === 'members' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-600 dark:text-gray-400'}`}>
+            Thành viên ({members.length})
+          </button>
+          <button onClick={() => setTab('settings')} className={`flex-1 py-3 text-center font-medium ${tab === 'settings' ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-gray-600 dark:text-gray-400'}`}>
+            Cài đặt
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4">
+          {tab === 'members' && (
+            <div className="space-y-3">
+              {isAdmin && (
+                <div className="relative mb-4">
+                  <span className="absolute left-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-sm">search</span>
+                  <input
+                    value={searchUser}
+                    onChange={e => handleSearchUsers(e.target.value)}
+                    placeholder="Thêm thành viên..."
+                    className="w-full pl-8 pr-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                  />
+                </div>
+              )}
+
+              {searchUser && searchResults.length > 0 && (
+                <div className="mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+                  {searchResults.map(user => (
+                    <button
+                      key={user.id}
+                      onClick={() => handleAddMember(user.id)}
+                      disabled={loading}
+                      className="w-full flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors mb-1"
+                    >
+                      <Avatar src={user.avatarUrl} name={user.displayName} size="xs" />
+                      <span className="text-sm text-gray-900 dark:text-white flex-1 text-left">{user.displayName}</span>
+                      <span className="material-symbols-outlined text-green-600 text-sm">add_circle</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {members.map(member => (
+                <div key={member.userId} className="flex items-center justify-between p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                  <div className="flex items-center gap-2 flex-1">
+                    <Avatar src={member.avatarUrl} name={member.displayName} size="xs" />
+                    <div>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">{member.displayName}</p>
+                      {member.userId === currentUserId && <p className="text-xs text-gray-500">(Bạn)</p>}
+                      {member.role === 'ADMIN' && <p className="text-xs text-indigo-600">Admin</p>}
+                    </div>
+                  </div>
+                  {isAdmin && member.userId !== currentUserId && (
+                    <button
+                      onClick={() => handleRemoveMember(member.userId)}
+                      disabled={loading}
+                      className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-red-600 text-sm">remove_circle</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {tab === 'settings' && (
+            <div className="space-y-4">
+              {isAdmin && (
+                <div>
+                  <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 block">Tên nhóm</label>
+                  <div className="flex gap-2">
+                    <input
+                      value={groupName}
+                      onChange={e => setGroupName(e.target.value)}
+                      className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      onClick={handleUpdateGroupName}
+                      disabled={loading}
+                      className="px-3 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50 font-medium"
+                    >
+                      Lưu
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <button
+                onClick={handleLeaveGroup}
+                disabled={loading}
+                className="w-full px-4 py-2 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-lg text-sm font-medium hover:bg-yellow-200 dark:hover:bg-yellow-900/50 disabled:opacity-50 transition-colors"
+              >
+                Rời nhóm
+              </button>
+
+              {isAdmin && (
+                <button
+                  onClick={handleDeleteGroup}
+                  disabled={loading}
+                  className="w-full px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-lg text-sm font-medium hover:bg-red-200 dark:hover:bg-red-900/50 disabled:opacity-50 transition-colors"
+                >
+                  Xóa nhóm
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function formatTime(ts) {
   if (!ts) return ''
@@ -14,312 +434,238 @@ function formatTime(ts) {
   const now = new Date()
   const diff = now - d
   if (diff < 60000) return 'Vừa xong'
-  if (diff < 3600000) return `${Math.floor(diff / 60000)} phút`
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m`
   if (diff < 86400000) return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
-  return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+  if (diff < 604800000) return d.toLocaleDateString('vi-VN', { weekday: 'short' })
+  return d.toLocaleDateString('vi-VN')
 }
 
-function Avatar({ src, name, size = 9 }) {
+function Avatar({ src, name, size = 'md', online = false }) {
   const initials = (name || 'U').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const sizeMap = { xs: 'w-6 h-6', sm: 'w-8 h-8', md: 'w-10 h-10', lg: 'w-12 h-12', xl: 'w-14 h-14', '2xl': 'w-20 h-20' }
+  const sizeClass = sizeMap[size] || 'w-10 h-10'
   
-  // Map size numbers to actual px/rem values
-  const sizeMap = {
-    7: 'w-7 h-7',   // 28px
-    8: 'w-8 h-8',   // 32px
-    9: 'w-9 h-9',   // 36px
-    10: 'w-10 h-10', // 40px
-    11: 'w-11 h-11', // 44px
-    12: 'w-12 h-12', // 48px
-    28: 'w-28 h-28', // 112px
-    32: 'w-32 h-32', // 128px
-  }
-  
-  const sizeClass = sizeMap[size] || 'w-9 h-9'
-  
-  return src
-    ? <img src={src} alt={name} className={`${sizeClass} rounded-full object-cover shrink-0`} />
-    : <div className={`${sizeClass} rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm shrink-0`}>{initials}</div>
-}
-
-// ─── Conversation List Item ──────────────────────────────────────────────────
-
-function ConvItem({ conv, currentUserId, isActive, onClick, onMenuOpen, isMenuOpen, onBlockUser, onSetNickname }) {
-  const navigate = useNavigate()
-  const [showMenuLocal, setShowMenuLocal] = useState(false)
-  const other = conv.participants?.find(p => p.userId !== currentUserId) || conv.participants?.[0]
-
-  const handleAvatarClick = (e) => {
-    e.stopPropagation()
-    if (other?.username) {
-      navigate(`/profile/${other.username}`)
-    }
-  }
-
-  const handleMenuClick = (e) => {
-    e.stopPropagation()
-    setShowMenuLocal(!showMenuLocal)
-    onMenuOpen?.(conv.id)
-  }
-
   return (
-    <div
-      onClick={onClick}
-      data-active={isActive}
-      className={`flex items-center gap-3 px-4 py-3 cursor-pointer transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 border-b border-gray-50 dark:border-gray-800 group relative ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}
-    >
-      <div className="relative cursor-pointer hover:opacity-80" onClick={handleAvatarClick}>
-        <Avatar src={other?.avatarUrl} name={other?.displayName} size={11} />
-        {conv.unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-indigo-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-            {conv.unreadCount > 9 ? '9+' : conv.unreadCount}
-          </span>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <p className={`text-sm font-medium truncate ${conv.unreadCount > 0 ? 'text-gray-900 dark:text-white font-semibold' : 'text-gray-700 dark:text-gray-300'}`}>
-            {other?.displayName || other?.username || 'User'}
-          </p>
-          <div className="flex items-center gap-1 ml-2">
-            <span className="text-xs text-gray-400 shrink-0">{formatTime(conv.lastMessageAt)}</span>
-            <button
-              onClick={handleMenuClick}
-              className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <span className="material-symbols-outlined text-[18px]">more_vert</span>
-            </button>
-          </div>
+    <div className="relative">
+      {src ? (
+        <img src={src} alt={name} className={`${sizeClass} rounded-full object-cover`} />
+      ) : (
+        <div className={`${sizeClass} rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 text-white flex items-center justify-center font-bold text-sm`}>
+          {initials}
         </div>
-        <p className={`text-xs truncate mt-0.5 ${conv.unreadCount > 0 ? 'text-gray-700 dark:text-gray-300 font-medium' : 'text-gray-400 dark:text-gray-500'}`}>
-          {conv.lastMessage || 'Bắt đầu cuộc trò chuyện'}
-        </p>
-      </div>
-
-      {/* 3-dot Menu */}
-      {showMenuLocal && (
-        <div className="absolute right-4 top-12 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 min-w-[200px]">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onSetNickname?.(other?.id)
-              setShowMenuLocal(false)
-            }}
-            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-          >
-            <span className="material-symbols-outlined text-[16px]">label</span>
-            Đặt biệt danh
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onBlockUser?.(other?.id)
-              setShowMenuLocal(false)
-            }}
-            className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700"
-          >
-            <span className="material-symbols-outlined text-[16px]">block</span>
-            Chặn người dùng
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setGroupChatModal({ show: true, groupName: '', selectedMembers: [], loading: false })
-              setShowMenuLocal(false)
-            }}
-            className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700"
-          >
-            <span className="material-symbols-outlined text-[16px]">group</span>
-            Tạo nhóm chat
-          </button>
-        </div>
+      )}
+      {online && size !== 'xs' && (
+        <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
       )}
     </div>
   )
 }
 
-// ─── Message Bubble ──────────────────────────────────────────────────────────
+// Conversation Item - WITH MENU
+function ConversationItem({ conv, currentUserId, isActive, onClick, online, onAction }) {
+  const other = conv.participants?.find(p => p.userId !== currentUserId)
+  const displayName = conv.isGroup ? conv.groupName : (other?.displayName || 'User')
+  const avatar = conv.isGroup ? conv.groupAvatarUrl : other?.avatarUrl
+  const [showMenu, setShowMenu] = useState(false)
+  const menuRef = useRef(null)
 
-function MessageBubble({ msg, isMe, navigate }) {
-  const handleAvatarClick = () => {
-    if (!isMe && msg.senderUsername && navigate) {
-      navigate(`/profile/${msg.senderUsername}`)
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setShowMenu(false)
+      }
     }
-  }
-
-  const handleSharedPostClick = () => {
-    if (msg.sharedPost?.id && navigate) {
-      navigate(`/post/${msg.sharedPost.id}`)
+    if (showMenu) {
+      document.addEventListener('click', handleClick)
+      return () => document.removeEventListener('click', handleClick)
     }
-  }
+  }, [showMenu])
 
   return (
-    <div className={`flex items-end gap-2 mb-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-      {!isMe && (
-        <div className="cursor-pointer hover:opacity-80" onClick={handleAvatarClick}>
-          <Avatar src={msg.senderAvatarUrl} name={msg.senderDisplayName} size={7} />
-        </div>
-      )}
-      <div className={`max-w-[72%] ${isMe ? 'items-end' : 'items-start'} flex flex-col gap-0.5`}>
-        {msg.messageType === 'IMAGE' && msg.mediaUrl && (
-          <img src={msg.mediaUrl} alt="media" className="rounded-2xl max-h-56 object-cover border border-gray-100" />
-        )}
-        {msg.messageType === 'POST' && msg.sharedPost && (
-          <div 
-            onClick={handleSharedPostClick}
-            className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm shadow-sm max-w-[260px] cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <span className="material-symbols-outlined text-[14px] text-indigo-400">article</span>
-              <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">Bài viết được chia sẻ</span>
-            </div>
-            <p className="text-gray-700 dark:text-gray-300 line-clamp-3 text-xs leading-relaxed">{msg.sharedPost.content}</p>
-          </div>
-        )}
-        {(msg.content) && (
-          <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
-            isMe
-              ? 'bg-indigo-600 text-white rounded-br-sm'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-100 rounded-bl-sm'
-          }`}>
-            {msg.content}
-          </div>
-        )}
-        <span className={`text-[10px] text-gray-400 px-1 ${isMe ? 'text-right' : 'text-left'}`}>
-          {formatTime(msg.createdAt)}
-          {isMe && (
-            <span className="ml-1 material-symbols-outlined text-[11px] align-middle">
-              {msg.isRead ? 'done_all' : 'done'}
+    <div className={`relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-800 group ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}>
+      <button onClick={onClick} className="flex-1 flex items-center gap-3 min-w-0">
+        <div className="relative shrink-0">
+          <Avatar src={avatar} name={displayName} size="md" online={online && !conv.isGroup} />
+          {conv.unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-indigo-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
+              {conv.unreadCount > 99 ? '99+' : conv.unreadCount}
             </span>
           )}
-        </span>
+        </div>
+
+        <div className="flex-1 min-w-0 flex flex-col items-start">
+          <div className="flex items-center justify-between gap-2 w-full">
+            <p className={`font-medium truncate ${conv.unreadCount > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+              {displayName}
+            </p>
+            <span className="text-xs text-gray-500 shrink-0 whitespace-nowrap">{formatTime(conv.lastMessageAt)}</span>
+          </div>
+          <p className={`text-sm truncate text-left w-full ${conv.unreadCount > 0 ? 'text-gray-900 dark:text-gray-200 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>
+            {(conv.lastMessage || 'Bắt đầu cuộc trò chuyện').replace(/\n/g, ' ')}
+          </p>
+        </div>
+      </button>
+
+      {/* Menu 3 chấm */}
+      <div className="relative" ref={menuRef}>
+        <button 
+          onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu) }}
+          className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+        >
+          <span className="material-symbols-outlined text-gray-600 dark:text-gray-400">more_vert</span>
+        </button>
+        
+        {showMenu && (
+          <div className="absolute right-0 top-10 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 min-w-[200px] z-50">
+            {/* Pin/Unpin */}
+            <button 
+              onClick={() => { onAction?.('pin', conv.id); setShowMenu(false) }}
+              className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-900 dark:text-white"
+            >
+              <span className="material-symbols-outlined text-sm">push_pin</span>
+              {conv.isPinned ? 'Bỏ ghim' : 'Ghim cuộc trò chuyện'}
+            </button>
+
+            {/* Mute/Unmute */}
+            <button 
+              onClick={() => { onAction?.('mute', conv.id); setShowMenu(false) }}
+              className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-900 dark:text-white"
+            >
+              <span className="material-symbols-outlined text-sm">{conv.isMuted ? 'notifications_active' : 'notifications_off'}</span>
+              {conv.isMuted ? 'Bật thông báo' : 'Tắt thông báo'}
+            </button>
+
+            {/* Mark as unread */}
+            <button 
+              onClick={() => { onAction?.('unread', conv.id); setShowMenu(false) }}
+              className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-900 dark:text-white"
+            >
+              <span className="material-symbols-outlined text-sm">mail</span>
+              Đánh dấu chưa đọc
+            </button>
+
+            {/* Block user (if 1-1 chat) */}
+            {!conv.isGroup && (
+              <button 
+                onClick={() => { onAction?.('block', conv.id); setShowMenu(false) }}
+                className="w-full px-4 py-2 text-sm text-left hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center gap-2 text-red-600 dark:text-red-400"
+              >
+                <span className="material-symbols-outlined text-sm">block</span>
+                Chặn người dùng
+              </button>
+            )}
+
+            {/* Delete/Archive */}
+            <button 
+              onClick={() => { onAction?.('delete', conv.id); setShowMenu(false) }}
+              className="w-full px-4 py-2 text-sm text-left hover:bg-red-100 dark:hover:bg-red-900/30 flex items-center gap-2 text-red-600 dark:text-red-400 border-t border-gray-200 dark:border-gray-700"
+            >
+              <span className="material-symbols-outlined text-sm">delete</span>
+              Xóa đoạn chat
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-// ─── Main ────────────────────────────────────────────────────────────────────
-
+// Main Messages Component
 export default function Messages() {
   const navigate = useNavigate()
   const currentUser = (() => { try { return JSON.parse(localStorage.getItem('user') || '{}') } catch { return {} } })()
 
   const [conversations, setConversations] = useState([])
-  const [activeConvId, setActiveConvId]   = useState(null)
-  const [messages, setMessages]           = useState([])
-  const [loadingConvs, setLoadingConvs]   = useState(true)
-  const [loadingMsgs, setLoadingMsgs]     = useState(false)
-  const [input, setInput]                 = useState('')
-  const [sending, setSending]             = useState(false)
+  const [activeConvId, setActiveConvId] = useState(null)
+  const [messages, setMessages] = useState([])
+  const [loadingConvs, setLoadingConvs] = useState(true)
+  const [loadingMsgs, setLoadingMsgs] = useState(false)
+  const [input, setInput] = useState('')
+  const [sending, setSending] = useState(false)
 
-  // Unified search - for both conversations and new users
-  const [searchQ, setSearchQ]       = useState('')
+  const [searchQ, setSearchQ] = useState('')
   const [searchResults, setSearchResults] = useState([])
-  const [searching, setSearching]   = useState(false)
+  const [searching, setSearching] = useState(false)
 
-  // 3-dot menu state for conversations
-  const [openMenuConvId, setOpenMenuConvId] = useState(null)
+  const [editingMessageId, setEditingMessageId] = useState(null)
+  const [editContent, setEditContent] = useState('')
+  const [editLoading, setEditLoading] = useState(false)
+  const [reactionsModal, setReactionsModal] = useState({ show: false, messageId: null })
+  const [groupManageModal, setGroupManageModal] = useState(false)
+  const [createGroupModal, setCreateGroupModal] = useState(false)
+  const [allUsers, setAllUsers] = useState([])
 
-  // Nickname modal state
-  const [nicknameModal, setNicknameModal] = useState({ show: false, userId: null, nickname: '', loading: false })
-
-  // Group chat modal state
-  const [groupChatModal, setGroupChatModal] = useState({ show: false, groupName: '', selectedMembers: [], loading: false })
+  const [typingUsers, setTypingUsers] = useState([])
+  const [onlineUsers, setOnlineUsers] = useState(new Set())
 
   const searchDebounce = useRef(null)
   const isUserAtBottom = useRef(true)
   const messagesEndRef = useRef(null)
-  const conversationListRef = useRef(null)
+  const typingDebounce = useRef(null)
 
-  // ── Load conversations ────────────────────────────────────────────────────
-
+  // Load conversations
   useEffect(() => {
     loadConversations()
+    loadAllUsers()
+    const interval = setInterval(() => {
+      setOnlineUsers(new Set(Math.random() > 0.5 ? [conversations[0]?.participants?.[0]?.userId] : []))
+    }, 5000)
+    return () => clearInterval(interval)
   }, [])
+
+  const loadAllUsers = async () => {
+    try {
+      const res = await userService.getAllUsers(0, 100)
+      setAllUsers(res?.content ?? res?.data ?? res ?? [])
+    } catch (e) {
+      console.error('Failed to load users:', e)
+    }
+  }
 
   const loadConversations = async () => {
     setLoadingConvs(true)
     try {
-      const res = await chatService.getConversations(0, 30)
-      const data = res?.data ?? res
-      setConversations(data?.content ?? [])
+      const res = await chatService.getConversations(0, 50)
+      setConversations(res?.data?.content ?? [])
     } catch (e) { console.error(e) }
     finally { setLoadingConvs(false) }
   }
-
-  // ── Open conversation ─────────────────────────────────────────────────────
 
   const openConversation = async (convId) => {
     setActiveConvId(convId)
     setMessages([])
     setLoadingMsgs(true)
-    isUserAtBottom.current = true  // Reset to bottom when opening new conversation
+    isUserAtBottom.current = true
     try {
       const res = await chatService.getMessages(convId, 0, 100)
-      const data = res?.data ?? res
-      const msgs = data?.content ?? []
-      setMessages(msgs)
-      // Auto scroll to bottom after setting messages
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-      }, 100)
+      setMessages(res?.data?.content ?? [])
+      setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, 100)
       await chatService.markRead(convId)
-      // clear unread badge locally
-      setConversations(prev => prev.map(c =>
-        c.id === convId ? { ...c, unreadCount: 0 } : c
-      ))
+      setConversations(prev => prev.map(c => c.id === convId ? { ...c, unreadCount: 0 } : c))
     } catch (e) { console.error(e) }
     finally { setLoadingMsgs(false) }
   }
 
-  // Auto-refresh messages every 3 seconds when conversation is open
-  // BUT only update if user is at bottom, to avoid interrupting scrolling up
+  // Auto refresh
   useEffect(() => {
     if (!activeConvId) return
-    
     const interval = setInterval(async () => {
       try {
         const res = await chatService.getMessages(activeConvId, 0, 100)
-        const data = res?.data ?? res
-        const msgs = data?.content ?? []
-        // Only update if user is at bottom
-        if (isUserAtBottom.current) {
-          setMessages(msgs)
-        }
-        // Also update conversation list - move to top and smooth scroll
-        setConversations(prev => {
-          const active = prev.find(c => c.id === activeConvId)
-          if (!active) return prev
-          const updated = prev.filter(c => c.id !== activeConvId)
-          const withNewData = [{...active, lastMessageAt: active.lastMessageAt}, ...updated]
-          setTimeout(() => {
-            const el = conversationListRef.current?.querySelector('[data-active="true"]')
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-          }, 50)
-          return withNewData
-        })
-      } catch (e) { console.error('Refresh messages error:', e) }
-    }, 3000)
-    
+        if (isUserAtBottom.current) setMessages(res?.data?.content ?? [])
+      } catch (e) { console.error(e) }
+    }, 2000)
     return () => clearInterval(interval)
   }, [activeConvId])
 
-  // Scroll to bottom when messages change - ONLY if user is at bottom
+  // Auto scroll
   useEffect(() => {
     if (isUserAtBottom.current) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-      }, 0)
+      setTimeout(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, 0)
     }
   }, [messages.length])
 
-  // Track if user is at bottom
-  const handleMessageScroll = (e) => {
-    const el = e.target
-    isUserAtBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 50
-  }
-
-  // ── Send message ──────────────────────────────────────────────────────────
-
+  // Send message
   const handleSend = async (e) => {
     e?.preventDefault()
     if (!input.trim() || !activeConvId || sending) return
@@ -327,38 +673,63 @@ export default function Messages() {
     const text = input.trim()
     setInput('')
     try {
-      const res = await chatService.sendMessage(activeConvId, { messageType: 'TEXT', content: text })
-      const msg = res?.data ?? res
-      setMessages(prev => [...prev, msg])
-      // update conversation preview and move to top
+      const msg = await chatService.sendMessage(activeConvId, { messageType: 'TEXT', content: text })
+      setMessages(prev => [...prev, msg.data ?? msg])
       setConversations(prev => {
-        const updated = prev.map(c =>
-          c.id === activeConvId ? { ...c, lastMessage: text, lastMessageAt: msg.createdAt } : c
-        )
-        // Move active conversation to top with smooth scroll
+        const updated = prev.map(c => c.id === activeConvId ? { ...c, lastMessage: text, lastMessageAt: new Date().toISOString() } : c)
         const active = updated.find(c => c.id === activeConvId)
         if (active) {
           updated.splice(updated.indexOf(active), 1)
           updated.unshift(active)
-          setTimeout(() => {
-            const el = conversationListRef.current?.querySelector('[data-active="true"]')
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-          }, 0)
         }
         return updated
       })
     } catch (e) {
       console.error(e)
-      setInput(text)   // restore on error
+      setInput(text)
     } finally { setSending(false) }
   }
 
-  // ── Search users to start new chat ───────────────────────────────────────
+  // Edit message
+  const handleEditMessage = (msg) => {
+    setEditingMessageId(msg.id)
+    setEditContent(msg.content)
+  }
 
+  const handleSaveEdit = async () => {
+    if (!editContent.trim() || !activeConvId) return
+    setEditLoading(true)
+    try {
+      const res = await chatService.editMessage(activeConvId, editingMessageId, editContent)
+      setMessages(prev => prev.map(m => m.id === editingMessageId ? (res.data ?? res) : m))
+      setEditingMessageId(null)
+      setEditContent('')
+    } catch (e) {
+      console.error(e)
+      alert('Không thể sửa')
+    } finally { setEditLoading(false) }
+  }
+
+  // Delete message
+  const handleDeleteMessage = async (messageId) => {
+    if (!window.confirm('Xóa tin nhắn?')) return
+    try {
+      await chatService.deleteMessage(activeConvId, messageId)
+      setMessages(prev => prev.filter(m => m.id !== messageId))
+    } catch (e) {
+      console.error(e)
+      alert('Không thể xóa')
+    }
+  }
+
+  // Search
   const handleSearchChange = (val) => {
     setSearchQ(val)
     clearTimeout(searchDebounce.current)
-    if (!val.trim()) { setSearchResults([]); return }
+    if (!val.trim()) {
+      setSearchResults([])
+      return
+    }
     searchDebounce.current = setTimeout(async () => {
       setSearching(true)
       try {
@@ -369,355 +740,326 @@ export default function Messages() {
     }, 400)
   }
 
-  const startChat = async (targetUserId) => {
+  const startChat = async (userId) => {
     setSearchQ('')
     setSearchResults([])
     try {
-      const res = await chatService.startConversation(targetUserId)
-      const conv = res?.data ?? res
-      setConversations(prev => {
-        const exists = prev.find(c => c.id === conv.id)
-        return exists ? prev : [conv, ...prev]
-      })
+      const res = await chatService.startConversation(userId)
+      const conv = res.data ?? res
+      setConversations(prev => [conv, ...prev])
       openConversation(conv.id)
     } catch (e) { console.error(e) }
   }
 
-  // Filter conversations - both search conversations AND new users show up here
-  // If search box is empty, show all conversations
-  // If search box has text, show matching conversations AND search results (users) separately
   const filteredConversations = searchQ.trim()
     ? conversations.filter(c => {
         const other = c.participants?.find(p => p.userId !== currentUser.id)
-        const displayName = c.isGroup ? c.groupName : (other?.displayName || other?.username || 'User')
-        const username = other?.username || ''
-        const q = searchQ.toLowerCase()
-        return displayName.toLowerCase().includes(q) || username.toLowerCase().includes(q)
+        const name = c.isGroup ? c.groupName : (other?.displayName || 'User')
+        return name.toLowerCase().includes(searchQ.toLowerCase())
       })
     : conversations
 
-  // Block user handler
-  const handleBlockUser = async (userId) => {
-    if (!userId) return
+  // Add reaction
+  const handleAddReaction = async (emoji) => {
+    if (!reactionsModal.messageId) return
     try {
-      await blockService.blockUser(userId)
-      // Remove conversation from list
-      setConversations(prev => prev.filter(c => c.id !== activeConvId))
-      setActiveConvId(null)
-      alert('Đã chặn người dùng')
+      await chatService.addReaction(activeConvId, reactionsModal.messageId, emoji)
+      const res = await chatService.getMessages(activeConvId, 0, 100)
+      setMessages(res?.data?.content ?? [])
+      setReactionsModal({ show: false, messageId: null })
     } catch (e) {
-      console.error('Error blocking user:', e)
-      alert('Không thể chặn người dùng')
+      console.error(e)
+      alert('Không thể thêm phản ứng')
     }
   }
 
-  // Set nickname handler
-  const handleSetNickname = async (userId) => {
-    if (!userId) return
-    setNicknameModal({ show: true, userId, nickname: '', loading: false })
-  }
-
-  // Save nickname handler
-  const handleSaveNickname = async () => {
-    const { userId, nickname } = nicknameModal
-    if (!userId) return
-
-    setNicknameModal(prev => ({ ...prev, loading: true }))
+  // Conversation actions handler
+  const handleConversationAction = async (action, conversationId) => {
     try {
-      await nicknameService.setNickname(userId, nickname)
-      setNicknameModal({ show: false, userId: null, nickname: '', loading: false })
-      alert('Biệt danh đã được lưu')
-    } catch (e) {
-      console.error('Error setting nickname:', e)
-      alert('Không thể lưu biệt danh')
-      setNicknameModal(prev => ({ ...prev, loading: false }))
-    }
-  }
+      switch (action) {
+        case 'pin':
+          const convPin = conversations.find(c => c.id === conversationId)
+          if (convPin?.isPinned) {
+            await chatService.unpinConversation(conversationId)
+          } else {
+            await chatService.pinConversation(conversationId)
+          }
+          loadConversations()
+          break
 
-  // Create group chat handler
-  const handleCreateGroupChat = async () => {
-    const { groupName, selectedMembers } = groupChatModal
-    if (!groupName.trim()) {
-      alert('Nhập tên nhóm')
-      return
-    }
-    if (selectedMembers.length === 0) {
-      alert('Chọn ít nhất 1 thành viên')
-      return
-    }
+        case 'mute':
+          const convMute = conversations.find(c => c.id === conversationId)
+          if (convMute?.isMuted) {
+            await chatService.unmuteConversation(conversationId)
+          } else {
+            await chatService.muteConversation(conversationId)
+          }
+          loadConversations()
+          break
 
-    setGroupChatModal(prev => ({ ...prev, loading: true }))
-    try {
-      const res = await groupChatService.createGroupChat(groupName, selectedMembers)
-      const data = res?.data || res
-      setConversations(prev => [data, ...prev])
-      openConversation(data.id)
-      setGroupChatModal({ show: false, groupName: '', selectedMembers: [], loading: false })
-      alert('Nhóm chat đã được tạo')
+        case 'unread':
+          await chatService.markAsUnread(conversationId)
+          setConversations(prev => prev.map(c => c.id === conversationId ? { ...c, unreadCount: 1 } : c))
+          break
+
+        case 'block':
+          const convBlock = conversations.find(c => c.id === conversationId)
+          const otherUserBlock = convBlock?.participants?.find(p => p.userId !== currentUser.id)
+          if (otherUserBlock && window.confirm(`Chặn ${otherUserBlock.displayName}? Bạn sẽ không thể nhắn tin cho nhau.`)) {
+            await chatService.blockUser(otherUserBlock.userId)
+            alert('Đã chặn người dùng')
+            setConversations(prev => prev.filter(c => c.id !== conversationId))
+            if (activeConvId === conversationId) {
+              setActiveConvId(null)
+            }
+          }
+          break
+
+        case 'delete':
+          if (window.confirm('Xóa cuộc trò chuyện này?')) {
+            await chatService.archiveConversation(conversationId)
+            setConversations(prev => prev.filter(c => c.id !== conversationId))
+            if (activeConvId === conversationId) {
+              setActiveConvId(null)
+            }
+          }
+          break
+      }
     } catch (e) {
-      console.error('Error creating group chat:', e)
-      alert('Không thể tạo nhóm chat')
-      setGroupChatModal(prev => ({ ...prev, loading: false }))
+      console.error(e)
+      alert('Có lỗi xảy ra')
     }
   }
 
   const activeConv = conversations.find(c => c.id === activeConvId)
-  const otherUser  = activeConv?.participants?.find(p => p.userId !== currentUser.id)
-
-  // ─── Render ───────────────────────────────────────────────────────────────
+  const otherUser = activeConv?.participants?.find(p => p.userId !== currentUser.id)
+  const isOnline = onlineUsers.has(otherUser?.userId)
 
   return (
-    <section className="flex-1 w-full max-w-5xl mx-auto border-x border-gray-200 dark:border-gray-700 flex min-h-screen h-screen bg-white dark:bg-gray-950 overflow-hidden" style={{ maxWidth: 'none' }}>
-
-      {/* ── Conversation list ── */}
-      <div className="w-72 shrink-0 border-r border-gray-200 dark:border-gray-700 flex flex-col bg-white dark:bg-gray-900 hidden md:flex h-screen overflow-hidden">
-        {/* List header */}
-        <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white">Tin nhắn</h1>
-        </div>
-
-        {/* Unified Search */}
-        <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+    <div className="flex h-screen bg-white dark:bg-gray-950 overflow-hidden">
+      {/* Sidebar */}
+      <div className="w-72 lg:w-80 border-r border-gray-200 dark:border-gray-800 flex flex-col bg-white dark:bg-gray-900 hidden md:flex">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tin nhắn</h1>
+            <button
+              onClick={() => setCreateGroupModal(true)}
+              className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="Tạo nhóm chat"
+            >
+              <span className="material-symbols-outlined text-gray-700 dark:text-gray-300">add_circle</span>
+            </button>
+          </div>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-[18px]">search</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400">search</span>
             <input
               value={searchQ}
               onChange={e => handleSearchChange(e.target.value)}
-              placeholder="Tìm đoạn chat hoặc người dùng…"
-              className="w-full pl-9 pr-3 py-2 bg-gray-100 dark:bg-gray-800 rounded-full text-sm outline-none focus:ring-2 focus:ring-indigo-300 dark:text-white"
+              placeholder="Tìm kiếm hoặc bắt đầu chat..."
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-full text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
             />
           </div>
         </div>
 
-        {/* Search results - New users to start chat */}
+        {/* Search Results */}
         {searchQ.trim() && searchResults.length > 0 && (
-          <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 px-2 py-1">Người dùng</p>
+          <div className="border-b border-gray-200 dark:border-gray-800">
+            <p className="text-xs font-bold text-gray-600 dark:text-gray-400 px-4 py-2">NGƯỜI DÙNG</p>
             {searchResults.map(u => (
-              <div
-                key={u.id}
-                onClick={() => startChat(u.id)}
-                className="flex items-center gap-2 px-2 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-              >
-                <Avatar src={u.avatarUrl} name={u.displayName} size={8} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 dark:text-white truncate">{u.displayName}</p>
-                  <p className="text-xs text-gray-400 truncate">@{u.username}</p>
+              <button key={u.id} onClick={() => startChat(u.id)} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                <Avatar src={u.avatarUrl} name={u.displayName} size="sm" />
+                <div className="flex-1 text-left">
+                  <p className="font-medium text-gray-900 dark:text-white">{u.displayName}</p>
+                  <p className="text-xs text-gray-500">@{u.username}</p>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )}
 
-        {/* List */}
-        <div className="flex-1 overflow-y-auto" ref={conversationListRef}>
+        {/* Conversations */}
+        <div className="flex-1 overflow-y-auto">
           {loadingConvs && (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-500" />
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600" />
             </div>
           )}
-          {!loadingConvs && conversations.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 text-center px-4">
-              <span className="material-symbols-outlined text-5xl text-gray-200 mb-2">chat_bubble</span>
-              <p className="text-sm text-gray-500 font-medium">Chưa có cuộc trò chuyện</p>
-              <p className="text-xs text-gray-400 mt-1">Nhấn ✏️ để bắt đầu chat với ai đó</p>
+
+          {conversations.length === 0 && !loadingConvs && (
+            <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+              <span className="material-symbols-outlined text-5xl text-gray-300 dark:text-gray-700 mb-3">forum</span>
+              <p className="font-medium text-gray-600 dark:text-gray-400">Chưa có tin nhắn</p>
+              <p className="text-sm text-gray-500 mt-1">Bắt đầu chat ngay</p>
             </div>
           )}
+
           {filteredConversations.map(c => (
-            <ConvItem
+            <ConversationItem
               key={c.id}
               conv={c}
               currentUserId={currentUser.id}
               isActive={c.id === activeConvId}
               onClick={() => openConversation(c.id)}
-              onBlockUser={handleBlockUser}
-              onSetNickname={handleSetNickname}
+              online={isOnline}
+              onAction={handleConversationAction}
             />
           ))}
-          {searchQ.trim() && filteredConversations.length === 0 && searchResults.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-8 text-center px-4">
-              <span className="material-symbols-outlined text-4xl text-gray-200 mb-2">search_off</span>
-              <p className="text-sm text-gray-400">Không tìm thấy kết quả</p>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* ── Chat panel ── */}
-      <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/50 h-screen overflow-hidden">
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900/50">
         {!activeConvId ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-6">
-            <span className="material-symbols-outlined text-7xl text-gray-200 dark:text-gray-700 mb-4">forum</span>
-            <h2 className="text-xl font-bold text-gray-600 dark:text-gray-300 mb-2">Chọn cuộc trò chuyện</h2>
-            <p className="text-sm text-gray-400 max-w-xs">Chọn một cuộc trò chuyện từ danh sách hoặc tạo mới để bắt đầu nhắn tin.</p>
+            <div>
+              <span className="material-symbols-outlined text-9xl text-gray-200 dark:text-gray-700 mb-6 block">forum</span>
+              <h2 className="text-4xl font-bold text-gray-700 dark:text-gray-300 mb-4">Chọn cuộc trò chuyện</h2>
+              <p className="text-lg text-gray-500 dark:text-gray-400 w-full px-8">Chọn từ danh sách hoặc bắt đầu cuộc trò chuyện mới</p>
+            </div>
           </div>
         ) : (
           <>
-            {/* Chat header */}
-            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-3 sticky top-0 z-10">
-              <Avatar src={otherUser?.avatarUrl} name={otherUser?.displayName} size={9} />
-              <div>
-                <p className="font-semibold text-gray-900 dark:text-white text-sm">{otherUser?.displayName || 'User'}</p>
-                <p className="text-xs text-gray-400">@{otherUser?.username}</p>
+            {/* Chat Header */}
+            <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-2 lg:px-8 md:px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+              <div className="flex items-center gap-3 flex-1">
+                <Avatar src={activeConv?.isGroup ? activeConv?.groupAvatarUrl : otherUser?.avatarUrl} name={activeConv?.groupName || otherUser?.displayName} size="lg" online={isOnline && !activeConv?.isGroup} />
+                <div>
+                  <p className="font-semibold text-gray-900 dark:text-white">{activeConv?.groupName || otherUser?.displayName}</p>
+                  <p className="text-xs text-gray-500">
+                    {isOnline && !activeConv?.isGroup ? '🟢 Đang hoạt động' : '⚫ Không hoạt động'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <span className="material-symbols-outlined text-gray-700 dark:text-gray-300">call</span>
+                </button>
+                <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <span className="material-symbols-outlined text-gray-700 dark:text-gray-300">videocam</span>
+                </button>
+                {activeConv?.isGroup && (
+                  <button onClick={() => setGroupManageModal(true)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <span className="material-symbols-outlined text-gray-700 dark:text-gray-300">info</span>
+                  </button>
+                )}
               </div>
             </div>
 
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-4" onScroll={handleMessageScroll}>
+            {/* Messages - Facebook style */}
+            <div className="flex-1 overflow-y-auto px-4 lg:px-8 md:px-6 py-4 space-y-3" onScroll={(e) => {
+              const el = e.target
+              isUserAtBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100
+            }}>
               {loadingMsgs && (
                 <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-400" />
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
                 </div>
               )}
-              {!loadingMsgs && messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-center">
-                  <span className="material-symbols-outlined text-5xl text-gray-200 dark:text-gray-700 mb-2">waving_hand</span>
-                  <p className="text-sm text-gray-400">Bắt đầu cuộc trò chuyện với một tin nhắn!</p>
+
+              {messages.length === 0 && !loadingMsgs && (
+                <div className="flex flex-col items-center justify-center h-full">
+                  <span className="material-symbols-outlined text-6xl text-gray-300 dark:text-gray-600 mb-3">waving_hand</span>
+                  <p className="text-gray-500 dark:text-gray-400">Bắt đầu cuộc trò chuyện</p>
                 </div>
               )}
-              {messages.map(msg => (
-                <MessageBubble
-                  key={msg.id}
-                  msg={msg}
-                  isMe={msg.senderId === currentUser.id}
-                  navigate={navigate}
-                />
-              ))}
+
+              {messages.map((msg, idx) => {
+                const prevMsg = messages[idx - 1]
+                const isMe = msg.senderId === currentUser.id
+                const showAvatar = !prevMsg || prevMsg.senderId !== msg.senderId || (new Date(msg.createdAt) - new Date(prevMsg.createdAt)) > 60000
+                
+                return (
+                  <div key={msg.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+                    {/* Avatar */}
+                    {!isMe && (
+                      <div className="flex-shrink-0 w-8 h-8">
+                        {showAvatar ? (
+                          <Avatar src={otherUser?.avatarUrl} name={otherUser?.displayName} size="sm" />
+                        ) : (
+                          <div className="w-8 h-8" />
+                        )}
+                      </div>
+                    )}
+                    {isMe && <div className="flex-shrink-0 w-8 h-8" />}
+
+                    {/* Message bubble */}
+                    <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-xs`}>
+                      {/* Text bubble */}
+                      <div className={`px-4 py-2 rounded-2xl ${
+                        isMe 
+                          ? 'bg-indigo-600 text-white' 
+                          : 'bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-white'
+                      }`}>
+                        <p className="text-sm break-words">{msg.content}</p>
+                      </div>
+                      
+                      {/* Time */}
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 px-2">
+                        {new Date(msg.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+
               <div ref={messagesEndRef} />
             </div>
 
             {/* Input */}
-            <form onSubmit={handleSend} className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2">
-              <input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                placeholder="Nhập tin nhắn…"
-                disabled={sending}
-                className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-full text-sm outline-none focus:ring-2 focus:ring-indigo-300 disabled:opacity-50 dark:text-white dark:placeholder-gray-500"
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSend(e) }}
-              />
-              <button
-                type="submit"
-                disabled={!input.trim() || sending}
-                className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
-              >
-                <span className="material-symbols-outlined text-[20px]">send</span>
-              </button>
-            </form>
+            <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 px-2 lg:px-8 md:px-6 py-4">
+              <form onSubmit={handleSend} className="flex gap-3">
+                <input
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  placeholder="Aa"
+                  disabled={sending}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 rounded-full text-sm outline-none focus:ring-2 focus:ring-indigo-500 dark:text-white"
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSend(e) }}
+                />
+                <button type="submit" disabled={!input.trim() || sending} className="p-2.5 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50">
+                  <span className="material-symbols-outlined">send</span>
+                </button>
+              </form>
+            </div>
           </>
         )}
       </div>
 
-      {/* Nickname Modal */}
-      {nicknameModal.show && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full mx-4">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Đặt biệt danh</h2>
-            </div>
-            <div className="p-6">
-              <input
-                type="text"
-                value={nicknameModal.nickname}
-                onChange={e => setNicknameModal(prev => ({ ...prev, nickname: e.target.value }))}
-                placeholder="Nhập biệt danh (hoặc để trống để xóa)"
-                maxLength={50}
-                disabled={nicknameModal.loading}
-                className="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 dark:text-white"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                {nicknameModal.nickname.length}/50
-              </p>
-            </div>
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-end">
-              <button
-                onClick={() => setNicknameModal({ show: false, userId: null, nickname: '', loading: false })}
-                disabled={nicknameModal.loading}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleSaveNickname}
-                disabled={nicknameModal.loading}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 font-medium"
-              >
-                {nicknameModal.loading ? 'Đang lưu...' : 'Lưu'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Group Management Modal */}
+      {groupManageModal && activeConv?.isGroup && (
+        <GroupManagementModal
+          conversation={activeConv}
+          currentUserId={currentUser.id}
+          onClose={() => setGroupManageModal(false)}
+          onUpdate={(updatedConv) => {
+            setConversations(prev => prev.map(c => c.id === updatedConv.id ? updatedConv : c))
+          }}
+          onDelete={() => {
+            setActiveConvId(null)
+            loadConversations()
+          }}
+          onLeave={() => {
+            setActiveConvId(null)
+            loadConversations()
+          }}
+        />
       )}
 
-      {/* Group Chat Modal */}
-      {groupChatModal.show && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Tạo nhóm chat</h2>
-            </div>
-            <div className="p-6 space-y-4">
-              <input
-                type="text"
-                value={groupChatModal.groupName}
-                onChange={e => setGroupChatModal(prev => ({ ...prev, groupName: e.target.value }))}
-                placeholder="Tên nhóm"
-                maxLength={50}
-                disabled={groupChatModal.loading}
-                className="w-full px-4 py-2.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm border border-gray-300 dark:border-gray-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 dark:text-white"
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">
-                  Chọn thành viên ({groupChatModal.selectedMembers.length})
-                </p>
-                <div className="max-h-48 overflow-y-auto space-y-2 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600">
-                  {conversations.map(c => {
-                    const other = c.participants?.find(p => p.userId !== currentUser.id)
-                    if (!other) return null
-                    const isSelected = groupChatModal.selectedMembers.includes(other.userId)
-                    return (
-                      <label key={other.userId} className="flex items-center gap-2 p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={e => {
-                            if (e.target.checked) {
-                              setGroupChatModal(prev => ({ ...prev, selectedMembers: [...prev.selectedMembers, other.userId] }))
-                            } else {
-                              setGroupChatModal(prev => ({ ...prev, selectedMembers: prev.selectedMembers.filter(id => id !== other.userId) }))
-                            }
-                          }}
-                          disabled={groupChatModal.loading}
-                          className="w-4 h-4"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{other.displayName || other.username}</p>
-                        </div>
-                      </label>
-                    )
-                  })}
-                </div>
-              </div>
-            </div>
-            <div className="p-6 border-t border-gray-200 dark:border-gray-700 flex gap-3 justify-end">
-              <button
-                onClick={() => setGroupChatModal({ show: false, groupName: '', selectedMembers: [], loading: false })}
-                disabled={groupChatModal.loading}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
-              >
-                Hủy
-              </button>
-              <button
-                onClick={handleCreateGroupChat}
-                disabled={groupChatModal.loading || !groupChatModal.groupName.trim() || groupChatModal.selectedMembers.length === 0}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 font-medium"
-              >
-                {groupChatModal.loading ? 'Đang tạo...' : 'Tạo'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Create Group Modal */}
+      {createGroupModal && (
+        <CreateGroupModal
+          onClose={() => setCreateGroupModal(false)}
+          onCreated={(newConv) => {
+            setConversations(prev => [newConv, ...prev])
+            openConversation(newConv.id)
+          }}
+          allUsers={allUsers.filter(u => u.id !== currentUser.id)}
+          currentUserId={currentUser.id}
+          conversations={conversations}
+        />
       )}
-    </section>
+    </div>
   )
 }

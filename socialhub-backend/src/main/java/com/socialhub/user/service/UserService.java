@@ -15,11 +15,9 @@ import com.socialhub.user.dto.CreateUserDto;
 import com.socialhub.user.dto.UpdateProfileDto;
 import com.socialhub.user.dto.UserDto;
 import com.socialhub.user.dto.UserProfileDto;
-import com.socialhub.user.document.Block;
 import com.socialhub.user.document.Nickname;
 import com.socialhub.user.dto.BlockedUserDto;
 import com.socialhub.user.dto.SetNicknameRequest;
-import com.socialhub.user.repository.BlockRepository;
 import com.socialhub.user.repository.NicknameRepository;
 import com.socialhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +40,7 @@ import java.util.stream.Collectors;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final BlockRepository blockRepository;
+    private final BlockService blockService;
     private final NicknameRepository nicknameRepository;
     private final FollowRepository followRepository;
     private final PostRepository postRepository;
@@ -100,7 +98,20 @@ public class UserService {
         return toDto(user);
     }
 
-    public Optional<User> findByEmail(String email) {
+    /**
+     * Get all users (paginated) - for group chat member selection
+     */
+    public List<UserDto> getAllUsers(int page, int size) {
+        try {
+            List<User> users = userRepository.findAll(PageRequest.of(page, size)).getContent();
+            return users.stream()
+                    .map(this::toDto)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            log.error("Error fetching all users", e);
+            return new ArrayList<>();
+        }
+    }    public Optional<User> findByEmail(String email) {
         return userRepository.findByEmailIgnoreCase(email);
     }
 
@@ -114,15 +125,13 @@ public class UserService {
                     .toList();
         }
         
-        // Get current user's blocked users
-        Set<String> blockedByMe = blockRepository.findByUserId(currentUserId).stream()
-                .map(Block::getBlockedUserId)
+        // Get current user's blocked users  
+        Set<String> blockedByMe = blockService.getBlockedUsers(currentUserId).stream()
+                .map(User::getId)
                 .collect(Collectors.toSet());
         
         // Get users who blocked current user
-        Set<String> blockedMeUsers = blockRepository.findByBlockedUserId(currentUserId).stream()
-                .map(Block::getUserId)
-                .collect(Collectors.toSet());
+        Set<String> blockedMeUsers = Set.copyOf(blockService.getUsersWhoBlockedMe(currentUserId));
         
         // Filter results: exclude blocked users and users who blocked current user
         return allResults.stream()
@@ -467,64 +476,42 @@ public class UserService {
     // ──────────────────────────────────────────────────────
 
     /**
-     * Block a user
+     * Block a user (Deprecated - use BlockService instead)
      */
+    @Deprecated
     public void blockUser(String currentUserId, String blockedUserId) {
-        if (currentUserId.equals(blockedUserId)) {
-            throw new ValidationException("Không thể chặn chính mình");
-        }
-
-        // Check user exists
-        findUserById(blockedUserId);
-
-        // Check if already blocked
-        if (blockRepository.existsByUserIdAndBlockedUserId(currentUserId, blockedUserId)) {
-            log.warn("User {} already blocked {}", currentUserId, blockedUserId);
-            return;
-        }
-
-        Block block = Block.builder()
-                .userId(currentUserId)
-                .blockedUserId(blockedUserId)
-                .createdAt(Instant.now())
-                .build();
-        blockRepository.save(block);
-        log.info("User {} blocked {}", currentUserId, blockedUserId);
+        blockService.blockUser(currentUserId, blockedUserId);
     }
 
     /**
-     * Unblock a user
+     * Unblock a user (Deprecated - use BlockService instead)
      */
+    @Deprecated
     public void unblockUser(String currentUserId, String blockedUserId) {
-        blockRepository.deleteByUserIdAndBlockedUserId(currentUserId, blockedUserId);
-        log.info("User {} unblocked {}", currentUserId, blockedUserId);
+        blockService.unblockUser(currentUserId, blockedUserId);
     }
 
     /**
-     * Get all blocked users
+     * Get all blocked users (Deprecated - use BlockService instead)
      */
+    @Deprecated
     public List<BlockedUserDto> getBlockedUsers(String currentUserId) {
-        List<Block> blocks = blockRepository.findByUserId(currentUserId);
-        return blocks.stream()
-                .map(b -> {
-                    User blockedUser = userRepository.findById(b.getBlockedUserId()).orElse(null);
-                    if (blockedUser == null) return null;
-                    return BlockedUserDto.builder()
-                            .id(blockedUser.getId())
-                            .username(blockedUser.getUsername())
-                            .displayName(blockedUser.getDisplayName())
-                            .avatarUrl(blockedUser.getAvatarUrl())
-                            .blockedAt(b.getCreatedAt())
-                            .build();
-                })
+        return blockService.getBlockedUsers(currentUserId).stream()
+                .map(user -> BlockedUserDto.builder()
+                        .id(user.getId())
+                        .username(user.getUsername())
+                        .displayName(user.getDisplayName())
+                        .avatarUrl(user.getAvatarUrl())
+                        .build())
                 .collect(Collectors.toList());
     }
 
     /**
-     * Check if user is blocked
+     * Check if user is blocked (Deprecated - use BlockService instead)
      */
+    @Deprecated
     public boolean isBlocked(String currentUserId, String targetUserId) {
-        return blockRepository.existsByUserIdAndBlockedUserId(currentUserId, targetUserId);
+        return blockService.isBlocked(currentUserId, targetUserId);
     }
 
     // ──────────────────────────────────────────────────────

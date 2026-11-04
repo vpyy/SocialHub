@@ -1,10 +1,15 @@
 package com.socialhub.chat.service;
 
+import com.socialhub.chat.document.Call;
 import com.socialhub.chat.document.Conversation;
 import com.socialhub.chat.document.Message;
+import com.socialhub.chat.document.UserConversationSettings;
 import com.socialhub.chat.dto.*;
+import com.socialhub.chat.repository.CallRepository;
 import com.socialhub.chat.repository.ConversationRepository;
 import com.socialhub.chat.repository.MessageRepository;
+import com.socialhub.chat.repository.UserConversationSettingsRepository;
+import com.socialhub.common.exception.ApiException;
 import com.socialhub.common.exception.ResourceNotFoundException;
 import com.socialhub.common.exception.ValidationException;
 import com.socialhub.post.document.Post;
@@ -12,6 +17,7 @@ import com.socialhub.post.dto.PostDto;
 import com.socialhub.post.repository.PostRepository;
 import com.socialhub.user.document.User;
 import com.socialhub.user.repository.UserRepository;
+import com.socialhub.user.service.BlockService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -20,7 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -29,8 +37,12 @@ public class ChatService {
 
     private final ConversationRepository conversationRepository;
     private final MessageRepository      messageRepository;
+    private final CallRepository         callRepository;
     private final UserRepository         userRepository;
     private final PostRepository         postRepository;
+    private final BlockService           blockService;
+    private final ConversationSettingsService settingsService;
+    private final UserConversationSettingsRepository userConversationSettingsRepository;
 
     // ── Get or create 1-1 conversation ───────────────────────────────────
 
@@ -39,6 +51,12 @@ public class ChatService {
         if (currentUserId.equals(targetUserId)) {
             throw new ValidationException("Cannot start conversation with yourself");
         }
+        
+        // Check if either user has blocked the other
+        if (blockService.isBlockedBidirectional(currentUserId, targetUserId)) {
+            throw new ValidationException("Cannot start conversation - user is blocked");
+        }
+        
         userRepository.findById(targetUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + targetUserId));
 
@@ -60,10 +78,30 @@ public class ChatService {
     // ── List conversations ────────────────────────────────────────────────
 
     public Page<ConversationDto> getConversations(String userId, int page, int size) {
-        return conversationRepository
+        // Get archived conversation IDs for this user
+        List<String> archivedConvIds = userConversationSettingsRepository
+                .findByUserIdAndIsArchived(userId, true)
+                .stream()
+                .map(UserConversationSettings::getConversationId)
+                .toList();
+
+        // Get all conversations for user with large page size, then filter
+        Page<Conversation> allConversations = conversationRepository
                 .findByParticipantIdsContainingOrderByLastMessageAtDesc(
-                        userId, PageRequest.of(page, size))
-                .map(c -> toConversationDto(c, userId));
+                        userId, PageRequest.of(0, 1000));
+
+        // Filter out archived and map to DTO
+        List<ConversationDto> filteredConversations = allConversations.stream()
+                .filter(c -> !archivedConvIds.contains(c.getId()))
+                .map(c -> toConversationDto(c, userId))
+                .toList();
+
+        // Manual pagination
+        int start = page * size;
+        int end = Math.min(start + size, filteredConversations.size());
+        List<ConversationDto> paginatedList = filteredConversations.subList(start, end);
+
+        return new org.springframework.data.domain.PageImpl<>(paginatedList, PageRequest.of(page, size), filteredConversations.size());
     }
 
     // ── Messages ──────────────────────────────────────────────────────────
@@ -162,6 +200,10 @@ public class ChatService {
                 .lastMessageAt(c.getLastMessageAt())
                 .createdAt(c.getCreatedAt())
                 .unreadCount(unread)
+                .isGroup(c.isGroup())
+                .groupName(c.getGroupName())
+                .groupAvatarUrl(c.getGroupAvatarUrl())
+                .adminIds(c.getAdminIds())
                 .build();
     }
 
@@ -175,7 +217,11 @@ public class ChatService {
                 .mediaUrl(m.getMediaUrl())
                 .sharedPostId(m.getSharedPostId())
                 .isRead(m.isRead())
-                .createdAt(m.getCreatedAt());
+                .createdAt(m.getCreatedAt())
+                .editedAt(m.getEditedAt())
+                .reactions(m.getReactions())
+                .voiceUrl(m.getVoiceUrl())
+                .voiceDuration(m.getVoiceDuration());
 
         userRepository.findById(m.getSenderId()).ifPresent(u -> {
             b.senderUsername(u.getUsername());
@@ -222,6 +268,45 @@ public class ChatService {
 
     // ── Create group chat ────────────────────────────────────────────────
 
+    /** Create group conversation */
+    public ConversationDto createGroupConversation(String currentUserId, CreateGroupChatRequest req) {
+        if (req.getGroupName() == null || req.getGroupName().trim().isEmpty()) {
+            throw new ValidationException("Tên nhóm không được để trống");
+        }
+        List<String> memberIds = req.getMemberIds() != null ? req.getMemberIds() : new java.util.ArrayList<>();
+        if (memberIds.size() < 1) {
+            throw new ValidationException("Nhóm phải có ít nhất 1 thành viên");
+        }
+        if (memberIds.size() > 100) {
+            throw new ValidationException("Nhóm không được quá 100 thành viên");
+        }
+
+        // Validate all members exist
+        for (String memberId : memberIds) {
+            userRepository.findById(memberId)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found: " + memberId));
+        }
+
+        // Create conversation with all participants including current user
+        List<String> participantIds = new java.util.ArrayList<>(memberIds);
+        if (!participantIds.contains(currentUserId)) {
+            participantIds.add(0, currentUserId);
+        }
+
+        Conversation conv = Conversation.builder()
+                .participantIds(participantIds)
+                .adminIds(List.of(currentUserId))  // Creator is admin
+                .isGroup(true)
+                .groupName(req.getGroupName().trim())
+                .groupAvatarUrl(req.getGroupAvatarUrl())
+                .createdAt(Instant.now())
+                .build();
+
+        Conversation saved = conversationRepository.save(conv);
+        log.info("Group chat created: {} with {} members", saved.getId(), participantIds.size());
+        return toConversationDto(saved, currentUserId);
+    }
+
     @Transactional
     public ConversationDto createGroupChat(String currentUserId, CreateGroupChatRequest req) {
         if (req.getGroupName() == null || req.getGroupName().trim().isEmpty()) {
@@ -248,6 +333,7 @@ public class ChatService {
 
         Conversation conv = Conversation.builder()
                 .participantIds(participantIds)
+                .adminIds(List.of(currentUserId))  // Creator is admin
                 .isGroup(true)
                 .groupName(req.getGroupName().trim())
                 .groupAvatarUrl(req.getGroupAvatarUrl())
@@ -257,5 +343,521 @@ public class ChatService {
         Conversation saved = conversationRepository.save(conv);
         log.info("Group chat created: {} with {} members", saved.getId(), participantIds.size());
         return toConversationDto(saved, currentUserId);
+    }
+
+    // ── Edit message ──────────────────────────────────────────────────────
+
+    @Transactional
+    public MessageDto editMessage(String messageId, String userId, EditMessageRequest req) {
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        if (!msg.getSenderId().equals(userId)) {
+            throw new ValidationException("Chỉ có thể sửa tin nhắn của chính mình");
+        }
+
+        if (req.getContent() == null || req.getContent().trim().isEmpty()) {
+            throw new ValidationException("Nội dung tin nhắn không được để trống");
+        }
+
+        msg.setContent(req.getContent().trim());
+        msg.setEditedAt(Instant.now());
+        messageRepository.save(msg);
+
+        log.info("Message {} edited", messageId);
+        return toMessageDto(msg);
+    }
+
+    // ── Delete message ────────────────────────────────────────────────────
+
+    @Transactional
+    public void deleteMessage(String messageId, String userId) {
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        if (!msg.getSenderId().equals(userId)) {
+            throw new ValidationException("Chỉ có thể xóa tin nhắn của chính mình");
+        }
+
+        messageRepository.deleteById(messageId);
+        log.info("Message {} deleted", messageId);
+    }
+
+    // ── Search messages ───────────────────────────────────────────────────
+
+    public Page<MessageDto> searchMessages(String conversationId, String userId, String query, int page, int size) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (!conv.getParticipantIds().contains(userId)) {
+            throw new ValidationException("Access denied");
+        }
+
+        return messageRepository
+                .findByConversationIdAndContentContainingIgnoreCaseOrderByCreatedAtDesc(
+                        conversationId, query, PageRequest.of(page, size))
+                .map(this::toMessageDto);
+    }
+
+    // ── Add reaction ──────────────────────────────────────────────────────
+
+    @Transactional
+    public MessageDto addReaction(String messageId, String userId, AddReactionRequest req) {
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        if (msg.getReactions() == null) {
+            msg.setReactions(new HashMap<>());
+        }
+
+        msg.getReactions().put(userId, req.getReaction());
+        messageRepository.save(msg);
+
+        log.info("Reaction added to message {} by {}", messageId, userId);
+        return toMessageDto(msg);
+    }
+
+    // ── Remove reaction ───────────────────────────────────────────────────
+
+    @Transactional
+    public void removeReaction(String messageId, String userId) {
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        if (msg.getReactions() != null) {
+            msg.getReactions().remove(userId);
+            messageRepository.save(msg);
+        }
+
+        log.info("Reaction removed from message {} by {}", messageId, userId);
+    }
+
+    // ── Update group chat ─────────────────────────────────────────────────
+
+    @Transactional
+    public ConversationDto updateGroupChat(String conversationId, String userId, UpdateGroupRequest req) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (!conv.isGroup()) {
+            throw new ValidationException("Chỉ có thể cập nhật nhóm chat");
+        }
+
+        if (!conv.getAdminIds().contains(userId)) {
+            throw new ValidationException("Chỉ admin mới có thể cập nhật nhóm");
+        }
+
+        // Update group name
+        if (req.getGroupName() != null && !req.getGroupName().trim().isEmpty()) {
+            conv.setGroupName(req.getGroupName().trim());
+        }
+
+        // Update group avatar
+        if (req.getGroupAvatarUrl() != null) {
+            conv.setGroupAvatarUrl(req.getGroupAvatarUrl());
+        }
+
+        // Add members
+        if (req.getAddMemberIds() != null && !req.getAddMemberIds().isEmpty()) {
+            for (String memberId : req.getAddMemberIds()) {
+                userRepository.findById(memberId)
+                        .orElseThrow(() -> new ResourceNotFoundException("User not found: " + memberId));
+
+                if (!conv.getParticipantIds().contains(memberId)) {
+                    conv.getParticipantIds().add(memberId);
+                }
+            }
+        }
+
+        // Remove members
+        if (req.getRemoveMemberIds() != null && !req.getRemoveMemberIds().isEmpty()) {
+            for (String memberId : req.getRemoveMemberIds()) {
+                conv.getParticipantIds().remove(memberId);
+                if (conv.getRemovedMemberIds() == null) {
+                    conv.setRemovedMemberIds(new java.util.ArrayList<>());
+                }
+                conv.getRemovedMemberIds().add(memberId);
+            }
+        }
+
+        conversationRepository.save(conv);
+        log.info("Group chat {} updated", conversationId);
+        return toConversationDto(conv, userId);
+    }
+
+    // ── Leave group ───────────────────────────────────────────────────────
+
+    @Transactional
+    public void leaveGroup(String conversationId, String userId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (!conv.isGroup()) {
+            throw new ValidationException("Chỉ có thể thoát nhóm chat");
+        }
+
+        if (!conv.getParticipantIds().contains(userId)) {
+            throw new ValidationException("Bạn không phải thành viên của nhóm");
+        }
+
+        conv.getParticipantIds().remove(userId);
+        if (conv.getAdminIds() != null) {
+            conv.getAdminIds().remove(userId);
+        }
+
+        conversationRepository.save(conv);
+        log.info("User {} left group {}", userId, conversationId);
+    }
+
+    /** Delete conversation (for 1-1 or group) */
+    @Transactional
+    public void deleteConversation(String conversationId, String userId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        // For 1-1 conversations, anyone can delete
+        if (!conv.isGroup()) {
+            conversationRepository.delete(conv);
+            messageRepository.deleteAll(messageRepository.findByConversationId(conversationId));
+            // Also delete user conversation settings for this 1-1 chat
+            userConversationSettingsRepository.deleteByConversationId(conversationId);
+            log.info("User {} deleted 1-1 conversation {}", userId, conversationId);
+            return;
+        }
+
+        // For groups, only admin can delete
+        if (conv.getAdminIds() == null || !conv.getAdminIds().contains(userId)) {
+            throw new ValidationException("Chỉ admin mới có thể xóa nhóm");
+        }
+
+        // Delete all messages in group first
+        messageRepository.deleteAll(messageRepository.findByConversationId(conversationId));
+        // Delete all user settings for this group
+        userConversationSettingsRepository.deleteByConversationId(conversationId);
+        conversationRepository.delete(conv);
+        log.info("Admin {} deleted group {}", userId, conversationId);
+    }
+
+    // ── Call management ───────────────────────────────────────────────────
+
+    @Transactional
+    public CallDto initiateCall(String conversationId, String callerId, String calleeId, String callType) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (!conv.getParticipantIds().contains(callerId)) {
+            throw new ValidationException("Access denied");
+        }
+
+        userRepository.findById(calleeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Callee not found"));
+
+        Call call = Call.builder()
+                .conversationId(conversationId)
+                .callerId(callerId)
+                .calleeId(calleeId)
+                .status("INITIATED")
+                .callType(callType != null ? callType : "VOICE")
+                .startedAt(Instant.now())
+                .createdAt(Instant.now())
+                .build();
+
+        Call savedCall = callRepository.save(call);
+        log.info("Call {} initiated from {} to {}", savedCall.getId(), callerId, calleeId);
+        return toCallDto(savedCall);
+    }
+
+    @Transactional
+    public CallDto updateCallStatus(String callId, String status, String userId) {
+        Call call = callRepository.findById(callId)
+                .orElseThrow(() -> new ResourceNotFoundException("Call not found"));
+
+        if (!call.getCallerId().equals(userId) && !call.getCalleeId().equals(userId)) {
+            throw new ValidationException("Access denied");
+        }
+
+        call.setStatus(status);
+
+        if ("ACCEPTED".equals(status)) {
+            call.setAnsweredAt(Instant.now());
+        } else if ("ENDED".equals(status) || "DECLINED".equals(status) || "MISSED".equals(status)) {
+            call.setEndedAt(Instant.now());
+            if (call.getAnsweredAt() != null) {
+                call.setDuration(call.getEndedAt().toEpochMilli() - call.getAnsweredAt().toEpochMilli());
+            }
+        }
+
+        callRepository.save(call);
+        log.info("Call {} status updated to {}", callId, status);
+        return toCallDto(call);
+    }
+
+    public Page<CallDto> getCallHistory(String conversationId, String userId, int page, int size) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (!conv.getParticipantIds().contains(userId)) {
+            throw new ValidationException("Access denied");
+        }
+
+        return callRepository
+                .findByConversationIdOrderByCreatedAtDesc(conversationId, PageRequest.of(page, size))
+                .map(this::toCallDto);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    private CallDto toCallDto(Call call) {
+        CallDto.CallDtoBuilder b = CallDto.builder()
+                .id(call.getId())
+                .conversationId(call.getConversationId())
+                .callerId(call.getCallerId())
+                .calleeId(call.getCalleeId())
+                .status(call.getStatus())
+                .startedAt(call.getStartedAt())
+                .answeredAt(call.getAnsweredAt())
+                .endedAt(call.getEndedAt())
+                .duration(call.getDuration())
+                .callType(call.getCallType())
+                .createdAt(call.getCreatedAt());
+
+        userRepository.findById(call.getCallerId()).ifPresent(u -> {
+            b.callerUsername(u.getUsername())
+                    .callerDisplayName(u.getDisplayName())
+                    .callerAvatarUrl(u.getAvatarUrl());
+        });
+
+        userRepository.findById(call.getCalleeId()).ifPresent(u -> {
+            b.calleeUsername(u.getUsername())
+                    .calleeDisplayName(u.getDisplayName())
+                    .calleeAvatarUrl(u.getAvatarUrl());
+        });
+
+        return b.build();
+    }
+
+
+    // ── New Features ─────────────────────────────────────────────────────
+
+    @Transactional
+    public MessageDto replyMessage(String conversationId, String userId, String replyToMessageId, ReplyMessageRequest req) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (!conv.getParticipantIds().contains(userId)) {
+            throw new ValidationException("Access denied");
+        }
+
+        Message originalMsg = messageRepository.findById(replyToMessageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Original message not found"));
+
+        Message message = Message.builder()
+                .conversationId(conversationId)
+                .senderId(userId)
+                .content(req.getContent())
+                .messageType(req.getMessageType() != null ? req.getMessageType() : "TEXT")
+                .mediaUrl(req.getMediaUrl())
+                .fileUrl(req.getFileUrl())
+                .fileName(req.getFileName())
+                .fileSize(req.getFileSize())
+                .replyToMessageId(replyToMessageId)
+                .isRead(false)
+                .createdAt(Instant.now())
+                .build();
+
+        Message saved = messageRepository.save(message);
+        conv.setLastMessage(req.getContent());
+        conv.setLastMessageAt(Instant.now());
+        conversationRepository.save(conv);
+
+        return mapMessageToDto(saved, originalMsg);
+    }
+
+    @Transactional
+    public MessageDto pinMessage(String conversationId, String messageId, String userId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (!conv.getParticipantIds().contains(userId)) {
+            throw new ValidationException("Access denied");
+        }
+
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        msg.setPinned(true);
+        messageRepository.save(msg);
+
+        if (!conv.getPinnedMessageIds().contains(messageId)) {
+            conv.getPinnedMessageIds().add(messageId);
+            conversationRepository.save(conv);
+        }
+
+        return mapMessageToDto(msg, null);
+    }
+
+    @Transactional
+    public MessageDto unpinMessage(String conversationId, String messageId, String userId) {
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        msg.setPinned(false);
+        messageRepository.save(msg);
+
+        Conversation conv = conversationRepository.findById(conversationId).orElse(null);
+        if (conv != null) {
+            conv.getPinnedMessageIds().remove(messageId);
+            conversationRepository.save(conv);
+        }
+
+        return mapMessageToDto(msg, null);
+    }
+
+    @Transactional
+    public void unsendMessage(String messageId, String userId) {
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        if (!msg.getSenderId().equals(userId)) {
+            throw new ValidationException("Chỉ người gửi mới có thể thu hồi tin nhắn");
+        }
+
+        msg.setDeletedForEveryone(true);
+        msg.setContent("Tin nhắn đã được thu hồi");
+        msg.setMediaUrl(null);
+        msg.setFileUrl(null);
+        messageRepository.save(msg);
+    }
+
+    @Transactional
+    public void forwardMessage(String messageId, String userId, List<String> targetConversationIds) {
+        Message originalMsg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        for (String targetConvId : targetConversationIds) {
+            Conversation targetConv = conversationRepository.findById(targetConvId).orElse(null);
+            if (targetConv == null || !targetConv.getParticipantIds().contains(userId)) continue;
+
+            Message forwarded = Message.builder()
+                    .conversationId(targetConvId)
+                    .senderId(userId)
+                    .content(originalMsg.getContent())
+                    .messageType(originalMsg.getMessageType())
+                    .mediaUrl(originalMsg.getMediaUrl())
+                    .fileUrl(originalMsg.getFileUrl())
+                    .fileName(originalMsg.getFileName())
+                    .fileSize(originalMsg.getFileSize())
+                    .isRead(false)
+                    .createdAt(Instant.now())
+                    .build();
+
+            messageRepository.save(forwarded);
+            targetConv.setLastMessage(originalMsg.getContent());
+            targetConv.setLastMessageAt(Instant.now());
+            conversationRepository.save(targetConv);
+        }
+    }
+
+    @Transactional
+    public void setTyping(String conversationId, String userId, boolean isTyping) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (isTyping) {
+            if (!conv.getTypingUserIds().contains(userId)) {
+                conv.getTypingUserIds().add(userId);
+            }
+        } else {
+            conv.getTypingUserIds().remove(userId);
+        }
+
+        conversationRepository.save(conv);
+    }
+
+    @Transactional
+    public ConversationDto promoteMember(String conversationId, String adminId, String memberId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (!conv.isGroup()) {
+            throw new ValidationException("Chỉ áp dụng cho nhóm chat");
+        }
+
+        if (!conv.getAdminIds().contains(adminId)) {
+            throw new ValidationException("Chỉ admin mới có thể thăng cấp thành viên");
+        }
+
+        if (!conv.getAdminIds().contains(memberId)) {
+            conv.getAdminIds().add(memberId);
+            conversationRepository.save(conv);
+        }
+
+        return toConversationDto(conv, adminId);
+    }
+
+    @Transactional
+    public ConversationDto demoteMember(String conversationId, String adminId, String memberId) {
+        Conversation conv = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (!conv.isGroup()) {
+            throw new ValidationException("Chỉ áp dụng cho nhóm chat");
+        }
+
+        if (!conv.getAdminIds().contains(adminId)) {
+            throw new ValidationException("Chỉ admin mới có thể gỡ quyền thành viên");
+        }
+
+        conv.getAdminIds().remove(memberId);
+        conversationRepository.save(conv);
+
+        return toConversationDto(conv, adminId);
+    }
+
+    private MessageDto mapMessageToDto(Message msg, Message replyToMsg) {
+        if (msg == null) return null;
+        
+        User sender = userRepository.findById(msg.getSenderId()).orElse(null);
+
+        MessageDto.MessageDtoBuilder builder = MessageDto.builder()
+                .id(msg.getId())
+                .conversationId(msg.getConversationId())
+                .senderId(msg.getSenderId())
+                .senderUsername(sender != null ? sender.getUsername() : null)
+                .senderDisplayName(sender != null ? sender.getDisplayName() : null)
+                .senderAvatarUrl(sender != null ? sender.getAvatarUrl() : null)
+                .content(msg.getContent())
+                .messageType(msg.getMessageType())
+                .mediaUrl(msg.getMediaUrl())
+                .isRead(msg.isRead())
+                .createdAt(msg.getCreatedAt())
+                .editedAt(msg.getEditedAt())
+                .reactions(msg.getReactions())
+                .voiceUrl(msg.getVoiceUrl())
+                .voiceDuration(msg.getVoiceDuration())
+                .replyToMessageId(msg.getReplyToMessageId())
+                .isPinned(msg.isPinned())
+                .isDeletedForEveryone(msg.isDeletedForEveryone())
+                .fileUrl(msg.getFileUrl())
+                .fileName(msg.getFileName())
+                .fileSize(msg.getFileSize())
+                .linkPreviewUrl(msg.getLinkPreviewUrl())
+                .linkPreviewTitle(msg.getLinkPreviewTitle())
+                .linkPreviewDescription(msg.getLinkPreviewDescription())
+                .linkPreviewImage(msg.getLinkPreviewImage());
+
+        if (replyToMsg != null) {
+            User replyToSender = userRepository.findById(replyToMsg.getSenderId()).orElse(null);
+            MessageDto replyDto = MessageDto.builder()
+                    .id(replyToMsg.getId())
+                    .content(replyToMsg.getContent())
+                    .messageType(replyToMsg.getMessageType())
+                    .senderId(replyToMsg.getSenderId())
+                    .senderDisplayName(replyToSender != null ? replyToSender.getDisplayName() : null)
+                    .build();
+            builder.replyToMessage(replyDto);
+        }
+
+        return builder.build();
     }
 }

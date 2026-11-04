@@ -2,6 +2,14 @@ import apiClient from './api'
 
 const userService = {
   /**
+   * Get all users (paginated)
+   */
+  getAllUsers: async (page = 0, size = 100) => {
+    const response = await apiClient.get('/users', { params: { page, size } })
+    return response.data
+  },
+
+  /**
    * Search users by keyword (displayName or username)
    */
   searchUsers: async (keyword) => {

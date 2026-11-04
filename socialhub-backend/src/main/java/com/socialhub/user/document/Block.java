@@ -14,27 +14,36 @@ import java.time.Instant;
 
 /**
  * blocks collection
- *
- * Stores user block relationships: userId blocked blockedUserId
+ * 
+ * Stores user blocking relationships.
+ * When user A blocks user B:
+ * - A cannot see B's posts/stories/messages
+ * - B cannot send messages to A
+ * - Both cannot start new conversations
+ * 
+ * Composite index on blockerId + blockedId for fast lookups
  */
 @Document(collection = "blocks")
-@CompoundIndexes({
-    @CompoundIndex(name = "user_blocked_idx", def = "{'userId': 1, 'blockedUserId': 1}", unique = true)
-})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@CompoundIndexes({
+    @CompoundIndex(name = "blocker_blocked_idx", def = "{'blockerId': 1, 'blockedId': 1}", unique = true)
+})
 public class Block {
 
     @Id
     private String id;
 
+    /** User who initiated the block */
     @Indexed
-    private String userId;              // → users._id (người block)
+    private String blockerId;
 
+    /** User who is being blocked */
     @Indexed
-    private String blockedUserId;       // → users._id (người bị block)
+    private String blockedId;
 
+    /** When the block was created */
     private Instant createdAt;
 }

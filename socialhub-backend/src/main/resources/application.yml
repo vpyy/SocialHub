@@ -24,16 +24,22 @@ server:
   port: 8080
   servlet:
     multipart:
-      max-file-size: 20MB
-      max-request-size: 20MB
+      max-file-size: 50MB
+      max-request-size: 50MB
   tomcat:
-    max-http-form-post-size: 20MB
-    max-swallow-size: 20MB
+    max-http-form-post-size: 50MB
+    max-swallow-size: 50MB
   error:
     include-message: always
     include-binding-errors: always
     include-stacktrace: never
     include-exception: false
+
+# File Upload Configuration
+file:
+  upload:
+    dir: uploads
+    base-url: http://localhost:8080/uploads
 
 # Logging
 logging:

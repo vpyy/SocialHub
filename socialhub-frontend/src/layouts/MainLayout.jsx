@@ -35,13 +35,14 @@ export default function MainLayout() {
   }
 
   return (
-    <div className="w-full flex min-h-screen bg-white dark:bg-gray-950">
-      <div className="w-full flex min-h-screen">
-        <Sidebar user={user} navigate={navigate} location={location} />
-        <main className="flex-1 flex">
-          <Outlet />
-        </main>
-      </div>
+  <div className="w-full h-screen overflow-hidden bg-white dark:bg-gray-950">
+    <div className="w-full h-full flex min-w-0">
+      <Sidebar user={user} navigate={navigate} location={location} />
+
+      <main className="flex-1 min-w-0 h-full overflow-hidden">
+        <Outlet />
+      </main>
     </div>
-  )
+  </div>
+)
 }

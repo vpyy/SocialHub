@@ -27,6 +27,22 @@ public class UserController {
     private final FollowService followService;
 
     // ──────────────────────────────────────────────────────
+    // GET /api/users (paginated) — List All Users
+    // ──────────────────────────────────────────────────────
+    @GetMapping
+    public ResponseEntity<ApiResponse<Object>> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+        try {
+            List<UserDto> users = userService.getAllUsers(page, size);
+            return ResponseEntity.ok(ApiResponse.success(users, "OK"));
+        } catch (Exception e) {
+            log.error("Error getting all users", e);
+            return ResponseEntity.ok(ApiResponse.success(List.of(), "OK"));
+        }
+    }
+
+    // ──────────────────────────────────────────────────────
     // 1. GET /api/users/{username} — Public Profile
     // ──────────────────────────────────────────────────────
     @GetMapping("/{username}")

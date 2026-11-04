@@ -25,7 +25,7 @@ public class MessageDto {
     private String senderAvatarUrl;
 
     private String content;
-    /** TEXT | IMAGE | VIDEO | POST */
+    /** TEXT | IMAGE | VIDEO | POST | VOICE */
     private String messageType;
     private String mediaUrl;
     private String sharedPostId;
@@ -33,4 +33,33 @@ public class MessageDto {
 
     private boolean isRead;
     private Instant createdAt;
+    private Instant editedAt;  // Thời gian sửa lần cuối
+    
+    /** Reactions: {userId: reactionType} */
+    private java.util.Map<String, String> reactions;
+    
+    // Voice message
+    private String voiceUrl;
+    private Long voiceDuration;  // ms
+    
+    // Reply feature
+    private String replyToMessageId;
+    private MessageDto replyToMessage;  // embedded original message
+    
+    // Pin feature
+    private boolean isPinned;
+    
+    // Delete for everyone
+    private boolean isDeletedForEveryone;
+    
+    // File upload
+    private String fileUrl;
+    private String fileName;
+    private Long fileSize;
+    
+    // Link preview
+    private String linkPreviewUrl;
+    private String linkPreviewTitle;
+    private String linkPreviewDescription;
+    private String linkPreviewImage;
 }

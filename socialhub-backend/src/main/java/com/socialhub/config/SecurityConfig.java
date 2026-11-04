@@ -68,6 +68,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/posts/following").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/posts/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/posts/search").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/users").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/search").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/*/liked-posts").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/*/reposts").permitAll()

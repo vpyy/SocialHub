@@ -16,7 +16,14 @@ public interface MessageRepository extends MongoRepository<Message, String> {
     Page<Message> findByConversationIdOrderByCreatedAtAsc(
             String conversationId, Pageable pageable);
 
+    // Find all messages by conversation ID (for deletion)
+    java.util.List<Message> findByConversationId(String conversationId);
+
     // Đếm tin nhắn chưa đọc trong conversation với người nhận cụ thể
     long countByConversationIdAndSenderIdNotAndIsReadFalse(
             String conversationId, String senderId);
+    
+    // Tìm kiếm tin nhắn theo nội dung
+    Page<Message> findByConversationIdAndContentContainingIgnoreCaseOrderByCreatedAtDesc(
+            String conversationId, String query, Pageable pageable);
 }

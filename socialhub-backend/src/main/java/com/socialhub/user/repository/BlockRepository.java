@@ -9,14 +9,14 @@ import java.util.Optional;
 
 @Repository
 public interface BlockRepository extends MongoRepository<Block, String> {
-
-    Optional<Block> findByUserIdAndBlockedUserId(String userId, String blockedUserId);
-
-    boolean existsByUserIdAndBlockedUserId(String userId, String blockedUserId);
-
-    List<Block> findByUserId(String userId);
-
-    List<Block> findByBlockedUserId(String blockedUserId);
-
-    void deleteByUserIdAndBlockedUserId(String userId, String blockedUserId);
+    
+    Optional<Block> findByBlockerIdAndBlockedId(String blockerId, String blockedId);
+    
+    List<Block> findByBlockerId(String blockerId);
+    
+    List<Block> findByBlockedId(String blockedId);
+    
+    boolean existsByBlockerIdAndBlockedId(String blockerId, String blockedId);
+    
+    void deleteByBlockerIdAndBlockedId(String blockerId, String blockedId);
 }
