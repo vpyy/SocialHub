@@ -149,6 +149,84 @@ SocialHub/
 
 ## ✨ Tính Năng Chính
 
+### Phase 1: Core Bảo Mật & Phiên Làm Việc
+
+#### v1.2 - Session Management & Refresh Token Rotation
+- **Refresh Token**: 7-day lifetime, lưu trong HTTP-only cookie
+- **Session Management**: 
+  - Tối đa 7 phiên song song trên các thiết bị
+  - Auto-rotate refresh token (cấu cấp mới mỗi lần refresh, lưu previous hash để phát hiện)
+  - Immediate revocation (khi logout hoặc access từ ngoài, revoke tất cả phiên cũ)
+  - Theo dõi: device name, OS, IP, last used, created date
+- **API Endpoints**:
+  - `GET /auth/sessions` - Danh sách phiên hoạt động
+  - `DELETE /auth/sessions/{sessionId}` - Thu hồi phiên
+- **Frontend**: SecurityTab hiển thị danh sách thiết bị + nút logout từ xa
+
+#### v1.3 - Rate Limiting
+- **Bucket4j** in-memory rate limiter per-IP + per-endpoint
+- **Giới hạn**:
+  - Login: 5/min
+  - Register: 5/hour  
+  - Password ops: 3/hour
+  - Media upload: 20/min
+- **Response**: `429 Too Many Requests`
+
+#### v1.4 - WebSocket STOMP Authorization
+- **ChannelInterceptor**: validate JWT trên STOMP CONNECT
+- **Destination ACL**: 
+  - Subscribe: `/user/queue/**` (private messages), `/topic/conversation/**`, `/topic/notifications/**`
+  - Send: `/app/**` (message handlers)
+- **Security**: Ngặn subscribe/send tới private channel của người khác
+
+#### v1.5 - Secure File Upload
+- **File Validation**:
+  - Apache Tika: detect magic bytes (chống MIME spoofing)
+  - Whitelist: jpg, jpeg, png, gif, webp, pdf, mp4, webm, mp3, m4a
+  - Block SVG (XSS risk)
+  - Size limit: 100MB
+- **Storage**: UUID naming + /uploads/ directory
+- **XSS Prevention**: HtmlSanitizer (remove `<script>`, `<iframe>`, on* handlers)
+- **Endpoints**: 
+  - `POST /media/upload` (single)
+  - `POST /media/upload/batch` (multiple)
+
+### Phase 2: Email Verification & Password Reset
+
+#### Email Verification
+- **Email Verification Banner**: Hiện trên MainLayout nếu `emailVerified = false`
+- **VerificationToken**: TTL 24h, one-time use tracking
+- **Token Hash**: SHA-256 (prevent extraction)
+- **Endpoints**:
+  - `POST /auth/verify-email` - Verify bằng token từ email link
+  - `POST /auth/resend-verification` - Gửi lại email (3/hour rate limit)
+
+#### Password Reset
+- **Password Reset Flow**:
+  1. User request `/forgot-password` → gửi email (3/hour limit, always return same message for security - no user enumeration)
+  2. Click link → `/reset-password?token=...` page
+  3. Submit → `/auth/reset-password` → revoke ALL sessions
+- **Token**: TTL 30 minutes, one-time use
+- **Password Strength**: 
+  - Min 8 ký tự
+  - Uppercase + lowercase + digit + special char
+  - Strength indicator: Yếu/Trung bình/Mạnh
+
+#### OAuth Google (Optional)
+- **Endpoint**: `POST /auth/oauth/google` - Authenticate with Google ID token
+- **Auto-create**: Tạo user mới nếu không tồn tại (email from Google)
+- **Link Account**: Link Google tới existing LOCAL account
+- **Frontend**: Google Sign-In button (requires GOOGLE_CLIENT_ID)
+
+#### Frontend Pages (Phase 2)
+- **VerifyEmail.jsx**: Auto-verify khi click link, hiện loading → success/error
+- **ForgotPassword.jsx**: Email input → success message
+- **ResetPassword.jsx**: 
+  - Token validation
+  - Password input với strength indicator
+  - Requirements checklist
+  - Success/error handling
+
 ### Auth & User
 - **Đăng ký / Đăng nhập** với JWT (access token 24h)
 - **Hồ sơ người dùng**: avatar, cover, bio, display name
@@ -289,7 +367,16 @@ Base URL: `http://localhost:8080/api`
 |--------|----------|-------|
 | POST | `/auth/register` | Đăng ký |
 | POST | `/auth/login` | Đăng nhập (trả JWT) |
-| POST | `/auth/logout` | Đăng xuất |
+| POST | `/auth/refresh` | Làm mới access token (từ refresh cookie) |
+| POST | `/auth/logout` | Đăng xuất (một phiên) |
+| POST | `/auth/logout-all` | Logout từ tất cả devices (optional: exceptCurrent=true) |
+| GET | `/auth/sessions` | Danh sách phiên hoạt động |
+| DELETE | `/auth/sessions/{sessionId}` | Thu hồi phiên cụ thể |
+| POST | `/auth/verify-email` | Xác minh email (from email link) |
+| POST | `/auth/resend-verification` | Gửi lại email xác minh |
+| POST | `/auth/forgot-password` | Yêu cầu reset mật khẩu (send email) |
+| POST | `/auth/reset-password` | Reset mật khẩu + revoke all sessions |
+| POST | `/auth/oauth/google` | Authenticate với Google ID token |
 
 ### Users
 | Method | Endpoint | Mô tả |
@@ -383,6 +470,12 @@ Base URL: `http://localhost:8080/api`
 |--------|----------|-------|
 | POST | `/dev/seed?users=50` | Tạo dữ liệu mẫu |
 | DELETE | `/dev/seed/reset` | Xóa & tạo lại data |
+
+### Media Upload (Phase 1.5)
+| Method | Endpoint | Mô tả |
+|--------|----------|-------|
+| POST | `/media/upload` | Upload single file (MIME validation, Tika) |
+| POST | `/media/upload/batch` | Upload multiple files |
 
 ### Health
 | Method | Endpoint | Mô tả |

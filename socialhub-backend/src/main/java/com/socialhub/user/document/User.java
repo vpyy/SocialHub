@@ -51,6 +51,14 @@ public class User {
     @Builder.Default
     private String status = "ACTIVE";
 
+    /** Email verification status */
+    @Builder.Default
+    private Boolean emailVerified = false;
+
+    /** Authentication provider: LOCAL | GOOGLE */
+    @Builder.Default
+    private String authProvider = "LOCAL";
+
     private Instant createdAt;
     private Instant updatedAt;
 }
