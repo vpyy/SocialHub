@@ -23,12 +23,23 @@ class WebSocketService {
       this.listeners.push(onNotification)
     }
 
-    const socket = new SockJS('http://localhost:8080/ws')
+    // Get JWT token from localStorage
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.error('[WebSocket] No JWT token found')
+      return
+    }
+
+    // Pass token as query parameter for SockJS
+    const wsUrl = `http://localhost:8080/ws?token=${token}`
+    const socket = new SockJS(wsUrl)
+    
     this.client = new Client({
       webSocketFactory: () => socket,
       connectHeaders: {
         login: userId,
         passcode: 'guest',
+        Authorization: `Bearer ${token}`
       },
       onConnect: this.onConnected.bind(this),
       onStompError: this.onStompError.bind(this),
@@ -38,7 +49,7 @@ class WebSocketService {
       },
     })
 
-    console.log('[WebSocket] Attempting to connect...')
+    console.log('[WebSocket] Attempting to connect with token...')
     this.client.activate()
   }
 

@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import chatService from '../services/chatService'
 import userService from '../services/userService'
 import groupChatService from '../services/groupChatService'
+import websocketService from '../services/websocketService'
+import CallStateManager, { CALL_STATES, CALL_EVENTS } from '../utils/callStateMachine'
+import { CallControls, PermissionsHandler, NetworkRecovery, AudioFocusManager } from '../utils/callControls'
+import AdvancedCallModal from '../components/AdvancedCallModal'
 
 const EMOJI_LIST = ['👍', '❤️', '😂', '😮', '😢', '😡', '🎉', '🔥', '💯', '✨']
 
@@ -12,41 +16,66 @@ function CreateGroupModal({ onClose, onCreated, allUsers, currentUserId, convers
   const [selectedMembers, setSelectedMembers] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState('suggested') // 'suggested' or 'all'
+  const [followingUsers, setFollowingUsers] = useState([])
 
-  // Get suggested users (people you've chatted with)
-  const getChatPartners = () => {
-    const chatPartnerIds = new Set()
+  // Fetch following list on mount
+  useEffect(() => {
+    const fetchFollowing = async () => {
+      try {
+        const res = await userService.getFollowing(currentUserId)
+        const following = res?.data ?? res ?? []
+        setFollowingUsers(Array.isArray(following) ? following : [])
+      } catch (e) {
+        console.error('Failed to load following list:', e)
+        setFollowingUsers([])
+      }
+    }
+    fetchFollowing()
+  }, [currentUserId])
+
+  // Get suggested user IDs: chat partners + following
+  const getSuggestedUserIds = () => {
+    const suggestedIds = new Set()
+
+    // Add chat partners (people you've had 1-1 conversations with)
     conversations.forEach(conv => {
       if (!conv.isGroup) {
         const partner = conv.participants?.find(p => p.userId !== currentUserId)
-        if (partner) chatPartnerIds.add(partner.userId)
+        if (partner) suggestedIds.add(partner.userId)
       }
     })
-    return Array.from(chatPartnerIds)
+
+    // Add following users
+    followingUsers.forEach(u => {
+      if (u.id) suggestedIds.add(u.id)
+      if (u.userId) suggestedIds.add(u.userId)
+      if (u.followingId) suggestedIds.add(u.followingId)
+    })
+
+    return suggestedIds
   }
 
-  const chatPartnerIds = getChatPartners()
-  
-  // Get suggested users (chat partners + remove already selected)
-  const suggestedUsers = allUsers.filter(u => 
-    u.id !== currentUserId && 
-    chatPartnerIds.includes(u.id) &&
+  const suggestedIds = getSuggestedUserIds()
+
+  // Suggested users from allUsers, filtered by chat partners + following
+  const suggestedUsers = allUsers.filter(u =>
+    u.id !== currentUserId &&
+    suggestedIds.has(u.id) &&
     !selectedMembers.includes(u.id)
   )
 
-  // Filtered users based on search and tab
+  // Filtered users based on search
   const filteredUsers = (() => {
-    let users = activeTab === 'suggested' ? suggestedUsers : allUsers
-    
+    let users = suggestedUsers
+
     if (searchTerm.trim()) {
-      users = users.filter(u => 
-        u.displayName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      users = users.filter(u =>
+        u.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.username?.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
-    
-    return users.filter(u => u.id !== currentUserId)
+
+    return users
   })()
 
   const toggleMember = (userId) => {
@@ -104,46 +133,27 @@ function CreateGroupModal({ onClose, onCreated, allUsers, currentUserId, convers
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 block">Chọn thành viên ({selectedMembers.length})</label>
+            <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+              Chọn thành viên ({selectedMembers.length})
+              <span className="ml-1 text-gray-400 font-normal">· {suggestedUsers.length} người có thể thêm</span>
+            </label>
             
             <div className="relative mb-3">
               <span className="absolute left-2 top-1/2 -translate-y-1/2 material-symbols-outlined text-gray-400 text-sm">search</span>
               <input
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Tìm người dùng..."
+                placeholder="Tìm trong những người đã chat / đang follow..."
                 className="w-full pl-8 pr-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"
               />
-            </div>
-
-            {/* Tab: Suggested vs All */}
-            <div className="flex gap-2 mb-3 border-b border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setActiveTab('suggested')}
-                className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'suggested'
-                    ? 'text-indigo-600 border-indigo-600 dark:text-indigo-400'
-                    : 'text-gray-600 dark:text-gray-400 border-transparent'
-                }`}
-              >
-                Đã chat ({suggestedUsers.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('all')}
-                className={`flex-1 py-2 text-sm font-medium border-b-2 transition-colors ${
-                  activeTab === 'all'
-                    ? 'text-indigo-600 border-indigo-600 dark:text-indigo-400'
-                    : 'text-gray-600 dark:text-gray-400 border-transparent'
-                }`}
-              >
-                Tất cả ({allUsers.length - 1})
-              </button>
             </div>
 
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {filteredUsers.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-4">
-                  {activeTab === 'suggested' ? 'Chưa chat với ai' : 'Không tìm thấy người dùng'}
+                  {searchTerm.trim()
+                    ? 'Không tìm thấy người dùng phù hợp'
+                    : 'Chưa có ai để thêm. Hãy chat hoặc follow thêm người dùng.'}
                 </p>
               ) : (
                 filteredUsers.map(user => (
@@ -598,10 +608,26 @@ export default function Messages() {
   const [typingUsers, setTypingUsers] = useState([])
   const [onlineUsers, setOnlineUsers] = useState(new Set())
 
+  // Call management state
+  const [callState, setCallState] = useState({ 
+    active: false, 
+    type: null, 
+    otherUser: null, 
+    status: 'idle',
+    callId: null
+  })
+
   const searchDebounce = useRef(null)
   const isUserAtBottom = useRef(true)
   const messagesEndRef = useRef(null)
   const typingDebounce = useRef(null)
+  
+  // Call manager refs
+  const callManagerRef = useRef(new CallStateManager())
+  const callControlsRef = useRef(new CallControls())
+  const networkRecoveryRef = useRef(new NetworkRecovery())
+  const audioFocusRef = useRef(new AudioFocusManager())
+  const permissionsRef = useRef(PermissionsHandler)
 
   // Load conversations
   useEffect(() => {
@@ -610,7 +636,15 @@ export default function Messages() {
     const interval = setInterval(() => {
       setOnlineUsers(new Set(Math.random() > 0.5 ? [conversations[0]?.participants?.[0]?.userId] : []))
     }, 5000)
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      try {
+        callManagerRef.current?.removeAllListeners()
+        callControlsRef.current?.close()
+      } catch (e) {
+        console.warn('Error cleaning up call managers:', e)
+      }
+    }
   }, [])
 
   const loadAllUsers = async () => {
@@ -621,6 +655,55 @@ export default function Messages() {
       console.error('Failed to load users:', e)
     }
   }
+
+  // Connect to WebSocket for incoming calls
+  useEffect(() => {
+    if (!currentUser?.id) {
+      console.warn('[WebSocket] No user ID, skipping connection')
+      return
+    }
+
+    console.log('[WebSocket] Connecting for user:', currentUser.id)
+    
+    // Connect to WebSocket
+    websocketService.connect(currentUser.id, (notification) => {
+      console.log('[WebSocket] Notification received:', notification)
+      
+      if (notification.type === 'call:incoming') {
+        console.log('[Messages] Incoming call notification:', notification)
+        
+        // Set call state to show incoming call modal
+        setCallState({
+          active: true,
+          type: notification.callData?.type || 'VOICE',
+          otherUser: {
+            userId: notification.callData?.initiator,
+            displayName: notification.callData?.initiatorName,
+            avatarUrl: notification.callData?.initiatorAvatar
+          },
+          status: 'incoming',
+          callId: notification.callData?.id
+        })
+        
+        // Initialize call state machine with RINGING state
+        try {
+          callManagerRef.current?.receiveCall(
+            notification.callData?.id,
+            notification.callData?.type,
+            notification.callData?.initiator,
+            notification.callData?.receiver
+          )
+        } catch (e) {
+          console.error('[Call] Failed to initialize incoming call:', e)
+        }
+      }
+    })
+
+    return () => {
+      console.log('[WebSocket] Disconnecting')
+      websocketService.disconnect()
+    }
+  }, [currentUser?.id])
 
   const loadConversations = async () => {
     setLoadingConvs(true)
@@ -773,6 +856,160 @@ export default function Messages() {
     }
   }
 
+  // Call handlers
+  const handleInitiateCall = async (callType = 'VOICE') => {
+    try {
+      console.log('[Messages] Initiating call:', callType)
+      if (!otherUser || !activeConvId) return
+      
+      // Call backend to initiate call (backend sends WebSocket notification to receiver)
+      const response = await chatService.initiateCall(activeConvId, otherUser.userId, callType)
+      const callData = response?.data?.data || {}
+      
+      console.log('[Messages] Call initiated, response:', callData)
+      
+      // Update local state machine
+      callManagerRef.current?.initiateCall(
+        callData.id || `call_${Date.now()}`,
+        callType,
+        currentUser.id,
+        otherUser.userId
+      )
+      
+      // Show outgoing call modal
+      setCallState({
+        active: true,
+        type: callType,
+        otherUser: {
+          userId: otherUser.userId,
+          displayName: otherUser.displayName,
+          avatarUrl: otherUser.avatarUrl
+        },
+        status: 'calling',
+        callId: callData.id
+      })
+    } catch (error) {
+      console.error('Failed to initiate call:', error)
+      alert('Failed to initiate call')
+    }
+  }
+
+  const handleAcceptCall = async () => {
+    try {
+      console.log('[Messages] Accepting call')
+      if (!callState.callId) return
+      
+      // Call backend to accept call
+      await chatService.updateCallStatus(callState.callId, 'ACCEPTED')
+      
+      callManagerRef.current?.acceptCall()
+      
+      // Update call state
+      setCallState(prev => ({
+        ...prev,
+        status: 'accepted'
+      }))
+    } catch (error) {
+      console.error('Failed to accept call:', error)
+    }
+  }
+
+  const handleDeclineCall = async () => {
+    try {
+      console.log('[Messages] Declining call')
+      if (!callState.callId) return
+      
+      // Call backend to decline/reject call
+      await chatService.updateCallStatus(callState.callId, 'REJECTED')
+      
+      callManagerRef.current?.rejectCall()
+      callControlsRef.current?.close()
+      
+      setCallState({
+        active: false,
+        type: null,
+        otherUser: null,
+        status: 'idle',
+        callId: null
+      })
+    } catch (error) {
+      console.error('Failed to decline call:', error)
+    }
+  }
+
+  const handleEndCall = async () => {
+    try {
+      console.log('[Messages] Ending call')
+      if (callState.callId) {
+        await chatService.updateCallStatus(callState.callId, 'ENDED')
+      }
+      
+      callManagerRef.current?.endCall()
+      callControlsRef.current?.close()
+      
+      setCallState({
+        active: false,
+        type: null,
+        otherUser: null,
+        status: 'idle',
+        callId: null
+      })
+    } catch (error) {
+      console.error('Failed to end call:', error)
+    }
+  }
+
+  const handleMuteToggle = async () => {
+    try {
+      console.log('[Messages] Toggling mute')
+      await callControlsRef.current?.toggleMute()
+      return callControlsRef.current?.isMuted || false
+    } catch (error) {
+      console.error('Failed to toggle mute:', error)
+      return false
+    }
+  }
+
+  const handleVideoToggle = async () => {
+    try {
+      console.log('[Messages] Toggling video')
+      await callControlsRef.current?.toggleVideo()
+      return callControlsRef.current?.isVideoEnabled || false
+    } catch (error) {
+      console.error('Failed to toggle video:', error)
+      return false
+    }
+  }
+
+  const handleSwitchCamera = async () => {
+    try {
+      console.log('[Messages] Switching camera')
+      await callControlsRef.current?.switchCamera()
+    } catch (error) {
+      console.error('Failed to switch camera:', error)
+    }
+  }
+
+  const handleSpeakerToggle = async () => {
+    try {
+      console.log('[Messages] Toggling speaker')
+      await callControlsRef.current?.toggleSpeaker()
+      return callControlsRef.current?.isSpeakerOn || false
+    } catch (error) {
+      console.error('Failed to toggle speaker:', error)
+      return false
+    }
+  }
+
+  const handlePiPToggle = async (videoElement) => {
+    try {
+      console.log('[Messages] Toggling PiP')
+      await callControlsRef.current?.enablePictureInPicture(videoElement)
+    } catch (error) {
+      console.error('Failed to toggle PiP:', error)
+    }
+  }
+
   // Conversation actions handler
   const handleConversationAction = async (action, conversationId) => {
     try {
@@ -834,6 +1071,21 @@ export default function Messages() {
   const activeConv = conversations.find(c => c.id === activeConvId)
   const otherUser = activeConv?.participants?.find(p => p.userId !== currentUser.id)
   const isOnline = onlineUsers.has(otherUser?.userId)
+
+  // Helper: find participant info by userId (for group chat message avatars/names)
+  const getParticipant = (userId) => {
+    return activeConv?.participants?.find(p => p.userId === userId) || 
+           allUsers.find(u => u.id === userId) ||
+           { userId, displayName: 'User', avatarUrl: null }
+  }
+
+  // Display name and avatar for the chat header
+  const headerName = activeConv?.isGroup 
+    ? (activeConv?.groupName || 'Nhóm chat')
+    : (otherUser?.displayName || 'User')
+  const headerAvatar = activeConv?.isGroup 
+    ? activeConv?.groupAvatarUrl 
+    : otherUser?.avatarUrl
 
   return (
     <div className="flex h-screen bg-white dark:bg-gray-950 overflow-hidden">
@@ -933,10 +1185,18 @@ export default function Messages() {
               </div>
 
               <div className="flex gap-3">
-                <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                <button 
+                  onClick={() => handleInitiateCall('VOICE')}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  title="Gọi thoại"
+                >
                   <span className="material-symbols-outlined text-gray-700 dark:text-gray-300">call</span>
                 </button>
-                <button className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                <button 
+                  onClick={() => handleInitiateCall('VIDEO')}
+                  className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  title="Gọi video"
+                >
                   <span className="material-symbols-outlined text-gray-700 dark:text-gray-300">videocam</span>
                 </button>
                 {activeConv?.isGroup && (
@@ -1058,6 +1318,24 @@ export default function Messages() {
           allUsers={allUsers.filter(u => u.id !== currentUser.id)}
           currentUserId={currentUser.id}
           conversations={conversations}
+        />
+      )}
+
+      {/* Advanced Call Modal */}
+      {callState.active && (
+        <AdvancedCallModal
+          callState={callState}
+          stateManager={callManagerRef.current}
+          controls={callControlsRef.current}
+          onDecline={handleDeclineCall}
+          onAccept={handleAcceptCall}
+          onEnd={handleEndCall}
+          onMuteToggle={handleMuteToggle}
+          onVideoToggle={handleVideoToggle}
+          onSwitchCamera={handleSwitchCamera}
+          onSpeakerToggle={handleSpeakerToggle}
+          onPiPToggle={handlePiPToggle}
+          otherUser={callState.otherUser}
         />
       )}
     </div>

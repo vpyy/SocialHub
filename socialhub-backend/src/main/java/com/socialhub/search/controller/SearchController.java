@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -57,7 +58,7 @@ public class SearchController {
             @Parameter(description = "Search keyword", required = true)
             @RequestParam String q,
             @Parameter(description = "Current user ID")
-            @RequestHeader(value = "X-User-Id", required = false) String currentUserId) {
+            @AuthenticationPrincipal String currentUserId) {
         
         log.info("GET /api/search/posts?q={}", q);
         
@@ -79,7 +80,7 @@ public class SearchController {
             @Parameter(description = "Hashtag to search", required = true)
             @RequestParam String tag,
             @Parameter(description = "Current user ID")
-            @RequestHeader(value = "X-User-Id", required = false) String currentUserId) {
+            @AuthenticationPrincipal String currentUserId) {
         
         log.info("GET /api/search/hashtags?tag={}", tag);
         

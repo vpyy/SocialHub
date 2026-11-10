@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -40,7 +41,7 @@ public class PostController {
     @PostMapping
     @Operation(summary = "Create a new post", description = "Create a new post with content, media, hashtags, and visibility settings")
     public ResponseEntity<ApiResponse<PostDto>> createPost(
-            @Parameter(description = "Author user ID", required = true) @RequestHeader(value = "X-User-Id", required = false, defaultValue = "temp-user-id") String authorId,
+            @AuthenticationPrincipal String authorId,
             @Valid @RequestBody CreatePostRequest request) {
 
         log.info("POST /api/posts - Creating post for author: {}", authorId);
@@ -57,7 +58,7 @@ public class PostController {
     @GetMapping("/feed")
     @Operation(summary = "Get personalized feed", description = "Get posts from followed users and public posts")
     public ResponseEntity<ApiResponse<Page<PostDto>>> getFeed(
-            @Parameter(description = "Current user ID") @RequestHeader(value = "X-User-Id", required = false, defaultValue = "temp-user-id") String currentUserId,
+            @AuthenticationPrincipal String currentUserId,
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
 
@@ -90,7 +91,7 @@ public class PostController {
     @GetMapping("/following")
     @Operation(summary = "Get following feed", description = "Get posts from users that current user follows")
     public ResponseEntity<ApiResponse<Page<PostDto>>> getFollowingFeed(
-            @Parameter(description = "Current user ID") @RequestHeader(value = "X-User-Id", required = false, defaultValue = "temp-user-id") String currentUserId,
+            @AuthenticationPrincipal String currentUserId,
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
 
@@ -108,7 +109,7 @@ public class PostController {
     @Operation(summary = "Get post by ID", description = "Retrieve detailed information about a specific post")
     public ResponseEntity<ApiResponse<PostDto>> getPostById(
             @Parameter(description = "Post ID", required = true) @PathVariable String id,
-            @Parameter(description = "Current user ID") @RequestHeader(value = "X-User-Id", required = false) String currentUserId) {
+            @AuthenticationPrincipal String currentUserId) {
 
         log.info("GET /api/posts/{} - Fetching post", id);
 
@@ -124,7 +125,7 @@ public class PostController {
     @Operation(summary = "Update post", description = "Update content, media, hashtags, or visibility of a post")
     public ResponseEntity<ApiResponse<PostDto>> updatePost(
             @Parameter(description = "Post ID", required = true) @PathVariable String id,
-            @Parameter(description = "Author user ID", required = true) @RequestHeader(value = "X-User-Id", required = false, defaultValue = "temp-user-id") String authorId,
+            @AuthenticationPrincipal String authorId,
             @Valid @RequestBody UpdatePostRequest request) {
 
         log.info("PUT /api/posts/{} - Updating post by author: {}", id, authorId);
@@ -141,7 +142,7 @@ public class PostController {
     @Operation(summary = "Delete post", description = "Delete a post (only the author can delete their own post)")
     public ResponseEntity<ApiResponse<Void>> deletePost(
             @Parameter(description = "Post ID", required = true) @PathVariable String id,
-            @Parameter(description = "Author user ID", required = true) @RequestHeader(value = "X-User-Id", required = false, defaultValue = "temp-user-id") String authorId) {
+            @AuthenticationPrincipal String authorId) {
 
         log.info("DELETE /api/posts/{} - Deleting post by author: {}", id, authorId);
 
@@ -173,7 +174,7 @@ public class PostController {
     @Operation(summary = "Get user posts", description = "Retrieve all posts created by a specific user")
     public ResponseEntity<ApiResponse<Page<PostDto>>> getUserPosts(
             @Parameter(description = "User ID", required = true) @PathVariable String userId,
-            @Parameter(description = "Current user ID") @RequestHeader(value = "X-User-Id", required = false) String currentUserId,
+            @AuthenticationPrincipal String currentUserId,
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
 
@@ -191,7 +192,7 @@ public class PostController {
     @Operation(summary = "Toggle repost", description = "Repost or unrepost a post")
     public ResponseEntity<ApiResponse<Map<String, Object>>> toggleRepost(
             @Parameter(description = "Post ID", required = true) @PathVariable String id,
-            @Parameter(description = "Current user ID", required = true) @RequestHeader(value = "X-User-Id", required = false, defaultValue = "temp-user-id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         log.info("POST /api/posts/{}/repost - Toggle repost by user: {}", id, userId);
 

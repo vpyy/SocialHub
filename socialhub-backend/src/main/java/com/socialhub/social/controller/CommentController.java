@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -37,7 +38,7 @@ public class CommentController {
             @Parameter(description = "Post ID", required = true)
             @PathVariable String id,
             @Parameter(description = "Author user ID")
-            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "temp-user-id") String authorId,
+            @AuthenticationPrincipal String authorId,
             @Valid @RequestBody CreateCommentRequest request) {
         
         log.info("POST /api/posts/{}/comments - Author: {}", id, authorId);
@@ -57,7 +58,7 @@ public class CommentController {
             @Parameter(description = "Post ID", required = true)
             @PathVariable String id,
             @Parameter(description = "Current user ID")
-            @RequestHeader(value = "X-User-Id", required = false) String currentUserId,
+            @AuthenticationPrincipal String currentUserId,
             @Parameter(description = "Page number (0-indexed)")
             @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size")
@@ -79,7 +80,7 @@ public class CommentController {
             @Parameter(description = "Comment ID", required = true)
             @PathVariable String id,
             @Parameter(description = "User ID")
-            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "temp-user-id") String userId) {
+            @AuthenticationPrincipal String userId) {
         
         log.info("DELETE /api/comments/{} - User: {}", id, userId);
         

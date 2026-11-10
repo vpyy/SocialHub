@@ -1,6 +1,7 @@
 package com.socialhub.config;
 
 import com.socialhub.auth.filter.JwtAuthenticationFilter;
+import com.socialhub.common.filter.RateLimitFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +22,7 @@ import java.util.Arrays;
  * Spring Security Configuration
  * 
  * Status:
+ * - Rate Limit Filter: Active - rate limits per endpoint
  * - JWT Filter: Active - validates Bearer tokens on all protected requests
  * - Public endpoints: health, swagger-ui, api-docs, auth/register, auth/login
  * - Protected endpoints: all /api/user/*, /api/post/*, etc.
@@ -32,9 +34,11 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, RateLimitFilter rateLimitFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.rateLimitFilter = rateLimitFilter;
     }
 
     /**
@@ -59,13 +63,15 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
                 
+                // WebSocket endpoint - exempted from JWT (handled by WebSocketConfig)
+                .requestMatchers("/ws", "/ws/**").permitAll()
+                
                 // Public API endpoints - auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
 
                 // Public read-only endpoints
                 .requestMatchers(HttpMethod.GET, "/api/posts/public").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/posts/following").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/posts/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/posts/search").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users").permitAll()
@@ -75,6 +81,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/users/*").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/*/followers").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/*/following").permitAll()
+                
+                // Public media files (uploaded content)
+                .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
 
                 // Dev seed endpoints (remove in production)
                 .requestMatchers("/api/dev/**").permitAll()
@@ -85,6 +94,9 @@ public class SecurityConfig {
             
             // HTTP Basic disabled (using JWT instead)
             .httpBasic(basic -> basic.disable())
+            
+            // Add RateLimitFilter BEFORE JwtAuthenticationFilter
+            .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class)
             
             // Add JWT filter before UsernamePasswordAuthenticationFilter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -115,15 +127,17 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:5173",
+            "http://localhost:5174",
             "http://localhost:3000",
             "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174",
             "http://127.0.0.1:3000"
         ));
         configuration.setAllowedMethods(Arrays.asList(
             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
         configuration.setAllowedHeaders(Arrays.asList(
-            "Content-Type", "Authorization", "X-Requested-With", "X-User-Id"
+            "Content-Type", "Authorization", "X-Requested-With"
         ));
         configuration.setExposedHeaders(Arrays.asList(
             "Authorization", "Content-Type"

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -24,7 +25,7 @@ public class ChatController {
     /** POST /api/conversations/group — create group conversation */
     @PostMapping("/group")
     public ResponseEntity<ApiResponse<ConversationDto>> createGroup(
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @Valid @RequestBody CreateGroupChatRequest req) {
 
         ConversationDto dto = chatService.createGroupConversation(userId, req);
@@ -35,7 +36,7 @@ public class ChatController {
     /** POST /api/conversations — get or create 1-1 conversation */
     @PostMapping
     public ResponseEntity<ApiResponse<ConversationDto>> getOrCreate(
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @Valid @RequestBody StartConversationRequest req) {
 
         ConversationDto dto = chatService.getOrCreateConversation(userId, req.getTargetUserId());
@@ -46,7 +47,7 @@ public class ChatController {
     /** GET /api/conversations?page=0&size=20 */
     @GetMapping
     public ResponseEntity<ApiResponse<Page<ConversationDto>>> list(
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") int size) {
 
@@ -58,7 +59,7 @@ public class ChatController {
     @GetMapping("/{id}/messages")
     public ResponseEntity<ApiResponse<Page<MessageDto>>> getMessages(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "50") int size) {
 
@@ -70,7 +71,7 @@ public class ChatController {
     @PostMapping("/{id}/messages")
     public ResponseEntity<ApiResponse<MessageDto>> sendMessage(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @RequestBody SendMessageRequest req) {
 
         MessageDto dto = chatService.sendMessage(id, userId, req);
@@ -82,7 +83,7 @@ public class ChatController {
     @PutMapping("/{id}/messages/read")
     public ResponseEntity<ApiResponse<Void>> markRead(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         chatService.markMessagesRead(id, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "OK"));
@@ -93,7 +94,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<Void>> deleteMessage(
             @PathVariable String id,
             @PathVariable String messageId,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         chatService.deleteMessage(messageId, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "Tin nhắn đã xóa"));
@@ -104,7 +105,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<MessageDto>> editMessage(
             @PathVariable String id,
             @PathVariable String messageId,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @Valid @RequestBody EditMessageRequest req) {
 
         MessageDto dto = chatService.editMessage(messageId, userId, req);
@@ -115,7 +116,7 @@ public class ChatController {
     @GetMapping("/{id}/messages/search")
     public ResponseEntity<ApiResponse<Page<MessageDto>>> searchMessages(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @RequestParam String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
@@ -129,7 +130,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<MessageDto>> addReaction(
             @PathVariable String id,
             @PathVariable String messageId,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @Valid @RequestBody AddReactionRequest req) {
 
         MessageDto dto = chatService.addReaction(messageId, userId, req);
@@ -141,7 +142,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<Void>> removeReaction(
             @PathVariable String id,
             @PathVariable String messageId,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         chatService.removeReaction(messageId, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "Phản ứng đã xóa"));
@@ -151,7 +152,7 @@ public class ChatController {
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<ConversationDto>> updateGroup(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @Valid @RequestBody UpdateGroupRequest req) {
 
         ConversationDto dto = chatService.updateGroupChat(id, userId, req);
@@ -162,7 +163,7 @@ public class ChatController {
     @DeleteMapping("/{id}/leave")
     public ResponseEntity<ApiResponse<Void>> leaveGroup(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         chatService.leaveGroup(id, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "Đã thoát nhóm"));
@@ -172,7 +173,7 @@ public class ChatController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteConversation(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         chatService.deleteConversation(id, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "Đoạn chat đã xóa"));
@@ -183,7 +184,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<MessageDto>> replyMessage(
             @PathVariable String id,
             @PathVariable String messageId,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @Valid @RequestBody ReplyMessageRequest req) {
 
         MessageDto dto = chatService.replyMessage(id, userId, messageId, req);
@@ -196,7 +197,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<MessageDto>> pinMessage(
             @PathVariable String id,
             @PathVariable String messageId,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         MessageDto dto = chatService.pinMessage(id, messageId, userId);
         return ResponseEntity.ok(ApiResponse.success(dto, "Tin nhắn đã ghim"));
@@ -207,7 +208,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<MessageDto>> unpinMessage(
             @PathVariable String id,
             @PathVariable String messageId,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         MessageDto dto = chatService.unpinMessage(id, messageId, userId);
         return ResponseEntity.ok(ApiResponse.success(dto, "Đã bỏ ghim"));
@@ -218,7 +219,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<Void>> unsendMessage(
             @PathVariable String id,
             @PathVariable String messageId,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         chatService.unsendMessage(messageId, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "Tin nhắn đã thu hồi"));
@@ -229,7 +230,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<Void>> forwardMessage(
             @PathVariable String id,
             @PathVariable String messageId,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @Valid @RequestBody ForwardMessageRequest req) {
 
         chatService.forwardMessage(messageId, userId, req.getTargetConversationIds());
@@ -240,7 +241,7 @@ public class ChatController {
     @PostMapping("/{id}/typing")
     public ResponseEntity<ApiResponse<Void>> setTyping(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         chatService.setTyping(id, userId, true);
         return ResponseEntity.ok(ApiResponse.success(null, "OK"));
@@ -250,7 +251,7 @@ public class ChatController {
     @DeleteMapping("/{id}/typing")
     public ResponseEntity<ApiResponse<Void>> clearTyping(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         chatService.setTyping(id, userId, false);
         return ResponseEntity.ok(ApiResponse.success(null, "OK"));
@@ -261,7 +262,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<ConversationDto>> promoteMember(
             @PathVariable String id,
             @PathVariable String memberId,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         ConversationDto dto = chatService.promoteMember(id, userId, memberId);
         return ResponseEntity.ok(ApiResponse.success(dto, "Đã thăng cấp thành Admin"));
@@ -272,7 +273,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<ConversationDto>> demoteMember(
             @PathVariable String id,
             @PathVariable String memberId,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         ConversationDto dto = chatService.demoteMember(id, userId, memberId);
         return ResponseEntity.ok(ApiResponse.success(dto, "Đã gỡ quyền Admin"));
@@ -282,7 +283,7 @@ public class ChatController {
     @PostMapping("/{id}/calls")
     public ResponseEntity<ApiResponse<CallDto>> initiateCall(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @RequestBody Map<String, String> req) {
 
         String calleeId = req.get("calleeId");
@@ -296,7 +297,7 @@ public class ChatController {
     @PutMapping("/calls/{callId}")
     public ResponseEntity<ApiResponse<CallDto>> updateCallStatus(
             @PathVariable String callId,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @RequestBody Map<String, String> req) {
 
         String status = req.get("status");
@@ -308,7 +309,7 @@ public class ChatController {
     @GetMapping("/{id}/calls")
     public ResponseEntity<ApiResponse<Page<CallDto>>> getCallHistory(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 

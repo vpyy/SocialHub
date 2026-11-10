@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -22,7 +23,7 @@ public class NotificationController {
     /** GET /api/notifications?page=0&size=20 */
     @GetMapping
     public ResponseEntity<ApiResponse<Page<NotificationDto>>> getNotifications(
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") int size) {
 
@@ -34,7 +35,7 @@ public class NotificationController {
     /** GET /api/notifications/unread-count */
     @GetMapping("/unread-count")
     public ResponseEntity<ApiResponse<Map<String, Long>>> getUnreadCount(
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         long count = notificationService.getUnreadCount(userId);
         return ResponseEntity.ok(ApiResponse.success(Map.of("count", count), "OK"));
@@ -43,7 +44,7 @@ public class NotificationController {
     /** PUT /api/notifications/read-all */
     @PutMapping("/read-all")
     public ResponseEntity<ApiResponse<Void>> markAllRead(
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         notificationService.markAllRead(userId);
         return ResponseEntity.ok(ApiResponse.success(null, "Đã đánh dấu tất cả là đã đọc"));
@@ -53,7 +54,7 @@ public class NotificationController {
     @PutMapping("/{id}/read")
     public ResponseEntity<ApiResponse<Void>> markOneRead(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId) {
+            @AuthenticationPrincipal String userId) {
 
         notificationService.markOneRead(id, userId);
         return ResponseEntity.ok(ApiResponse.success(null, "OK"));

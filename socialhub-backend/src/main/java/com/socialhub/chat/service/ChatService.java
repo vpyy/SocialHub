@@ -12,6 +12,7 @@ import com.socialhub.chat.repository.UserConversationSettingsRepository;
 import com.socialhub.common.exception.ApiException;
 import com.socialhub.common.exception.ResourceNotFoundException;
 import com.socialhub.common.exception.ValidationException;
+import com.socialhub.notification.service.NotificationService;
 import com.socialhub.post.document.Post;
 import com.socialhub.post.dto.PostDto;
 import com.socialhub.post.repository.PostRepository;
@@ -43,6 +44,7 @@ public class ChatService {
     private final BlockService           blockService;
     private final ConversationSettingsService settingsService;
     private final UserConversationSettingsRepository userConversationSettingsRepository;
+    private final NotificationService    notificationService;
 
     // ── Get or create 1-1 conversation ───────────────────────────────────
 
@@ -549,8 +551,11 @@ public class ChatService {
             throw new ValidationException("Access denied");
         }
 
-        userRepository.findById(calleeId)
+        User callee = userRepository.findById(calleeId)
                 .orElseThrow(() -> new ResourceNotFoundException("Callee not found"));
+
+        User caller = userRepository.findById(callerId)
+                .orElseThrow(() -> new ResourceNotFoundException("Caller not found"));
 
         Call call = Call.builder()
                 .conversationId(conversationId)
@@ -564,6 +569,21 @@ public class ChatService {
 
         Call savedCall = callRepository.save(call);
         log.info("Call {} initiated from {} to {}", savedCall.getId(), callerId, calleeId);
+
+        // Send WebSocket notification to callee
+        try {
+            notificationService.notifyIncomingCall(
+                calleeId,
+                savedCall.getId(),
+                savedCall.getCallType(),
+                callerId,
+                caller.getDisplayName(),
+                caller.getAvatarUrl()
+            );
+        } catch (Exception e) {
+            log.error("Failed to send incoming call notification: {}", e.getMessage(), e);
+        }
+
         return toCallDto(savedCall);
     }
 
@@ -580,10 +600,27 @@ public class ChatService {
 
         if ("ACCEPTED".equals(status)) {
             call.setAnsweredAt(Instant.now());
+            // Notify caller that call was accepted
+            try {
+                notificationService.notifyCallAccepted(call.getCallerId(), callId);
+            } catch (Exception e) {
+                log.error("Failed to send call accepted notification: {}", e.getMessage(), e);
+            }
         } else if ("ENDED".equals(status) || "DECLINED".equals(status) || "MISSED".equals(status)) {
             call.setEndedAt(Instant.now());
             if (call.getAnsweredAt() != null) {
                 call.setDuration(call.getEndedAt().toEpochMilli() - call.getAnsweredAt().toEpochMilli());
+            }
+            // Notify other party
+            try {
+                String otherUserId = call.getCallerId().equals(userId) ? call.getCalleeId() : call.getCallerId();
+                if ("DECLINED".equals(status)) {
+                    notificationService.notifyCallRejected(otherUserId, callId);
+                } else {
+                    notificationService.notifyCallEnded(otherUserId, callId);
+                }
+            } catch (Exception e) {
+                log.error("Failed to send call status notification: {}", e.getMessage(), e);
             }
         }
 

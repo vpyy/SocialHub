@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useTheme } from '../hooks/useTheme'
 import userService from '../services/userService'
 import blockService from '../services/blockService'
+import api from '../services/api'
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -38,6 +39,11 @@ export default function Settings() {
   const [notifError, setNotifError] = useState('')
   const [notifSuccess, setNotifSuccess] = useState('')
 
+  // Security/Sessions state
+  const [sessions, setSessions] = useState([])
+  const [sessionsLoading, setSessionsLoading] = useState(false)
+  const [sessionsError, setSessionsError] = useState('')
+
   // Load user data on mount
   useEffect(() => {
     const raw = localStorage.getItem('user')
@@ -62,6 +68,9 @@ export default function Settings() {
 
     // Load blocked users
     loadBlockedUsers()
+
+    // Load sessions
+    loadSessions()
   }, [])
 
   // Load blocked users from API
@@ -88,6 +97,41 @@ export default function Settings() {
     } catch (error) {
       console.error('Error unblocking user:', error)
       setBlockedError('Không thể bỏ chặn người dùng')
+    }
+  }
+
+  // ── Security/Sessions handlers ──
+  const loadSessions = async () => {
+    setSessionsLoading(true)
+    setSessionsError('')
+    try {
+      const response = await api.get('/auth/sessions')
+      setSessions(response.data || [])
+    } catch (error) {
+      console.error('Error loading sessions:', error)
+      setSessionsError('Không thể tải danh sách thiết bị')
+    } finally {
+      setSessionsLoading(false)
+    }
+  }
+
+  const handleRevokeSession = async (sessionId) => {
+    try {
+      await api.delete(`/auth/sessions/${sessionId}`)
+      setSessions(prev => prev.filter(s => s.sessionId !== sessionId))
+    } catch (error) {
+      console.error('Error revoking session:', error)
+      setSessionsError('Không thể đăng xuất thiết bị')
+    }
+  }
+
+  const handleLogoutAllOtherDevices = async () => {
+    try {
+      await api.post('/auth/logout-all', { exceptCurrent: true })
+      loadSessions()
+    } catch (error) {
+      console.error('Error logging out other devices:', error)
+      setSessionsError('Không thể đăng xuất các thiết bị khác')
     }
   }
 
@@ -188,6 +232,7 @@ export default function Settings() {
           { key: 'display', label: 'Hiển thị' },
           { key: 'language', label: 'Ngôn ngữ' },
           { key: 'notifications', label: 'Thông báo' },
+          { key: 'security', label: 'Bảo mật' },
           { key: 'blocked', label: 'Người bị chặn' },
           { key: 'password', label: 'Mật khẩu' },
         ].map(tab => (
@@ -315,6 +360,75 @@ export default function Settings() {
             >
               {notifLoading ? 'Đang lưu...' : 'Lưu cài đặt'}
             </button>
+          </div>
+        )}
+
+        {/* Security/Sessions Tab */}
+        {activeTab === 'security' && (
+          <div className="max-w-2xl space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6">Thiết bị đang đăng nhập</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">Quản lý các thiết bị có quyền truy cập tài khoản của bạn</p>
+
+            {sessionsError && (
+              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-400 text-sm rounded-lg">
+                {sessionsError}
+              </div>
+            )}
+
+            {sessionsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600" />
+              </div>
+            ) : sessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <span className="material-symbols-outlined text-5xl text-gray-200 dark:text-gray-700 mb-2">devices</span>
+                <p className="text-gray-600 dark:text-gray-400">Không có thiết bị nào</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {sessions.map(session => (
+                  <div key={session.sessionId} className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-gray-900 dark:text-white">
+                            {session.browser} • {session.os}
+                          </p>
+                          {session.isCurrent && (
+                            <span className="inline-block px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs font-semibold rounded-full">Thiết bị này</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          IP: {session.ip}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
+                          Đăng nhập: {new Date(session.createdAt).toLocaleDateString('vi-VN')}
+                          {' · '}
+                          Lần cuối: {new Date(session.lastUsedAt).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                        </p>
+                      </div>
+                      {!session.isCurrent && (
+                        <button
+                          onClick={() => handleRevokeSession(session.sessionId)}
+                          className="px-3 py-1.5 text-sm bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors font-medium whitespace-nowrap shrink-0"
+                        >
+                          Đăng xuất
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {sessions.length > 1 && (
+              <button
+                onClick={handleLogoutAllOtherDevices}
+                className="w-full py-2.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 font-medium transition-colors"
+              >
+                Đăng xuất các thiết bị khác
+              </button>
+            )}
           </div>
         )}
 

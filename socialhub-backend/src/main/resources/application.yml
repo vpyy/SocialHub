@@ -16,8 +16,10 @@ spring:
 
 # App Configuration
 app:
-  jwtSecret: ${JWT_SECRET:mySecretKeyForSocialHubJWTTokenGenerationAndValidation1234567890SecureKeyForHS512}
-  jwtExpirationMs: ${JWT_EXPIRATION_MS:86400000}
+  jwtSecret: ${JWT_SECRET}
+  jwtExpirationMs: ${JWT_EXPIRATION_MS:1800000}
+  websocket:
+    allowed-origins: ${WEBSOCKET_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://localhost:3000}
 
 # Server Configuration
 server:
@@ -25,10 +27,10 @@ server:
   servlet:
     multipart:
       max-file-size: 50MB
-      max-request-size: 50MB
+      max-request-size: 100MB
   tomcat:
-    max-http-form-post-size: 50MB
-    max-swallow-size: 50MB
+    max-http-form-post-size: 52428800
+    max-swallow-size: 52428800
   error:
     include-message: always
     include-binding-errors: always

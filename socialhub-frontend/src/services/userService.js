@@ -34,6 +34,22 @@ const userService = {
   },
 
   /**
+   * Get list of users that a user is following
+   */
+  getFollowing: async (userId) => {
+    const response = await apiClient.get(`/users/${userId}/following`)
+    return response.data
+  },
+
+  /**
+   * Get list of followers of a user
+   */
+  getFollowers: async (userId) => {
+    const response = await apiClient.get(`/users/${userId}/followers`)
+    return response.data
+  },
+
+  /**
    * Update profile (displayName, bio)
    */
   updateProfile: async (displayName, bio) => {

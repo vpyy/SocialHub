@@ -19,19 +19,12 @@ export default function RepostButton({
   const handleRepost = async (e) => {
     e.stopPropagation();
 
-    // In dev mode, we use X-User-Id header instead of token
-    // if (!token) {
-    //   navigate("/login");
-    //   return;
-    // }
-
     if (loading) return;
 
     setLoading(true);
     try {
       const headers = {
         "Content-Type": "application/json",
-        "X-User-Id": "temp-user-id",
       };
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;

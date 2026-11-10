@@ -1,24 +1,29 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { login, isAuthenticated } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
 
-  // Only show success message once, then clear it
+  // Get message from URL params or redirect if already authenticated
   useEffect(() => {
-    if (location.state?.message) {
-      setSuccessMessage(location.state.message)
-      // Clear the state after showing
-      window.history.replaceState({}, document.title)
+    if (isAuthenticated) {
+      navigate('/')
+      return
     }
-  }, [])
+
+    const params = new URLSearchParams(location.search)
+    if (params.has('message')) {
+      setError(decodeURIComponent(params.get('message')))
+    }
+  }, [isAuthenticated, navigate, location])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -26,28 +31,12 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          emailOrUsername: email,
-          password: password,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.message || 'Đăng nhập thất bại')
-        return
+      const result = await login(email, password)
+      if (result.success) {
+        navigate('/')
+      } else {
+        setError(result.error)
       }
-
-      localStorage.setItem('token', data.data.token)
-      localStorage.setItem('user', JSON.stringify(data.data.user))
-
-      navigate('/')
     } catch (err) {
       setError('Lỗi kết nối: ' + err.message)
     } finally {
@@ -80,14 +69,6 @@ export default function Login() {
             <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Kết nối bạn bè</h1>
             <p className="text-slate-500 text-sm">Đăng nhập để tiếp tục chia sẻ khoảnh khắc với bạn bè</p>
           </div>
-
-          {/* Success Alert */}
-          {successMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2">
-              <span className="material-symbols-outlined text-emerald-600 text-[18px]">check_circle</span>
-              <p className="text-xs text-emerald-900 font-medium">{successMessage}</p>
-            </div>
-          )}
 
           {/* Error Alert */}
           {error && (

@@ -259,8 +259,7 @@ export default function Profile() {
     if (!profile?.id) return;
 
     const headers = { 
-      "Content-Type": "application/json",
-      "X-User-Id": "temp-user-id"
+      "Content-Type": "application/json"
     };
     if (token) headers["Authorization"] = `Bearer ${token}`;
 

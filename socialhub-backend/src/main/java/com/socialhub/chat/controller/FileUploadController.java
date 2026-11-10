@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,7 +26,7 @@ public class FileUploadController {
     @PostMapping("/{id}/messages/upload")
     public ResponseEntity<ApiResponse<MessageDto>> uploadFile(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @RequestParam("file") MultipartFile file,
             @RequestParam(required = false) String caption) {
 
@@ -45,7 +46,7 @@ public class FileUploadController {
     @PostMapping("/{id}/avatar")
     public ResponseEntity<ApiResponse<String>> uploadGroupAvatar(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") String userId,
+            @AuthenticationPrincipal String userId,
             @RequestParam("avatar") MultipartFile avatar) {
 
         log.info("Group avatar upload: convId={}, userId={}, filename={}", 

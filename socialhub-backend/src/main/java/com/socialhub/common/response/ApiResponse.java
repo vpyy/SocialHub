@@ -20,6 +20,7 @@ public class ApiResponse<T> {
     private boolean success;
     private String message;
     private T data;
+    private String code;              // For error codes (TOKEN_EXPIRED, etc.)
     private LocalDateTime timestamp;
     private String path;
     

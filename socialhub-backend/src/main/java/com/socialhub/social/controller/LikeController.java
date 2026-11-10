@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -36,7 +37,7 @@ public class LikeController {
             @Parameter(description = "Post ID", required = true)
             @PathVariable String id,
             @Parameter(description = "User ID")
-            @RequestHeader(value = "X-User-Id", required = false, defaultValue = "temp-user-id") String userId) {
+            @AuthenticationPrincipal String userId) {
         
         log.info("POST /api/posts/{}/like - User: {}", id, userId);
         

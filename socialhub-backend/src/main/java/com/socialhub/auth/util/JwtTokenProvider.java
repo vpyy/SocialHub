@@ -17,10 +17,10 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
     
-    @Value("${app.jwtSecret:mySecretKeyForSocialHubJWTTokenGenerationAndValidation123456789}")
+    @Value("${app.jwtSecret}")
     private String jwtSecret;
 
-    @Value("${app.jwtExpirationMs:86400000}")
+    @Value("${app.jwtExpirationMs:1800000}")  // 30 minutes default for access token
     private long jwtExpirationMs;
 
     private SecretKey getSigningKey() {
@@ -32,15 +32,28 @@ public class JwtTokenProvider {
     // ──────────────────────────────────────────────────────
 
     public String generateToken(String userId, String username) {
+        return generateTokenWithSession(userId, username, null);
+    }
+
+    /**
+     * Generate token with session ID (for refresh token flow)
+     */
+    public String generateTokenWithSession(String userId, String username, String sessionId) {
         Date now      = new Date();
         Date expiry   = new Date(now.getTime() + jwtExpirationMs);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(userId)                   // 0.12.x: subject() not setSubject()
                 .claim("username", username)
                 .issuedAt(now)                     // 0.12.x: issuedAt() not setIssuedAt()
-                .expiration(expiry)                // 0.12.x: expiration() not setExpiration()
-                .signWith(getSigningKey())         // 0.12.x: key only, algorithm inferred
+                .expiration(expiry);               // 0.12.x: expiration() not setExpiration()
+        
+        // Add session ID if provided
+        if (sessionId != null) {
+            builder.claim("sid", sessionId);
+        }
+        
+        return builder.signWith(getSigningKey())   // 0.12.x: key only, algorithm inferred
                 .compact();
     }
 
@@ -54,6 +67,10 @@ public class JwtTokenProvider {
 
     public String getUsernameFromToken(String token) {
         return parseClaims(token).get("username", String.class);
+    }
+
+    public String getSessionIdFromToken(String token) {
+        return parseClaims(token).get("sid", String.class);
     }
 
     // ──────────────────────────────────────────────────────
