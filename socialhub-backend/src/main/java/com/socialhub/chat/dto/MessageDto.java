@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -25,7 +27,7 @@ public class MessageDto {
     private String senderAvatarUrl;
 
     private String content;
-    /** TEXT | IMAGE | VIDEO | POST | VOICE */
+    /** TEXT | IMAGE | VIDEO | POST | VOICE | FILE */
     private String messageType;
     private String mediaUrl;
     private String sharedPostId;
@@ -33,33 +35,52 @@ public class MessageDto {
 
     private boolean isRead;
     private Instant createdAt;
-    private Instant editedAt;  // Thời gian sửa lần cuối
-    
+    private Instant editedAt;
+
     /** Reactions: {userId: reactionType} */
-    private java.util.Map<String, String> reactions;
-    
+    private Map<String, String> reactions;
+
+    /** Read receipts: {userId: readAt timestamp} */
+    private Map<String, Instant> readBy;
+
     // Voice message
     private String voiceUrl;
     private Long voiceDuration;  // ms
-    
+
     // Reply feature
     private String replyToMessageId;
     private MessageDto replyToMessage;  // embedded original message
-    
+
     // Pin feature
     private boolean isPinned;
-    
+
     // Delete for everyone
     private boolean isDeletedForEveryone;
-    
-    // File upload
+
+    // Single file upload (legacy)
     private String fileUrl;
     private String fileName;
     private Long fileSize;
-    
+
+    // Multi-attachment support (new)
+    private List<AttachmentItem> attachments;
+
     // Link preview
     private String linkPreviewUrl;
     private String linkPreviewTitle;
     private String linkPreviewDescription;
     private String linkPreviewImage;
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class AttachmentItem {
+        private String id;
+        private String type;
+        private String url;
+        private String fileName;
+        private Long fileSize;
+        private String thumbnailUrl;
+    }
 }

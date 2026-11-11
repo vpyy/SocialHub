@@ -114,7 +114,11 @@ public class PresenceService {
     private void broadcastPresenceToConversationMembers(String userId, boolean online, Instant lastSeenAt) {
         try {
             // Get all conversations the user is part of
-            List<String> conversationIds = conversationRepository.findConversationIdsByParticipantId(userId);
+            List<String> conversationIds = conversationRepository
+                    .findAllByParticipantIdsContaining(userId)
+                    .stream()
+                    .map(c -> c.getId())
+                    .toList();
             
             // Get all unique participant IDs from these conversations
             Set<String> notifyUserIds = new HashSet<>();
