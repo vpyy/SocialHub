@@ -62,6 +62,9 @@ public class UserConversationSettings {
     /** Last read timestamp */
     private Instant lastReadAt;
 
+    /** User cleared conversation history up to this point (soft delete per user) */
+    private Instant clearedBefore;
+
     /** When settings were created/updated */
     private Instant createdAt;
     private Instant updatedAt;

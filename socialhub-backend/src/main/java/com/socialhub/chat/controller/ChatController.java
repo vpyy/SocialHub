@@ -61,8 +61,15 @@ public class ChatController {
             @PathVariable String id,
             @AuthenticationPrincipal String userId,
             @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String after) {
 
+        // If 'after' parameter is provided, sync missed messages
+        if (after != null && !after.isEmpty()) {
+            return ResponseEntity.ok(ApiResponse.success(
+                    chatService.getMessagesAfter(id, userId, after, size), "OK"));
+        }
+        
         return ResponseEntity.ok(ApiResponse.success(
                 chatService.getMessages(id, userId, page, size), "OK"));
     }
@@ -139,13 +146,13 @@ public class ChatController {
 
     /** DELETE /api/conversations/{id}/messages/{messageId}/reactions — remove reaction */
     @DeleteMapping("/{id}/messages/{messageId}/reactions")
-    public ResponseEntity<ApiResponse<Void>> removeReaction(
+    public ResponseEntity<ApiResponse<MessageDto>> removeReaction(
             @PathVariable String id,
             @PathVariable String messageId,
             @AuthenticationPrincipal String userId) {
 
-        chatService.removeReaction(messageId, userId);
-        return ResponseEntity.ok(ApiResponse.success(null, "Phản ứng đã xóa"));
+        MessageDto dto = chatService.removeReaction(messageId, userId);
+        return ResponseEntity.ok(ApiResponse.success(dto, "Phản ứng đã xóa"));
     }
 
     /** PUT /api/conversations/{id} — update group info */
@@ -317,3 +324,12 @@ public class ChatController {
                 chatService.getCallHistory(id, userId, page, size), "OK"));
     }
 }
+
+    /** POST /api/conversations/users/presence — get presence status for multiple users */
+    @PostMapping("/users/presence")
+    public ResponseEntity<ApiResponse<java.util.List<com.socialhub.chat.dto.PresenceEvent>>> getPresence(
+            @RequestBody java.util.List<String> userIds) {
+
+        return ResponseEntity.ok(ApiResponse.success(
+                chatService.getPresenceStatus(userIds), "OK"));
+    }

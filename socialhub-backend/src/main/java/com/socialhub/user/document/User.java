@@ -59,6 +59,9 @@ public class User {
     @Builder.Default
     private String authProvider = "LOCAL";
 
+    /** Last seen timestamp for presence tracking */
+    private Instant lastSeenAt;
+
     private Instant createdAt;
     private Instant updatedAt;
 }
