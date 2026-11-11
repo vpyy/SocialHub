@@ -1,170 +1,242 @@
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 
+const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:8080/ws'
+const RECONNECT_DELAY_MS = 5000
+const MAX_RECONNECT_ATTEMPTS = 10
+
+/**
+ * WebSocketService — singleton
+ *
+ * Channels subscribed when connected:
+ *   /user/queue/messages  — chat events (message:new, edited, deleted, unsent, reaction, pinned, read)
+ *   /user/queue/presence  — presence updates (online/offline + lastSeenAt)
+ *   /user/queue/call      — call signaling
+ *   /topic/notifications/{userId}        — general notifications
+ *   /topic/notifications/broadcast       — broadcast notifications
+ *   /topic/conversation/{id}/typing      — typing indicators (subscribed per-conversation)
+ */
 class WebSocketService {
   constructor() {
     this.client = null
     this.connected = false
     this.userId = null
-    this.listeners = []
+
+    // Listener maps keyed by channel type
+    this._listeners = {
+      message: [],   // /user/queue/messages
+      presence: [],  // /user/queue/presence
+      typing: [],    // /topic/conversation/{id}/typing
+      call: [],      // /user/queue/call
+      notification: [],
+    }
+
+    this._typingSubscriptions = new Map()  // conversationId → STOMP subscription
+    this._reconnectAttempts = 0
+    this._manuallyDisconnected = false
+    this._onReconnectCallbacks = []  // called after successful reconnect
   }
 
-  /**
-   * Connect to WebSocket server
-   */
-  connect(userId, onNotification) {
-    if (this.connected) {
-      console.warn('WebSocket already connected')
-      return
-    }
+  // ── Connection ────────────────────────────────────────────────────────
 
+  connect(userId, onNotification = null) {
+    if (this.connected && this.userId === userId) return
     this.userId = userId
+    this._manuallyDisconnected = false
+
     if (onNotification) {
-      this.listeners.push(onNotification)
+      this.addListener('notification', onNotification)
+      this.addListener('call', onNotification)
     }
 
-    // Get JWT token from localStorage
-    const token = localStorage.getItem('token')
-    if (!token) {
-      console.error('[WebSocket] No JWT token found')
-      return
-    }
-
-    // Pass token as query parameter for SockJS
-    const wsUrl = `http://localhost:8080/ws?token=${token}`
-    const socket = new SockJS(wsUrl)
-    
-    this.client = new Client({
-      webSocketFactory: () => socket,
-      connectHeaders: {
-        login: userId,
-        passcode: 'guest',
-        Authorization: `Bearer ${token}`
-      },
-      onConnect: this.onConnected.bind(this),
-      onStompError: this.onStompError.bind(this),
-      onDisconnect: this.onDisconnected.bind(this),
-      debug: (msg) => {
-        console.log('[WS Debug]', msg)
-      },
-    })
-
-    console.log('[WebSocket] Attempting to connect with token...')
+    this._createClient()
+    console.log('[WS] Connecting for user:', userId)
     this.client.activate()
   }
 
-  onConnected() {
-    console.log('[WebSocket] Connected successfully')
+  _createClient() {
+    const token = localStorage.getItem('token')
+    if (!token) { console.error('[WS] No JWT token'); return }
+
+    const socketFactory = () => new SockJS(`${WS_URL}?token=${token}`)
+
+    this.client = new Client({
+      webSocketFactory: socketFactory,
+      connectHeaders: {
+        login: this.userId,
+        Authorization: `Bearer ${token}`,
+      },
+      reconnectDelay: RECONNECT_DELAY_MS,
+      onConnect: (frame) => this._onConnected(frame),
+      onStompError: (frame) => this._onError(frame),
+      onDisconnect: () => this._onDisconnected(),
+      onWebSocketClose: () => {
+        if (!this._manuallyDisconnected) {
+          console.warn('[WS] WebSocket closed, will reconnect...')
+        }
+      },
+    })
+  }
+
+  _onConnected(frame) {
+    console.log('[WS] Connected')
     this.connected = true
+    this._reconnectAttempts = 0
 
-    // Subscribe to user's personal notifications
-    this.client.subscribe(`/topic/notifications/${this.userId}`, (message) => {
-      try {
-        const notification = JSON.parse(message.body)
-        console.log('[WebSocket] Received notification:', notification)
-        this.notifyListeners(notification)
-      } catch (err) {
-        console.error('[WebSocket] Failed to parse notification:', err)
-      }
+    // ── Core subscriptions ─────────────────────────────────────────────
+
+    // Chat events: message:new, edited, deleted, unsent, reaction, pinned, read
+    this.client.subscribe('/user/queue/messages', (msg) => {
+      this._dispatch('message', this._parse(msg))
     })
 
-    // Subscribe to broadcast notifications
-    this.client.subscribe('/topic/notifications/broadcast', (message) => {
-      try {
-        const notification = JSON.parse(message.body)
-        console.log('[WebSocket] Received broadcast:', notification)
-        this.notifyListeners(notification)
-      } catch (err) {
-        console.error('[WebSocket] Failed to parse broadcast:', err)
-      }
+    // Presence events
+    this.client.subscribe('/user/queue/presence', (msg) => {
+      this._dispatch('presence', this._parse(msg))
     })
 
-    // Subscribe to call signaling messages
-    this.client.subscribe(`/user/queue/call`, (message) => {
-      try {
-        const callMessage = JSON.parse(message.body)
-        console.log('[WebSocket] Received call message:', callMessage)
-        this.notifyListeners(callMessage)
-      } catch (err) {
-        console.error('[WebSocket] Failed to parse call message:', err)
-      }
+    // Call signaling
+    this.client.subscribe('/user/queue/call', (msg) => {
+      this._dispatch('call', this._parse(msg))
+      this._dispatch('notification', this._parse(msg))
     })
+
+    // General notifications
+    this.client.subscribe(`/topic/notifications/${this.userId}`, (msg) => {
+      this._dispatch('notification', this._parse(msg))
+    })
+    this.client.subscribe('/topic/notifications/broadcast', (msg) => {
+      this._dispatch('notification', this._parse(msg))
+    })
+
+    // Re-subscribe typing for any conversation that was active before reconnect
+    this._typingSubscriptions.forEach((_, convId) => {
+      this._subscribeTyping(convId)
+    })
+
+    // Notify reconnect callbacks (for missed message sync)
+    this._onReconnectCallbacks.forEach(cb => { try { cb() } catch (e) { /* silent */ } })
   }
 
-  onStompError(frame) {
-    console.error('[WebSocket] STOMP error:', frame.headers['message'], frame.body)
+  _onError(frame) {
+    console.error('[WS] STOMP error:', frame.headers?.message)
     this.connected = false
   }
 
-  onDisconnected() {
-    console.log('[WebSocket] Disconnected')
+  _onDisconnected() {
     this.connected = false
-  }
-
-  notifyListeners(notification) {
-    this.listeners.forEach((callback) => {
-      try {
-        callback(notification)
-      } catch (err) {
-        console.error('[WebSocket] Error in notification listener:', err)
-      }
-    })
-  }
-
-  /**
-   * Subscribe to notifications (add listener)
-   */
-  subscribe(onNotification) {
-    if (!this.listeners.includes(onNotification)) {
-      this.listeners.push(onNotification)
+    if (this._manuallyDisconnected) return
+    this._reconnectAttempts++
+    if (this._reconnectAttempts <= MAX_RECONNECT_ATTEMPTS) {
+      console.log(`[WS] Reconnecting (attempt ${this._reconnectAttempts})...`)
     }
   }
 
-  /**
-   * Unsubscribe from notifications
-   */
-  unsubscribe(onNotification) {
-    this.listeners = this.listeners.filter((cb) => cb !== onNotification)
-  }
-
-  /**
-   * Send a message to the server via STOMP
-   * @param {string} destination - Destination path (e.g., /app/call/{callId}/offer)
-   * @param {object} body - Message body
-   */
-  sendMessage(destination, body) {
-    if (!this.connected || !this.client) {
-      console.error('[WebSocket] Cannot send message: not connected')
-      return false
-    }
-
-    try {
-      this.client.publish({
-        destination,
-        body: JSON.stringify(body)
-      })
-      console.log(`[WebSocket] Sent message to ${destination}`)
-      return true
-    } catch (error) {
-      console.error('[WebSocket] Failed to send message:', error)
-      return false
-    }
-  }
-
-  /**
-   * Disconnect from WebSocket
-   */
   disconnect() {
-    if (this.client && this.connected) {
-      this.client.deactivate()
-      this.connected = false
-      this.listeners = []
-      console.log('[WebSocket] Disconnected')
+    this._manuallyDisconnected = true
+    this.connected = false
+    this._typingSubscriptions.clear()
+    if (this.client) {
+      try { this.client.deactivate() } catch (e) { /* silent */ }
     }
   }
 
-  isConnected() {
-    return this.connected
+  isConnected() { return this.connected }
+
+  // ── Typing indicator subscriptions (per-conversation) ─────────────────
+
+  subscribeTyping(conversationId, callback) {
+    // Store callback in the map so it survives reconnects
+    if (!this._typingSubscriptions.has(conversationId)) {
+      this._typingSubscriptions.set(conversationId, callback)
+    }
+    if (this.connected) {
+      this._subscribeTyping(conversationId)
+    }
+  }
+
+  _subscribeTyping(conversationId) {
+    const cb = this._typingSubscriptions.get(conversationId)
+    if (!cb || !this.client) return
+    try {
+      const sub = this.client.subscribe(
+        `/topic/conversation/${conversationId}/typing`,
+        (msg) => { try { cb(this._parse(msg)) } catch (e) { /* silent */ } }
+      )
+      // Replace the map entry with the actual subscription object for unsubscription
+      this._typingSubscriptions.set(conversationId, { callback: cb, sub })
+    } catch (e) {
+      console.error('[WS] Failed to subscribe typing:', e)
+    }
+  }
+
+  unsubscribeTyping(conversationId) {
+    const entry = this._typingSubscriptions.get(conversationId)
+    if (entry?.sub) {
+      try { entry.sub.unsubscribe() } catch (e) { /* silent */ }
+    }
+    this._typingSubscriptions.delete(conversationId)
+  }
+
+  // ── Send helpers ──────────────────────────────────────────────────────
+
+  sendTyping(conversationId, typing) {
+    this.publish('/app/chat/typing', { conversationId, typing })
+  }
+
+  publish(destination, body) {
+    if (!this.connected || !this.client) {
+      console.warn('[WS] Cannot publish: not connected to', destination)
+      return false
+    }
+    try {
+      this.client.publish({ destination, body: JSON.stringify(body) })
+      return true
+    } catch (e) {
+      console.error('[WS] Publish error:', e)
+      return false
+    }
+  }
+
+  /** Legacy alias used by call handling code */
+  sendMessage(destination, body) { return this.publish(destination, body) }
+
+  // ── Listener management ───────────────────────────────────────────────
+
+  addListener(type, cb) {
+    if (!this._listeners[type]) return
+    if (!this._listeners[type].includes(cb)) this._listeners[type].push(cb)
+  }
+
+  removeListener(type, cb) {
+    if (!this._listeners[type]) return
+    this._listeners[type] = this._listeners[type].filter(fn => fn !== cb)
+  }
+
+  /** Called when WS reconnects successfully — use to sync missed messages */
+  onReconnect(cb) {
+    if (!this._onReconnectCallbacks.includes(cb)) {
+      this._onReconnectCallbacks.push(cb)
+    }
+    return () => {
+      this._onReconnectCallbacks = this._onReconnectCallbacks.filter(fn => fn !== cb)
+    }
+  }
+
+  // Legacy API (used by call handlers in Messages.jsx)
+  subscribe(cb) { this.addListener('notification', cb) }
+  unsubscribe(cb) { this.removeListener('notification', cb) }
+
+  // ── Internal helpers ──────────────────────────────────────────────────
+
+  _parse(msg) {
+    try { return JSON.parse(msg.body) } catch { return msg.body }
+  }
+
+  _dispatch(type, data) {
+    if (!data) return
+    const listeners = this._listeners[type] || []
+    listeners.forEach(cb => { try { cb(data) } catch (e) { /* silent */ } })
   }
 }
 
