@@ -1,7 +1,6 @@
 package com.socialhub.config;
 
 import com.socialhub.auth.filter.JwtAuthenticationFilter;
-import com.socialhub.common.filter.RateLimitFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,32 +19,21 @@ import java.util.Arrays;
 
 /**
  * Spring Security Configuration
- * 
- * Status:
- * - Rate Limit Filter: Active - rate limits per endpoint
- * - JWT Filter: Active - validates Bearer tokens on all protected requests
- * - Public endpoints: health, swagger-ui, api-docs, auth/register, auth/login
- * - Protected endpoints: all /api/user/*, /api/post/*, etc.
- * - CORS: Configured for frontend development (http://localhost:5173)
- * - Session: Stateless (JWT-based)
+ * - JWT-based stateless authentication
+ * - CORS enabled for frontend development (localhost:5173)
+ * - Exempts public endpoints: auth, health, WebSocket, ICE servers
  */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final RateLimitFilter rateLimitFilter;
-
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, RateLimitFilter rateLimitFilter) {
-        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
-        this.rateLimitFilter = rateLimitFilter;
-    }
-
     /**
      * Security filter chain configuration
      */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(
+            HttpSecurity http,
+            JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
         http
             // CORS configuration
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -69,6 +57,14 @@ public class SecurityConfig {
                 // Public API endpoints - auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/register").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/verify-email").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/resend-verification").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/forgot-password").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/reset-password").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/auth/oauth/google").permitAll()
+                
+                // Public call endpoints
+                .requestMatchers(HttpMethod.GET, "/api/calls/ice-servers").permitAll()
 
                 // Public read-only endpoints
                 .requestMatchers(HttpMethod.GET, "/api/posts/public").permitAll()
@@ -95,9 +91,6 @@ public class SecurityConfig {
             // HTTP Basic disabled (using JWT instead)
             .httpBasic(basic -> basic.disable())
             
-            // Add RateLimitFilter BEFORE JwtAuthenticationFilter
-            .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class)
-            
             // Add JWT filter before UsernamePasswordAuthenticationFilter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             
@@ -120,7 +113,7 @@ public class SecurityConfig {
 
     /**
      * CORS Configuration
-     * Allows requests from http://localhost:5173 (Vite development server)
+     * Allows requests from Vite dev server and localhost variants
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -151,11 +144,11 @@ public class SecurityConfig {
     }
 
     /**
-     * Password encoder using BCrypt
+     * Password Encoder Bean
+     * Using BCrypt for secure password hashing
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
 }

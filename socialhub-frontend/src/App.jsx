@@ -17,6 +17,7 @@ import Notifications from './pages/Notifications'
 import Bookmarks from './pages/Bookmarks'
 import Messages from './pages/Messages'
 import Settings from './pages/Settings'
+import CallTest from './pages/CallTest'
 import './i18n/config' // Initialize i18n
 import './App.css'
 
@@ -44,6 +45,7 @@ function App() {
               <Route path="/bookmarks" element={<Bookmarks />} />
               <Route path="/messages" element={<Messages />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/call-test" element={<CallTest />} />
             </Route>
 
             {/* Catch all */}

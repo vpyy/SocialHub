@@ -78,6 +78,17 @@ class WebSocketService {
         console.error('[WebSocket] Failed to parse broadcast:', err)
       }
     })
+
+    // Subscribe to call signaling messages
+    this.client.subscribe(`/user/queue/call`, (message) => {
+      try {
+        const callMessage = JSON.parse(message.body)
+        console.log('[WebSocket] Received call message:', callMessage)
+        this.notifyListeners(callMessage)
+      } catch (err) {
+        console.error('[WebSocket] Failed to parse call message:', err)
+      }
+    })
   }
 
   onStompError(frame) {
@@ -114,6 +125,30 @@ class WebSocketService {
    */
   unsubscribe(onNotification) {
     this.listeners = this.listeners.filter((cb) => cb !== onNotification)
+  }
+
+  /**
+   * Send a message to the server via STOMP
+   * @param {string} destination - Destination path (e.g., /app/call/{callId}/offer)
+   * @param {object} body - Message body
+   */
+  sendMessage(destination, body) {
+    if (!this.connected || !this.client) {
+      console.error('[WebSocket] Cannot send message: not connected')
+      return false
+    }
+
+    try {
+      this.client.publish({
+        destination,
+        body: JSON.stringify(body)
+      })
+      console.log(`[WebSocket] Sent message to ${destination}`)
+      return true
+    } catch (error) {
+      console.error('[WebSocket] Failed to send message:', error)
+      return false
+    }
   }
 
   /**

@@ -14,6 +14,23 @@ spring:
       name: admin
       password: admin123
 
+  # Spring Mail Configuration
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    protocol: ${MAIL_PROTOCOL:smtp}
+    properties:
+      mail:
+        smtp:
+          auth: false
+          starttls:
+            enable: false
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
 # App Configuration
 app:
   jwtSecret: ${JWT_SECRET}
@@ -28,25 +45,14 @@ app:
     google:
       client-id: ${GOOGLE_CLIENT_ID:}
 
-# Spring Mail Configuration
-spring:
-  mail:
-    host: ${MAIL_HOST:localhost}
-    port: ${MAIL_PORT:1025}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
-    protocol: ${MAIL_PROTOCOL:smtp}
-    properties:
-      mail:
-        smtp:
-          auth: false
-          starttls:
-            enable: false
-          starttls:
-            required: false
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
+# WebRTC ICE Configuration
+webrtc:
+  stun:
+    urls: ${WEBRTC_STUN_URLS:stun:stun.l.google.com:19302,stun:stun1.l.google.com:19302}
+  turn:
+    urls: ${WEBRTC_TURN_URLS:}
+    username: ${WEBRTC_TURN_USERNAME:}
+    credential: ${WEBRTC_TURN_CREDENTIAL:}
 
 # Server Configuration
 server:
