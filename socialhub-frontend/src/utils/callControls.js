@@ -267,15 +267,23 @@ export class CallControls {
   }
 
   /**
-   * Add ICE candidate
+   * Add ICE candidate (with queuing if remote description is not set yet)
    */
   async addIceCandidate(candidate) {
-    if (!this.peerConnection) {
-      throw new Error('Peer connection not initialized')
+    if (!candidate) return
+
+    if (!this.pendingCandidates) {
+      this.pendingCandidates = []
+    }
+
+    if (!this.peerConnection || !this.peerConnection.remoteDescription) {
+      this.pendingCandidates.push(candidate)
+      return
     }
 
     try {
-      await this.peerConnection.addIceCandidate(candidate)
+      const rtcCandidate = candidate.candidate ? new RTCIceCandidate(candidate) : candidate
+      await this.peerConnection.addIceCandidate(rtcCandidate)
     } catch (error) {
       console.error('Failed to add ICE candidate:', error)
     }
@@ -325,7 +333,7 @@ export class CallControls {
   }
 
   /**
-   * Set remote description
+   * Set remote description and flush queued ICE candidates
    */
   async setRemoteDescription(description) {
     if (!this.peerConnection) {
@@ -336,6 +344,19 @@ export class CallControls {
       await this.peerConnection.setRemoteDescription(
         new RTCSessionDescription(description)
       )
+
+      // Drain any queued ICE candidates
+      if (this.pendingCandidates && this.pendingCandidates.length > 0) {
+        for (const c of this.pendingCandidates) {
+          try {
+            const rtcCandidate = c.candidate ? new RTCIceCandidate(c) : c
+            await this.peerConnection.addIceCandidate(rtcCandidate)
+          } catch (e) {
+            console.error('Failed to add queued candidate:', e)
+          }
+        }
+        this.pendingCandidates = []
+      }
     } catch (error) {
       console.error('Failed to set remote description:', error)
       this.emit('error', { type: 'remote_description', error })
@@ -363,6 +384,7 @@ export class CallControls {
     this.audioTrack = null
     this.videoTrack = null
     this.peerConnection = null
+    this.pendingCandidates = []
 
     this.emit('closed', {})
   }

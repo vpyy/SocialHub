@@ -78,13 +78,15 @@ public class CallSignalingService {
 
         // Check if call is in valid state for signaling
         String status = call.getStatus();
-        if (!"RINGING".equals(status) && !"ACTIVE".equals(status) && !"CONNECTING".equals(status)) {
+        if (!"RINGING".equals(status) && !"ACTIVE".equals(status) && !"CONNECTING".equals(status)
+                && !"ACCEPTED".equals(status) && !"INITIATED".equals(status)) {
             log.warn("Signaling for call in invalid state: {}", status);
             return; // Silently ignore, call may have ended
         }
 
-        // Update call status if transitioning to CONNECTING (first offer/answer)
-        if ("RINGING".equals(status) && ("offer".equals(messageType) || "answer".equals(messageType))) {
+        // Update call status if transitioning (first offer/answer)
+        if (("RINGING".equals(status) || "ACCEPTED".equals(status) || "INITIATED".equals(status))
+                && ("offer".equals(messageType) || "answer".equals(messageType))) {
             call.setStatus("CONNECTING");
             callRepository.save(call);
             log.info("Call {} transitioned to CONNECTING", callId);

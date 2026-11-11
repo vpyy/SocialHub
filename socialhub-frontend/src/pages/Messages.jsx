@@ -616,11 +616,14 @@ export default function Messages() {
     status: 'idle',
     callId: null
   })
+  const [localStream, setLocalStream] = useState(null)
+  const [remoteStream, setRemoteStream] = useState(null)
 
   const searchDebounce = useRef(null)
   const isUserAtBottom = useRef(true)
   const messagesEndRef = useRef(null)
   const typingDebounce = useRef(null)
+  const remoteStreamRef = useRef(null)  // ref for remote audio/video element
   
   // Call manager refs
   const callManagerRef = useRef(new CallStateManager())
@@ -656,7 +659,15 @@ export default function Messages() {
     }
   }
 
-  // Connect to WebSocket for incoming calls
+  const cleanupCall = () => {
+    try { callManagerRef.current?.endCall() } catch (e) { /* ok */ }
+    callControlsRef.current?.close()
+    setLocalStream(null)
+    setRemoteStream(null)
+    setCallState({ active: false, type: null, otherUser: null, status: 'idle', callId: null })
+  }
+
+  // Connect to WebSocket for incoming calls + call signaling
   useEffect(() => {
     if (!currentUser?.id) {
       console.warn('[WebSocket] No user ID, skipping connection')
@@ -664,15 +675,13 @@ export default function Messages() {
     }
 
     console.log('[WebSocket] Connecting for user:', currentUser.id)
-    
-    // Connect to WebSocket
-    websocketService.connect(currentUser.id, (notification) => {
+
+    const handleWsMessage = async (notification) => {
       console.log('[WebSocket] Notification received:', notification)
-      
+
+      // ── Incoming call ───────────────────────────────────────────────────
       if (notification.type === 'call:incoming') {
         console.log('[Messages] Incoming call notification:', notification)
-        
-        // Set call state to show incoming call modal
         setCallState({
           active: true,
           type: notification.callData?.type || 'VOICE',
@@ -684,20 +693,162 @@ export default function Messages() {
           status: 'incoming',
           callId: notification.callData?.id
         })
-        
-        // Initialize call state machine with RINGING state
         try {
           callManagerRef.current?.receiveCall(
             notification.callData?.id,
             notification.callData?.type,
             notification.callData?.initiator,
-            notification.callData?.receiver
+            notification.callData?.receiver || currentUser.id
           )
         } catch (e) {
           console.error('[Call] Failed to initialize incoming call:', e)
         }
+        return
       }
-    })
+
+      // ── Callee accepted → caller creates offer ──────────────────────────
+      if (notification.type === 'call:accepted') {
+        console.log('[Messages] Call accepted, creating WebRTC offer...')
+        setCallState(prev => ({ ...prev, status: 'connecting' }))
+        try {
+          const callId = notification.callId
+          const callType = callControlsRef.current?._callType || 'VOICE'
+          let stream = callControlsRef.current?.localStream
+          if (!stream) {
+            stream = await callControlsRef.current?.initializeStream({ audio: true, video: callType === 'VIDEO' })
+            setLocalStream(stream)
+          }
+          await callControlsRef.current?.initializePeerConnection()
+
+          // Send ICE candidates as they arrive
+          callControlsRef.current?.on('ice:candidate', (candidate) => {
+            websocketService.sendMessage(`/app/call/${callId}/ice-candidate`, {
+              candidate: candidate.candidate,
+              sdpMid: candidate.sdpMid,
+              sdpMLineIndex: candidate.sdpMLineIndex
+            })
+          })
+
+          // When remote stream arrives
+          callControlsRef.current?.on('track:received', (event) => {
+            console.log('[Messages] Remote track received:', event)
+            const rStream = event.streams?.[0] || new MediaStream([event.track])
+            setRemoteStream(rStream)
+          })
+
+          // When connected
+          callControlsRef.current?.on('connection:state_changed', ({ state }) => {
+            console.log('[Messages] Connection state changed:', state)
+            if (state === 'connected') {
+              setCallState(prev => ({ ...prev, status: 'connected' }))
+              try { callManagerRef.current?.setConnected() } catch (e) { /* ok */ }
+            } else if (state === 'failed' || state === 'disconnected') {
+              setCallState(prev => ({ ...prev, status: 'failed' }))
+            }
+          })
+
+          const offer = await callControlsRef.current?.createOffer()
+          websocketService.sendMessage(`/app/call/${callId}/offer`, {
+            type: offer.type,
+            sdp: offer.sdp
+          })
+          console.log('[Call] Offer sent')
+        } catch (e) {
+          console.error('[Call] Failed to create offer:', e)
+        }
+        return
+      }
+
+      // ── Caller receives SDP offer → callee side ─────────────────────────
+      if (notification.type === 'offer') {
+        console.log('[Messages] Received offer from caller, creating answer...')
+        try {
+          const callId = notification.callId
+          if (!callControlsRef.current?.peerConnection) {
+            const callType = callState.type || 'VOICE'
+            const stream = await callControlsRef.current?.initializeStream({ audio: true, video: callType === 'VIDEO' })
+            setLocalStream(stream)
+            await callControlsRef.current?.initializePeerConnection()
+
+            callControlsRef.current?.on('ice:candidate', (candidate) => {
+              websocketService.sendMessage(`/app/call/${callId}/ice-candidate`, {
+                candidate: candidate.candidate,
+                sdpMid: candidate.sdpMid,
+                sdpMLineIndex: candidate.sdpMLineIndex
+              })
+            })
+
+            callControlsRef.current?.on('track:received', (event) => {
+              console.log('[Messages] Remote track received:', event)
+              const rStream = event.streams?.[0] || new MediaStream([event.track])
+              setRemoteStream(rStream)
+            })
+
+            callControlsRef.current?.on('connection:state_changed', ({ state }) => {
+              console.log('[Messages] Connection state changed:', state)
+              if (state === 'connected') {
+                setCallState(prev => ({ ...prev, status: 'connected' }))
+                try { callManagerRef.current?.setConnected() } catch (e) { /* ok */ }
+              } else if (state === 'failed' || state === 'disconnected') {
+                setCallState(prev => ({ ...prev, status: 'failed' }))
+              }
+            })
+          }
+
+          await callControlsRef.current?.setRemoteDescription({ type: notification.sdp.type, sdp: notification.sdp.sdp })
+          const answer = await callControlsRef.current?.createAnswer()
+          websocketService.sendMessage(`/app/call/${callId}/answer`, {
+            type: answer.type,
+            sdp: answer.sdp
+          })
+          setCallState(prev => ({ ...prev, status: 'connecting' }))
+          console.log('[Call] Answer sent')
+        } catch (e) {
+          console.error('[Call] Failed to handle offer/create answer:', e)
+        }
+        return
+      }
+
+      // ── Callee receives SDP answer ──────────────────────────────────────
+      if (notification.type === 'answer') {
+        console.log('[Messages] Received answer, setting remote description...')
+        try {
+          await callControlsRef.current?.setRemoteDescription({ type: notification.sdp.type, sdp: notification.sdp.sdp })
+          console.log('[Call] Remote description set')
+        } catch (e) {
+          console.error('[Call] Failed to set remote description:', e)
+        }
+        return
+      }
+
+      // ── ICE candidate ───────────────────────────────────────────────────
+      if (notification.type === 'ice-candidate') {
+        console.log('[Messages] Received ICE candidate')
+        try {
+          if (notification.candidate?.candidate) {
+            await callControlsRef.current?.addIceCandidate(notification.candidate)
+          }
+        } catch (e) {
+          console.error('[Call] Failed to add ICE candidate:', e)
+        }
+        return
+      }
+
+      // ── Call rejected ───────────────────────────────────────────────────
+      if (notification.type === 'call:rejected') {
+        console.log('[Messages] Call was rejected')
+        cleanupCall()
+        return
+      }
+
+      // ── Call ended by other party ───────────────────────────────────────
+      if (notification.type === 'call:ended') {
+        console.log('[Messages] Call ended by other party')
+        cleanupCall()
+      }
+    }
+
+    websocketService.connect(currentUser.id, handleWsMessage)
 
     return () => {
       console.log('[WebSocket] Disconnecting')
@@ -861,13 +1012,24 @@ export default function Messages() {
     try {
       console.log('[Messages] Initiating call:', callType)
       if (!otherUser || !activeConvId) return
-      
+
       // Call backend to initiate call (backend sends WebSocket notification to receiver)
       const response = await chatService.initiateCall(activeConvId, otherUser.userId, callType)
       const callData = response?.data?.data || {}
-      
+
       console.log('[Messages] Call initiated, response:', callData)
-      
+
+      // Store callType so we know it when creating offer on call:accepted
+      callControlsRef.current._callType = callType
+
+      // Initialize local stream preview upfront
+      try {
+        const stream = await callControlsRef.current?.initializeStream({ audio: true, video: callType === 'VIDEO' })
+        setLocalStream(stream)
+      } catch (err) {
+        console.warn('Could not acquire local stream upfront:', err)
+      }
+
       // Update local state machine
       callManagerRef.current?.initiateCall(
         callData.id || `call_${Date.now()}`,
@@ -875,7 +1037,7 @@ export default function Messages() {
         currentUser.id,
         otherUser.userId
       )
-      
+
       // Show outgoing call modal
       setCallState({
         active: true,
@@ -890,7 +1052,7 @@ export default function Messages() {
       })
     } catch (error) {
       console.error('Failed to initiate call:', error)
-      alert('Failed to initiate call')
+      alert('Không thể thực hiện cuộc gọi: ' + (error?.response?.data?.message || error.message))
     }
   }
 
@@ -898,17 +1060,57 @@ export default function Messages() {
     try {
       console.log('[Messages] Accepting call')
       if (!callState.callId) return
-      
-      // Call backend to accept call
+
+      const callType = callState.type || 'VOICE'
+
+      // Init local media stream for callee
+      const stream = await callControlsRef.current?.initializeStream({ audio: true, video: callType === 'VIDEO' })
+      setLocalStream(stream)
+
+      // Init peer connection for callee (will receive offer next)
+      await callControlsRef.current?.initializePeerConnection()
+
+      // Send ICE candidates as they arrive
+      callControlsRef.current?.on('ice:candidate', (candidate) => {
+        websocketService.sendMessage(`/app/call/${callState.callId}/ice-candidate`, {
+          candidate: candidate.candidate,
+          sdpMid: candidate.sdpMid,
+          sdpMLineIndex: candidate.sdpMLineIndex
+        })
+      })
+
+      // When remote stream arrives
+      callControlsRef.current?.on('track:received', (event) => {
+        console.log('[Messages] Remote track received:', event)
+        const rStream = event.streams?.[0] || new MediaStream([event.track])
+        setRemoteStream(rStream)
+      })
+
+      // When WebRTC fully connected
+      callControlsRef.current?.on('connection:state_changed', ({ state }) => {
+        console.log('[Messages] Connection state changed:', state)
+        if (state === 'connected') {
+          setCallState(prev => ({ ...prev, status: 'connected' }))
+          try { callManagerRef.current?.setConnected() } catch (e) { /* ok */ }
+        } else if (state === 'failed' || state === 'disconnected') {
+          setCallState(prev => ({ ...prev, status: 'failed' }))
+        }
+      })
+
+      // Store callType for later (offer creation on caller side)
+      callControlsRef.current._callType = callType
+
+      // Notify backend → backend sends call:accepted to caller → caller creates offer
       await chatService.updateCallStatus(callState.callId, 'ACCEPTED')
-      
+
       callManagerRef.current?.acceptCall()
-      
+
       // Update call state
       setCallState(prev => ({
         ...prev,
         status: 'accepted'
       }))
+      console.log('[Call] Accepted, waiting for offer from caller...')
     } catch (error) {
       console.error('Failed to accept call:', error)
     }
@@ -917,23 +1119,14 @@ export default function Messages() {
   const handleDeclineCall = async () => {
     try {
       console.log('[Messages] Declining call')
-      if (!callState.callId) return
-      
-      // Call backend to decline/reject call
-      await chatService.updateCallStatus(callState.callId, 'REJECTED')
-      
-      callManagerRef.current?.rejectCall()
-      callControlsRef.current?.close()
-      
-      setCallState({
-        active: false,
-        type: null,
-        otherUser: null,
-        status: 'idle',
-        callId: null
-      })
+      if (callState.callId) {
+        // Backend expects 'DECLINED' (not 'REJECTED')
+        await chatService.updateCallStatus(callState.callId, 'DECLINED')
+      }
+      cleanupCall()
     } catch (error) {
       console.error('Failed to decline call:', error)
+      cleanupCall()
     }
   }
 
@@ -943,19 +1136,10 @@ export default function Messages() {
       if (callState.callId) {
         await chatService.updateCallStatus(callState.callId, 'ENDED')
       }
-      
-      callManagerRef.current?.endCall()
-      callControlsRef.current?.close()
-      
-      setCallState({
-        active: false,
-        type: null,
-        otherUser: null,
-        status: 'idle',
-        callId: null
-      })
+      cleanupCall()
     } catch (error) {
       console.error('Failed to end call:', error)
+      cleanupCall()
     }
   }
 
@@ -1336,6 +1520,8 @@ export default function Messages() {
           onSpeakerToggle={handleSpeakerToggle}
           onPiPToggle={handlePiPToggle}
           otherUser={callState.otherUser}
+          localStream={localStream}
+          remoteStream={remoteStream}
         />
       )}
     </div>

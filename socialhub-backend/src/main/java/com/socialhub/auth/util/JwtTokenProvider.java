@@ -17,7 +17,7 @@ import java.util.Date;
 @Component
 public class JwtTokenProvider {
     
-    @Value("${app.jwtSecret}")
+    @Value("${app.jwtSecret:dev-secret-key-change-in-production-12345678901234567890}")
     private String jwtSecret;
 
     @Value("${app.jwtExpirationMs:1800000}")  // 30 minutes default for access token

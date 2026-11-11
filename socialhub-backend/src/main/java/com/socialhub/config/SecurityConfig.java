@@ -131,10 +131,12 @@ public class SecurityConfig {
             "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
         ));
         configuration.setAllowedHeaders(Arrays.asList(
-            "Content-Type", "Authorization", "X-Requested-With"
+            "Content-Type", "Authorization", "X-Requested-With",
+            "X-User-Id", "Cache-Control", "Accept", "Origin",
+            "Access-Control-Request-Method", "Access-Control-Request-Headers"
         ));
         configuration.setExposedHeaders(Arrays.asList(
-            "Authorization", "Content-Type"
+            "Authorization", "Content-Type", "X-User-Id"
         ));
         configuration.setAllowCredentials(true);
         configuration.setMaxAge(3600L);

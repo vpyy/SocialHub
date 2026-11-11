@@ -168,6 +168,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     return;
                 }
 
+                // Allow /topic/notifications/** for this user and broadcast
+                if (destination != null && (destination.equals("/topic/notifications/" + userId) || destination.equals("/topic/notifications/broadcast"))) {
+                    log.debug("[WebSocket:SUBSCRIBE] User {} subscribing to personal/broadcast notifications: {}", userId, destination);
+                    return;
+                }
+
                 // Allow /topic/conversation/{id}/** (would need to check membership)
                 if (destination != null && destination.startsWith("/topic/conversation/")) {
                     log.info("[WebSocket:SUBSCRIBE] User {} subscribing to conversation: {}", userId, destination);

@@ -6,7 +6,7 @@ import authApi from '../services/authApi'
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated, isLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -14,18 +14,20 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
-  // Get message from URL params or redirect if already authenticated
+  // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/')
-      return
+    if (!isLoading && isAuthenticated) {
+      navigate('/', { replace: true })
     }
+  }, [isAuthenticated, isLoading, navigate])
 
+  // Get message from URL params
+  useEffect(() => {
     const params = new URLSearchParams(location.search)
     if (params.has('message')) {
       setError(decodeURIComponent(params.get('message')))
     }
-  }, [isAuthenticated, navigate, location])
+  }, [location.search])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -53,9 +55,12 @@ export default function Login() {
     try {
       const response = await authApi.authenticateWithGoogle(googleIdToken)
       if (response.data) {
-        const { token } = response.data
+        const { token, user: userData } = response.data
         // Set token and redirect
-        localStorage.setItem('accessToken', token)
+        localStorage.setItem('token', token)
+        if (userData) {
+          localStorage.setItem('user', JSON.stringify(userData))
+        }
         navigate('/')
       }
     } catch (err) {

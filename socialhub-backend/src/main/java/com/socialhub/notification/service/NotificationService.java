@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialhub.notification.document.Notification;
 import com.socialhub.notification.dto.NotificationDto;
 import com.socialhub.notification.repository.NotificationRepository;
+import com.socialhub.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,7 @@ public class NotificationService {
 
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     /**
@@ -38,6 +40,7 @@ public class NotificationService {
             callData.put("initiator", initiatorId);
             callData.put("initiatorName", initiatorName);
             callData.put("initiatorAvatar", initiatorAvatar);
+            callData.put("receiver", receiverId);
             
             Map<String, Object> notification = new HashMap<>();
             notification.put("type", "call:incoming");
@@ -179,20 +182,58 @@ public class NotificationService {
      * Mark all notifications as read
      */
     public void markAllRead(String userId) {
-        log.info("[Notification] Marked all notifications as read for user: {}", userId);
+        try {
+            Page<Notification> unreadPage = notificationRepository
+                    .findByRecipientIdAndIsReadFalseOrderByCreatedAtDesc(userId, PageRequest.of(0, 500));
+            if (unreadPage.hasContent()) {
+                unreadPage.getContent().forEach(n -> n.setRead(true));
+                notificationRepository.saveAll(unreadPage.getContent());
+            }
+            log.info("[Notification] Marked all notifications as read for user: {}", userId);
+        } catch (Exception e) {
+            log.error("[Notification] Failed to mark all notifications as read: {}", e.getMessage(), e);
+        }
     }
 
     /**
      * Mark single notification as read
      */
     public void markOneRead(String notificationId, String userId) {
-        log.info("[Notification] Marked notification {} as read", notificationId);
+        try {
+            notificationRepository.findById(notificationId).ifPresent(n -> {
+                if (userId.equals(n.getRecipientId())) {
+                    n.setRead(true);
+                    notificationRepository.save(n);
+                }
+            });
+            log.info("[Notification] Marked notification {} as read", notificationId);
+        } catch (Exception e) {
+            log.error("[Notification] Failed to mark notification as read: {}", e.getMessage(), e);
+        }
     }
 
     /**
      * Convert Notification document to DTO
      */
     private NotificationDto toNotificationDto(Notification notification) {
-        return new NotificationDto();
+        if (notification == null) return null;
+        NotificationDto.NotificationDtoBuilder b = NotificationDto.builder()
+                .id(notification.getId())
+                .recipientId(notification.getRecipientId())
+                .actorId(notification.getActorId())
+                .type(notification.getType())
+                .postId(notification.getPostId())
+                .commentId(notification.getCommentId())
+                .isRead(notification.isRead())
+                .createdAt(notification.getCreatedAt());
+
+        if (notification.getActorId() != null) {
+            userRepository.findById(notification.getActorId()).ifPresent(user -> {
+                b.actorUsername(user.getUsername())
+                 .actorDisplayName(user.getDisplayName())
+                 .actorAvatarUrl(user.getAvatarUrl());
+            });
+        }
+        return b.build();
     }
 }

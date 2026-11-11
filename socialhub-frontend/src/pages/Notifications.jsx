@@ -230,9 +230,9 @@ export default function Notifications() {
           </div>
         )}
 
-        {!loading && displayed.map(n => (
+        {!loading && displayed.map((n, idx) => (
           <NotificationItem
-            key={n.id}
+            key={n.id || `notif_${idx}_${n.createdAt || idx}`}
             notif={n}
             onRead={handleMarkOneRead}
             navigate={navigate}

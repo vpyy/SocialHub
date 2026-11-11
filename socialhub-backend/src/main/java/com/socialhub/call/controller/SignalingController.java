@@ -8,6 +8,7 @@ import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 
 /**
@@ -38,7 +39,7 @@ public class SignalingController {
             @Payload SignalingMessage.SdpPayload sdp,
             SimpMessageHeaderAccessor headerAccessor) {
 
-        String senderId = (String) headerAccessor.getSessionAttributes().get("userId");
+        String senderId = extractUserId(headerAccessor);
         
         if (senderId == null) {
             log.warn("Offer from unauthenticated session");
@@ -59,7 +60,7 @@ public class SignalingController {
             @Payload SignalingMessage.SdpPayload sdp,
             SimpMessageHeaderAccessor headerAccessor) {
 
-        String senderId = (String) headerAccessor.getSessionAttributes().get("userId");
+        String senderId = extractUserId(headerAccessor);
         
         if (senderId == null) {
             log.warn("Answer from unauthenticated session");
@@ -80,7 +81,7 @@ public class SignalingController {
             @Payload SignalingMessage.IceCandidatePayload candidate,
             SimpMessageHeaderAccessor headerAccessor) {
 
-        String senderId = (String) headerAccessor.getSessionAttributes().get("userId");
+        String senderId = extractUserId(headerAccessor);
         
         if (senderId == null) {
             log.warn("ICE candidate from unauthenticated session");
@@ -89,5 +90,25 @@ public class SignalingController {
 
         log.debug("Received ICE candidate for call: {} from user: {}", callId, senderId);
         signalingService.handleIceCandidate(callId, senderId, candidate);
+    }
+
+    /**
+     * Extract user ID from STOMP header accessor.
+     * WebSocketConfig sets the principal via accessor.setUser(auth) where auth is a
+     * UsernamePasswordAuthenticationToken whose principal is the userId string.
+     */
+    private String extractUserId(SimpMessageHeaderAccessor headerAccessor) {
+        try {
+            java.security.Principal principal = headerAccessor.getUser();
+            if (principal instanceof Authentication auth) {
+                Object p = auth.getPrincipal();
+                if (p instanceof String) {
+                    return (String) p;
+                }
+            }
+        } catch (Exception e) {
+            log.error("Failed to extract userId from header: {}", e.getMessage());
+        }
+        return null;
     }
 }

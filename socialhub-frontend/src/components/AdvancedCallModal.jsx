@@ -13,7 +13,9 @@ export default function AdvancedCallModal({
   onSwitchCamera,
   onSpeakerToggle,
   onPiPToggle,
-  otherUser
+  otherUser,
+  localStream,
+  remoteStream
 }) {
   const [duration, setDuration] = useState('00:00')
   const [isMuted, setIsMuted] = useState(false)
@@ -22,11 +24,36 @@ export default function AdvancedCallModal({
   const [isPiPEnabled, setIsPiPEnabled] = useState(false)
   const localVideoRef = useRef(null)
   const remoteVideoRef = useRef(null)
+  const remoteAudioRef = useRef(null)
   const durationIntervalRef = useRef(null)
+
+  const state = stateManager?.getState()
+  const isIncoming = state === CALL_STATES.RINGING || callState.status === 'incoming'
+  const isConnected = state === CALL_STATES.CONNECTED || callState.status === 'connected'
+  const isCalling = state === CALL_STATES.CALLING || state === CALL_STATES.CONNECTING || callState.status === 'calling' || callState.status === 'connecting'
+
+  // Attach local stream to local video element
+  useEffect(() => {
+    if (localStream && localVideoRef.current) {
+      localVideoRef.current.srcObject = localStream
+    }
+  }, [localStream, callState.type, isConnected])
+
+  // Attach remote stream to remote video/audio element
+  useEffect(() => {
+    if (remoteStream) {
+      if (remoteVideoRef.current) {
+        remoteVideoRef.current.srcObject = remoteStream
+      }
+      if (remoteAudioRef.current) {
+        remoteAudioRef.current.srcObject = remoteStream
+      }
+    }
+  }, [remoteStream, isConnected, callState.type])
 
   // Update duration
   useEffect(() => {
-    if (callState.status === 'active' && stateManager) {
+    if ((isConnected || callState.status === 'connected') && stateManager) {
       durationIntervalRef.current = setInterval(() => {
         const formatted = stateManager.formatDuration(stateManager.callData.duration)
         setDuration(formatted)
@@ -38,14 +65,9 @@ export default function AdvancedCallModal({
         clearInterval(durationIntervalRef.current)
       }
     }
-  }, [callState.status, stateManager])
+  }, [isConnected, callState.status, stateManager])
 
   if (!callState.active) return null
-
-  const state = stateManager?.getState()
-  const isIncoming = state === CALL_STATES.RINGING
-  const isConnected = state === CALL_STATES.CONNECTED
-  const isCalling = state === CALL_STATES.CALLING || state === CALL_STATES.CONNECTING
 
   const handleMuteClick = async () => {
     try {
@@ -318,6 +340,7 @@ export default function AdvancedCallModal({
 
       {/* Remote audio element */}
       <audio
+        ref={remoteAudioRef}
         autoPlay
         playsInline
         data-remote-audio
