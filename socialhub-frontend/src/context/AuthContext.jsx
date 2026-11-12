@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import api, { setAccessToken, clearAccessToken, isTokenExpired, refreshAccessToken } from '../services/api';
+import websocketService from '../services/websocketService';
 
 const AuthContext = createContext();
 
@@ -196,6 +197,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     api.post('/auth/logout').catch(() => {});
+    websocketService.disconnect();
     clearAccessToken();
     localStorage.removeItem('user');
     setUser(null);

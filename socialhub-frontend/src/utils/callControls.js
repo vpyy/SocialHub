@@ -15,6 +15,7 @@ export class CallControls {
     this.cameraSource = 'front' // 'front' or 'back'
     this.isSpeakerOn = true
     this.isPictureInPictureEnabled = false
+    this.pendingCandidates = []
     
     this.listeners = new Map()
     this.onTrackReceived = options.onTrackReceived

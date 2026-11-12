@@ -231,6 +231,11 @@ public class ChatService {
                         .timestamp(Instant.now())
                         .build());
 
+        // Also notify each participant via personal notification topic
+        for (String memberId : conv.getParticipantIds()) {
+            notificationService.notifyNewMessage(memberId, conversationId, dto);
+        }
+
         log.info("Message {} sent in conversation {}", msg.getId(), conversationId);
         return dto;
     }

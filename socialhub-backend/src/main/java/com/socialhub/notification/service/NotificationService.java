@@ -114,6 +114,23 @@ public class NotificationService {
     }
 
     /**
+     * Send new message notification to a conversation member
+     */
+    public void notifyNewMessage(String recipientId, String conversationId, Object messageDto) {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("type", "message:new");
+            payload.put("conversationId", conversationId);
+            payload.put("message", messageDto);
+            payload.put("timestamp", System.currentTimeMillis());
+            messagingTemplate.convertAndSend("/topic/notifications/" + recipientId, payload);
+            log.info("[Notification] Sent message:new notification to {}: conv={}", recipientId, conversationId);
+        } catch (Exception e) {
+            log.error("[Notification] Failed to send message:new notification: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
      * Send generic notification
      */
     public void sendNotification(String userId, Map<String, Object> notification) {

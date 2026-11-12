@@ -638,9 +638,11 @@ export default function Messages() {
   const audioFocusRef = useRef(new AudioFocusManager())
   const permissionsRef = useRef(PermissionsHandler)
   const activeConvIdRef = useRef(null)
+  const conversationsRef = useRef([])
 
-  // keep ref in sync so WS handlers can read latest value
+  // keep refs in sync so WS handlers can read latest value
   useEffect(() => { activeConvIdRef.current = activeConvId }, [activeConvId])
+  useEffect(() => { conversationsRef.current = conversations }, [conversations])
 
   // ── WebSocket handlers ────────────────────────────────────────────────
 
@@ -755,11 +757,48 @@ export default function Messages() {
   }
 
   const handleCallEvent = async (notification) => {
+    if (!notification) return
+
+    // ── Realtime new message via personal notification topic ──────────
+    if (notification.type === 'message:new') {
+      const { conversationId, message } = notification
+      const isActive = conversationId === activeConvIdRef.current
+      const isMe = message?.senderId === currentUser.id
+
+      if (isActive && message) {
+        setMessages(prev => prev.some(m => m.id === message.id) ? prev : [...prev, message])
+        if (!isMe) chatService.markRead(conversationId).catch(() => {})
+      }
+
+      if (message) {
+        if (!conversationsRef.current.some(c => c.id === conversationId)) {
+          loadConversations()
+        } else {
+          setConversations(prev => {
+            const conv = prev.find(c => c.id === conversationId)
+            if (!conv) return prev
+            const updated = {
+              ...conv,
+              lastMessage: message.content || '📎',
+              lastMessageAt: message.createdAt,
+              unreadCount: isActive || isMe ? 0 : (conv.unreadCount || 0) + 1,
+            }
+            return [updated, ...prev.filter(c => c.id !== conversationId)]
+          })
+        }
+      }
+      return
+    }
+
     if (notification.type === 'call:incoming') {
-      setCallState({ active: true, type: notification.callData?.type || 'VOICE',
+      const incomingType = notification.callData?.type || 'VOICE'
+      if (callControlsRef.current) {
+        callControlsRef.current._callType = incomingType
+      }
+      setCallState({ active: true, type: incomingType,
         otherUser: { userId: notification.callData?.initiator, displayName: notification.callData?.initiatorName, avatarUrl: notification.callData?.initiatorAvatar },
         status: 'incoming', callId: notification.callData?.id })
-      try { callManagerRef.current?.receiveCall(notification.callData?.id, notification.callData?.type, notification.callData?.initiator, notification.callData?.receiver || currentUser.id) } catch {}
+      try { callManagerRef.current?.receiveCall(notification.callData?.id, incomingType, notification.callData?.initiator, notification.callData?.receiver || currentUser.id) } catch {}
       return
     }
     if (notification.type === 'call:accepted') {
@@ -785,7 +824,7 @@ export default function Messages() {
       try {
         const callId = notification.callId
         if (!callControlsRef.current?.peerConnection) {
-          const callType = callState.type || 'VOICE'
+          const callType = callControlsRef.current?._callType || 'VOICE'
           const stream = await callControlsRef.current?.initializeStream({ audio: true, video: callType === 'VIDEO' })
           setLocalStream(stream)
           await callControlsRef.current?.initializePeerConnection()

@@ -40,33 +40,25 @@ class WebSocketService {
   // ── Connection ────────────────────────────────────────────────────────
 
   connect(userId, onNotification = null) {
-    // If already connected for same user, skip
-    if (this.connected && this.userId === userId && this.client) return
-
-    // If client exists but not connected (stale), deactivate first
-    if (this.client && !this.connected) {
-      try { this.client.deactivate() } catch {}
-      this.client = null
+    if (onNotification) {
+      this.addListener('notification', onNotification)
+      this.addListener('call', onNotification)
+      this.addListener('message', onNotification)
     }
+
+    // Chỉ tạo client một lần
+    if (this.client) return
 
     this.userId = userId
     this._manuallyDisconnected = false
 
-    if (onNotification) {
-      this.addListener('notification', onNotification)
-      this.addListener('call', onNotification)
+    const token = localStorage.getItem('token')
+    if (!token) {
+      console.error('[WebSocket] No JWT token found')
+      return
     }
 
-    this._createClient()
-    console.log('[WS] Connecting for user:', userId)
-    this.client.activate()
-  }
-
-  _createClient() {
-    const token = localStorage.getItem('token')
-    if (!token) { console.error('[WS] No JWT token'); return }
-
-    const socketFactory = () => new SockJS(`${WS_URL}?token=${token}`)
+    const socketFactory = () => new SockJS(WS_URL)
 
     this.client = new Client({
       webSocketFactory: socketFactory,
@@ -84,6 +76,8 @@ class WebSocketService {
         }
       },
     })
+    console.log('[WebSocket] Connecting for user:', userId)
+    this.client.activate()
   }
 
   _onConnected(frame) {
@@ -154,8 +148,16 @@ class WebSocketService {
     this._manuallyDisconnected = true
     this.connected = false
     this._typingSubscriptions.clear()
+    this._listeners = {
+      message: [],
+      presence: [],
+      typing: [],
+      call: [],
+      notification: [],
+    }
     if (this.client) {
       try { this.client.deactivate() } catch (e) { /* silent */ }
+      this.client = null
     }
   }
 
@@ -241,9 +243,17 @@ class WebSocketService {
     }
   }
 
-  // Legacy API (used by call handlers in Messages.jsx)
-  subscribe(cb) { this.addListener('notification', cb) }
-  unsubscribe(cb) { this.removeListener('notification', cb) }
+  // Legacy API (used by call handlers and page components)
+  subscribe(cb) {
+    this.addListener('notification', cb)
+    this.addListener('call', cb)
+    this.addListener('message', cb)
+  }
+  unsubscribe(cb) {
+    this.removeListener('notification', cb)
+    this.removeListener('call', cb)
+    this.removeListener('message', cb)
+  }
 
   // ── Internal helpers ──────────────────────────────────────────────────
 
