@@ -1,45 +1,43 @@
-import { useState, useEffect } from 'react'
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import Sidebar from '../components/common/Sidebar'
+import { useAuth } from '../context/AuthContext'
 
 export default function MainLayout() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const navigate  = useNavigate()
+  const location  = useLocation()
+  const { user: authUser, isAuthenticated, isLoading } = useAuth()
 
-  useEffect(() => {
-    // Load user from localStorage
-    const userData = localStorage.getItem('user')
-    if (userData) {
-      try {
-        setUser(JSON.parse(userData))
-      } catch (error) {
-        console.error('Failed to parse user data:', error)
-        localStorage.removeItem('user')
-        navigate('/login')
-      }
+  // Fallback to localStorage if authUser is not set in state yet
+  const localUser = (() => {
+    try {
+      const raw = localStorage.getItem('user')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
     }
-    setLoading(false)
-  }, [navigate])
+  })()
 
-  if (loading) {
+  const currentUser = authUser || localUser
+
+  if (isLoading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-[#faf8ff]">
-        <div className="animate-pulse">Loading...</div>
+      <div className="w-full h-screen flex items-center justify-center bg-white dark:bg-gray-950">
+        <div className="w-8 h-8 border-4 border-indigo-300 dark:border-indigo-700 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin" />
       </div>
     )
   }
 
-  if (!user) {
-    return null
+  // Not loading and not authenticated and no user -> redirect to login
+  if (!isAuthenticated && !currentUser) {
+    return <Navigate to="/login" replace />
   }
 
   return (
-    <div className="w-full flex justify-center min-h-screen">
-      <div className="w-full max-w-[1400px] flex min-h-screen">
-        <Sidebar user={user} navigate={navigate} location={location} />
-        <main className="flex-1 flex">
+    <div className="w-full h-screen overflow-hidden bg-white dark:bg-gray-950">
+      <div className="w-full h-full flex min-w-0">
+        <Sidebar user={currentUser} navigate={navigate} location={location} />
+
+        <main className="flex-1 min-w-0 h-full overflow-hidden">
           <Outlet />
         </main>
       </div>

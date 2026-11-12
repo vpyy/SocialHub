@@ -19,9 +19,35 @@ import java.util.List;
 /**
  * Global exception handler for consistent error responses
  */
+
+/**
+ * Global exception handler for consistent error responses
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * Handle Token exceptions (refresh token, session errors)
+     */
+    @ExceptionHandler(TokenException.class)
+    public ResponseEntity<ErrorResponse> handleTokenException(
+            TokenException ex,
+            WebRequest request) {
+        
+        log.warn("Token Exception: {} - {}", ex.getCode(), ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+            .status("TOKEN_ERROR")
+            .statusCode(ex.getStatusCode())
+            .errorCode(ex.getCode())
+            .message(ex.getMessage())
+            .timestamp(LocalDateTime.now())
+            .path(request.getDescription(false).replace("uri=", ""))
+            .build();
+
+        return new ResponseEntity<>(errorResponse, HttpStatus.valueOf(ex.getStatusCode()));
+    }
 
     /**
      * Handle API exceptions (custom exceptions)

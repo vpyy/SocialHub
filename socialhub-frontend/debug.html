@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            padding: 40px;
+            background: #f0f0f0;
+        }
+        .box { 
+            background: white; 
+            padding: 20px; 
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug SocialHub Frontend</h1>
+    
+    <div class="box">
+        <h2>Step 1: Check Vite Server</h2>
+        <p>If you see this page, Vite server is working!</p>
+        <p>Status: <strong style="color: green;">✅ OK</strong></p>
+    </div>
+
+    <div class="box">
+        <h2>Step 2: Check React Mount</h2>
+        <p>Open browser console (F12) and check for errors</p>
+        <div id="test-react">Loading React...</div>
+    </div>
+
+    <div class="box">
+        <h2>Step 3: Check Backend</h2>
+        <button onclick="testBackend()" style="background: #4f46e5; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">
+            Test Backend API
+        </button>
+        <div id="backend-result" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="box">
+        <h2>Step 4: Links</h2>
+        <ul>
+            <li><a href="/" style="color: #4f46e5;">Main App (http://localhost:5173/)</a></li>
+            <li><a href="/test.html" style="color: #4f46e5;">API Test Page</a></li>
+            <li><a href="http://localhost:8080/api/health" target="_blank" style="color: #4f46e5;">Backend Health</a></li>
+        </ul>
+    </div>
+
+    <script>
+        async function testBackend() {
+            const result = document.getElementById('backend-result');
+            result.innerHTML = 'Testing...';
+            try {
+                const response = await fetch('http://localhost:8080/api/health');
+                const data = await response.json();
+                result.innerHTML = '<p style="color: green;">✅ Backend OK: ' + JSON.stringify(data.data) + '</p>';
+            } catch (err) {
+                result.innerHTML = '<p style="color: red;">❌ Backend Error: ' + err.message + '</p>';
+            }
+        }
+
+        // Test React
+        const reactDiv = document.getElementById('test-react');
+        try {
+            reactDiv.innerHTML = '<p style="color: green;">✅ React loaded</p>';
+        } catch (err) {
+            reactDiv.innerHTML = '<p style="color: red;">❌ React error: ' + err.message + '</p>';
+        }
+    </script>
+</body>
+</html>

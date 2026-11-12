@@ -1,65 +1,59 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
+import { ThemeProvider } from './context/ThemeContext'
+import { AuthProvider } from './context/AuthContext'
 import MainLayout from './layouts/MainLayout'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import VerifyEmail from './pages/VerifyEmail'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Feed from './pages/Feed'
+import Discover from './pages/Discover'
 import Profile from './pages/Profile'
+import PostDetail from './pages/PostDetail'
 import Search from './pages/Search'
 import Notifications from './pages/Notifications'
 import Bookmarks from './pages/Bookmarks'
 import Messages from './pages/Messages'
 import Settings from './pages/Settings'
+import CallTest from './pages/CallTest'
+import './i18n/config' // Initialize i18n
 import './App.css'
 
-// Protected Route Component
-function ProtectedRoute({ element }) {
-  const token = localStorage.getItem('token')
-  return token ? element : <Navigate to="/login" replace />
-}
-
 function App() {
-  const [isReady, setIsReady] = useState(false)
-
-  useEffect(() => {
-    // Check token on app load
-    const token = localStorage.getItem('token')
-    setIsReady(true)
-  }, [])
-
-  if (!isReady) {
-    return (
-      <div className="w-full h-screen flex items-center justify-center bg-gradient-to-br from-[#faf8ff] to-[#e2e7ff]">
-        <div className="text-center">
-          <div className="w-12 h-12 rounded-xl bg-[#4648d4] mx-auto mb-4 flex items-center justify-center animate-pulse"></div>
-          <p className="text-[#767586]">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <Router>
-      <Routes>
-        {/* Auth Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <Routes>
+            {/* Auth Routes */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
-        {/* Protected Routes */}
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<ProtectedRoute element={<Feed />} />} />
-          <Route path="/profile/:username" element={<ProtectedRoute element={<Profile />} />} />
-          <Route path="/search" element={<ProtectedRoute element={<Search />} />} />
-          <Route path="/notifications" element={<ProtectedRoute element={<Notifications />} />} />
-          <Route path="/bookmarks" element={<ProtectedRoute element={<Bookmarks />} />} />
-          <Route path="/messages" element={<ProtectedRoute element={<Messages />} />} />
-          <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
-        </Route>
+            {/* Protected Routes — guarded by MainLayout */}
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<Feed />} />
+              <Route path="/discover" element={<Discover />} />
+              <Route path="/post/:id" element={<PostDetail />} />
+              <Route path="/profile/:username" element={<Profile />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/notifications" element={<Notifications />} />
+              <Route path="/bookmarks" element={<Bookmarks />} />
+              <Route path="/messages" element={<Messages />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/call-test" element={<CallTest />} />
+            </Route>
 
-        {/* Catch all - redirect to login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </Router>
+            {/* Catch all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
 

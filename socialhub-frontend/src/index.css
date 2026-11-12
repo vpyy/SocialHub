@@ -1,10 +1,13 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&display=swap");
 
 @layer base {
   body {
     @apply bg-surface text-on-surface font-body-md min-h-screen antialiased;
+    font-family: "Inter", sans-serif;
   }
 
   ::selection {
@@ -14,14 +17,18 @@
 
 @layer components {
   .material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    font-variation-settings:
+      "FILL" 0,
+      "wght" 400,
+      "GRAD" 0,
+      "opsz" 24;
     font-size: 22px;
     line-height: 1;
     display: inline-block;
     vertical-align: middle;
 
     &.fill-icon {
-      font-variation-settings: 'FILL' 1;
+      font-variation-settings: "FILL" 1;
     }
   }
 

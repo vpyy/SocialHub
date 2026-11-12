@@ -1,24 +1,33 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import authApi from '../services/authApi'
 
 export default function Login() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { login, isAuthenticated, isLoading } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
+  const [googleLoading, setGoogleLoading] = useState(false)
 
-  // Only show success message once, then clear it
+  // Redirect if already authenticated
   useEffect(() => {
-    if (location.state?.message) {
-      setSuccessMessage(location.state.message)
-      // Clear the state after showing
-      window.history.replaceState({}, document.title)
+    if (!isLoading && isAuthenticated) {
+      navigate('/', { replace: true })
     }
-  }, [])
+  }, [isAuthenticated, isLoading, navigate])
+
+  // Get message from URL params
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.has('message')) {
+      setError(decodeURIComponent(params.get('message')))
+    }
+  }, [location.search])
 
   const handleLogin = async (e) => {
     e.preventDefault()
@@ -26,34 +35,53 @@ export default function Login() {
     setLoading(true)
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          emailOrUsername: email,
-          password: password,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.message || 'Đăng nhập thất bại')
-        return
+      const result = await login(email, password)
+      if (result.success) {
+        navigate('/')
+      } else {
+        setError(result.error)
       }
-
-      localStorage.setItem('token', data.data.token)
-      localStorage.setItem('user', JSON.stringify(data.data.user))
-
-      navigate('/')
     } catch (err) {
       setError('Lỗi kết nối: ' + err.message)
     } finally {
       setLoading(false)
     }
   }
+
+  const handleGoogleLogin = async (googleIdToken) => {
+    setError('')
+    setGoogleLoading(true)
+
+    try {
+      const response = await authApi.authenticateWithGoogle(googleIdToken)
+      if (response.data) {
+        const { token, user: userData } = response.data
+        // Set token and redirect
+        localStorage.setItem('token', token)
+        if (userData) {
+          localStorage.setItem('user', JSON.stringify(userData))
+        }
+        navigate('/')
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Google login failed')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
+  // Initialize Google Sign-In
+  useEffect(() => {
+    // Load Google Sign-In script
+    const script = document.createElement('script')
+    script.src = 'https://accounts.google.com/gsi/client'
+    script.async = true
+    document.head.appendChild(script)
+
+    return () => {
+      document.head.removeChild(script)
+    }
+  }, [])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#f8faff] via-white to-[#f1f5f9] flex">
@@ -80,14 +108,6 @@ export default function Login() {
             <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Kết nối bạn bè</h1>
             <p className="text-slate-500 text-sm">Đăng nhập để tiếp tục chia sẻ khoảnh khắc với bạn bè</p>
           </div>
-
-          {/* Success Alert */}
-          {successMessage && (
-            <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center gap-2">
-              <span className="material-symbols-outlined text-emerald-600 text-[18px]">check_circle</span>
-              <p className="text-xs text-emerald-900 font-medium">{successMessage}</p>
-            </div>
-          )}
 
           {/* Error Alert */}
           {error && (
@@ -123,7 +143,7 @@ export default function Login() {
                 <button
                   type="button"
                   className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold transition"
-                  onClick={() => setError('Chức năng quên mật khẩu sẽ sớm có')}
+                  onClick={() => navigate('/forgot-password')}
                 >
                   Quên mật khẩu?
                 </button>
@@ -182,16 +202,7 @@ export default function Login() {
 
           {/* Social Login */}
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <button
-              type="button"
-              className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition text-xs font-semibold text-slate-700"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              </svg>
-              Google
-            </button>
+            <div id="google-signin-button"></div>
             <button
               type="button"
               className="flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition text-xs font-semibold text-slate-700"

@@ -1,106 +1,302 @@
 package com.socialhub.user.controller;
 
+import com.socialhub.common.exception.ApiException;
 import com.socialhub.common.response.ApiResponse;
-import com.socialhub.user.dto.CreateUserDto;
-import com.socialhub.user.dto.UserDto;
+import com.socialhub.post.dto.PostResponseDto;
+import com.socialhub.social.dto.FollowResponseDto;
+import com.socialhub.social.dto.FollowUserDto;
+import com.socialhub.social.service.FollowService;
+import com.socialhub.user.dto.*;
 import com.socialhub.user.service.UserService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * User API Endpoints
- * 
- * Base URL: /api/user
- */
+import java.util.List;
+
 @Slf4j
 @RestController
-@RequestMapping("/api/user")
+@RequestMapping("/api/users")
 @RequiredArgsConstructor
-@Tag(name = "User", description = "User management endpoints")
 public class UserController {
-    
+
     private final UserService userService;
-    
-    /**
-     * Get user by ID
-     */
-    @GetMapping("/{id}")
-    @Operation(summary = "Get user by ID", description = "Retrieves user profile information by user ID")
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User found"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
-    })
-    public ResponseEntity<ApiResponse<UserDto>> getUserById(
-            @Parameter(description = "User ID (MongoDB ObjectId)", example = "507f1f77bcf86cd799439011")
-            @PathVariable String id) {
-        log.info("Get user by id: {}", id);
-        UserDto user = userService.getUserById(id);
-        return ResponseEntity.ok(ApiResponse.success(user, "User retrieved successfully"));
+    private final FollowService followService;
+
+    // ──────────────────────────────────────────────────────
+    // GET /api/users (paginated) — List All Users
+    // ──────────────────────────────────────────────────────
+    @GetMapping
+    public ResponseEntity<ApiResponse<Object>> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+        try {
+            List<UserDto> users = userService.getAllUsers(page, size);
+            return ResponseEntity.ok(ApiResponse.success(users, "OK"));
+        } catch (Exception e) {
+            log.error("Error getting all users", e);
+            return ResponseEntity.ok(ApiResponse.success(List.of(), "OK"));
+        }
     }
-    
+
+    // ──────────────────────────────────────────────────────
+    // 1. GET /api/users/{username} — Public Profile
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{username}")
+    public ResponseEntity<ApiResponse<UserProfileDto>> getProfile(
+            @PathVariable String username,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        UserProfileDto profile = userService.getUserProfile(username, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(profile, "OK"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 2. PUT /api/users/me — Update My Profile
+    // ──────────────────────────────────────────────────────
+    @PutMapping("/me")
+    public ResponseEntity<ApiResponse<UserProfileDto>> updateProfile(
+            @Valid @RequestBody UpdateProfileDto dto,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        UserProfileDto updated = userService.updateMyProfile(currentUserId, dto);
+        return ResponseEntity.ok(ApiResponse.success(updated, "Cập nhật profile thành công"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 3. POST /api/users/{id}/follow — Toggle Follow / Unfollow
+    // ──────────────────────────────────────────────────────
+    @PostMapping("/{id}/follow")
+    public ResponseEntity<ApiResponse<FollowResponseDto>> toggleFollow(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        FollowResponseDto result = followService.toggleFollow(currentUserId, id);
+        return ResponseEntity.ok(ApiResponse.success(result, result.getMessage()));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 4. GET /api/users/{id}/followers — Followers List
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{id}/followers")
+    public ResponseEntity<ApiResponse<List<FollowUserDto>>> getFollowers(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        List<FollowUserDto> followers = followService.getFollowers(id, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(followers, "OK"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 5. GET /api/users/{id}/following — Following List
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{id}/following")
+    public ResponseEntity<ApiResponse<List<FollowUserDto>>> getFollowing(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        List<FollowUserDto> following = followService.getFollowing(id, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(following, "OK"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 6. GET /api/users/{id}/reposts — User Reposts
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{id}/reposts")
+    public ResponseEntity<ApiResponse<List<PostResponseDto>>> getReposts(
+            @PathVariable String id,
+            Authentication authentication) {
+        log.info("GET /api/users/{}/reposts", id);
+        String currentUserId = extractCurrentUserId(authentication);
+        List<PostResponseDto> reposts = userService.getUserReposts(id, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(reposts, "Reposts retrieved successfully"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // 7. GET /api/users/{id}/liked-posts — User Liked Posts
+    // ──────────────────────────────────────────────────────
+    @GetMapping("/{id}/liked-posts")
+    public ResponseEntity<ApiResponse<List<PostResponseDto>>> getLikedPosts(
+            @PathVariable String id,
+            Authentication authentication) {
+        log.info("GET /api/users/{}/liked-posts", id);
+        String currentUserId = extractCurrentUserId(authentication);
+        List<PostResponseDto> likedPosts = userService.getUserLikedPosts(id, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(likedPosts, "Liked posts retrieved successfully"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Settings Endpoints (require authentication)
+    // ──────────────────────────────────────────────────────
+
     /**
-     * Get user by username
+     * PUT /api/users/me/password — Change Password
      */
+    @PutMapping("/me/password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest req,
+            Authentication authentication) {
+        String userId = extractCurrentUserId(authentication);
+        if (userId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        userService.changePassword(userId, req.getCurrentPassword(), req.getNewPassword());
+        return ResponseEntity.ok(ApiResponse.success(null, "Mật khẩu đã được cập nhật"));
+    }
+
+    /**
+     * PUT /api/users/me/avatar — Update Avatar URL
+     */
+    @PutMapping("/me/avatar")
+    public ResponseEntity<ApiResponse<UserDto>> updateAvatar(
+            @Valid @RequestBody UpdateAvatarRequest req,
+            Authentication authentication) {
+        String userId = extractCurrentUserId(authentication);
+        if (userId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        UserDto updated = userService.updateAvatar(userId, req.getAvatarUrl());
+        return ResponseEntity.ok(ApiResponse.success(updated, "Avatar đã được cập nhật"));
+    }
+
+    /**
+     * PUT /api/users/me/cover — Update Cover URL
+     */
+    @PutMapping("/me/cover")
+    public ResponseEntity<ApiResponse<UserDto>> updateCover(
+            @Valid @RequestBody UpdateCoverRequest req,
+            Authentication authentication) {
+        String userId = extractCurrentUserId(authentication);
+        if (userId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        UserDto updated = userService.updateCover(userId, req.getCoverUrl());
+        return ResponseEntity.ok(ApiResponse.success(updated, "Cover đã được cập nhật"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Existing API compatibility
+    // ──────────────────────────────────────────────────────
+
+    /** GET /api/users/username/:username */
     @GetMapping("/username/{username}")
-    @Operation(summary = "Get user by username", description = "Retrieves user profile information by username")
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User found"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
-    })
-    public ResponseEntity<ApiResponse<UserDto>> getUserByUsername(
-            @Parameter(description = "Username", example = "minh_dev")
-            @PathVariable String username) {
-        log.info("Get user by username: {}", username);
-        UserDto user = userService.getUserByUsername(username);
-        return ResponseEntity.ok(ApiResponse.success(user, "User retrieved successfully"));
+    public ResponseEntity<ApiResponse<UserDto>> getByUsername(@PathVariable String username) {
+        return ResponseEntity.ok(ApiResponse.success(userService.getUserByUsername(username), "OK"));
     }
-    
-    /**
-     * Get user by email
-     */
-    @GetMapping("/email/{email}")
-    @Operation(summary = "Get user by email", description = "Retrieves user profile information by email")
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "User found"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
-    })
-    public ResponseEntity<ApiResponse<UserDto>> getUserByEmail(
-            @Parameter(description = "Email address", example = "minh@example.com")
-            @PathVariable String email) {
-        log.info("Get user by email: {}", email);
-        UserDto user = userService.getUserByEmail(email);
-        return ResponseEntity.ok(ApiResponse.success(user, "User retrieved successfully"));
+
+    /** GET /api/users/search?q=keyword */
+    @GetMapping("/search")
+    public ResponseEntity<ApiResponse<List<UserDto>>> search(
+            @RequestParam String q,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        List<UserDto> results = userService.searchUsers(q, currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(results, "OK"));
     }
-    
+
+    // ──────────────────────────────────────────────────────
+    // Helper
+    // ──────────────────────────────────────────────────────
+    private String extractCurrentUserId(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+        Object principal = authentication.getPrincipal();
+        if ("anonymousUser".equals(principal)) {
+            return null;
+        }
+        return principal.toString();
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Block/Unblock Users
+    // ──────────────────────────────────────────────────────
+
     /**
-     * Create new user (test endpoint - will be part of auth registration)
-     * 
-     * NOTE: This endpoint is public for testing during setup phase.
-     * In production, user creation should be done through the auth/register endpoint.
+     * POST /api/users/{id}/block — Block a user
      */
-    @PostMapping
-    @Operation(summary = "Create new user (TEST ONLY)", description = "Creates a new user account - This is a test endpoint for setup phase")
-    @ApiResponses(value = {
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201", description = "User created successfully"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation error"),
-        @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Username or email already exists")
-    })
-    public ResponseEntity<ApiResponse<UserDto>> createUser(
-            @Valid @RequestBody CreateUserDto createUserDto) {
-        log.info("Create new user with email: {}", createUserDto.getEmail());
-        UserDto user = userService.createUser(createUserDto);
-        return ResponseEntity
-            .status(HttpStatus.CREATED)
-            .body(ApiResponse.success(user, "User created successfully"));
+    @PostMapping("/{id}/block")
+    public ResponseEntity<ApiResponse<Void>> blockUser(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        userService.blockUser(currentUserId, id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Đã chặn người dùng"));
+    }
+
+    /**
+     * DELETE /api/users/{id}/block — Unblock a user
+     */
+    @DeleteMapping("/{id}/block")
+    public ResponseEntity<ApiResponse<Void>> unblockUser(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        userService.unblockUser(currentUserId, id);
+        return ResponseEntity.ok(ApiResponse.success(null, "Đã bỏ chặn người dùng"));
+    }
+
+    /**
+     * GET /api/users/me/blocked — Get all blocked users
+     */
+    @GetMapping("/me/blocked")
+    public ResponseEntity<ApiResponse<List<BlockedUserDto>>> getBlockedUsers(
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        List<BlockedUserDto> blocked = userService.getBlockedUsers(currentUserId);
+        return ResponseEntity.ok(ApiResponse.success(blocked, "OK"));
+    }
+
+    // ──────────────────────────────────────────────────────
+    // Nicknames
+    // ──────────────────────────────────────────────────────
+
+    /**
+     * POST /api/users/{id}/nickname — Set nickname
+     */
+    @PostMapping("/{id}/nickname")
+    public ResponseEntity<ApiResponse<Void>> setNickname(
+            @PathVariable String id,
+            @Valid @RequestBody SetNicknameRequest req,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        userService.setNickname(currentUserId, id, req.getNickname());
+        return ResponseEntity.ok(ApiResponse.success(null, "Biệt danh đã được lưu"));
+    }
+
+    /**
+     * GET /api/users/{id}/nickname — Get nickname
+     */
+    @GetMapping("/{id}/nickname")
+    public ResponseEntity<ApiResponse<String>> getNickname(
+            @PathVariable String id,
+            Authentication authentication) {
+        String currentUserId = extractCurrentUserId(authentication);
+        if (currentUserId == null) {
+            throw new ApiException("Vui lòng đăng nhập để thực hiện thao tác này", "UNAUTHORIZED", 401);
+        }
+        String nickname = userService.getNickname(currentUserId, id);
+        return ResponseEntity.ok(ApiResponse.success(nickname, "OK"));
     }
 }

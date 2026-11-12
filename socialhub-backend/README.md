@@ -1,12 +1,12 @@
 # SocialHub Backend
 
-A modern social network platform backend built with Spring Boot 3.5.x, Java 21, and MongoDB.
+A modern social network platform backend built with Spring Boot 3.5.x, Java 17, and MongoDB.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Java 21 LTS** ([Download](https://www.oracle.com/java/technologies/downloads/))
+- **Java 17 LTS** ([Download](https://www.oracle.com/java/technologies/downloads/))
 - **MongoDB Community Server** ([Download](https://www.mongodb.com/try/download/community))
 - **Maven** (optional - project includes Maven Wrapper)
 - **Git** for version control
@@ -290,11 +290,11 @@ Error: Port 8080 already in use
 
 ### Maven Build Fails
 ```
-Error: java: error: release version 21 not supported
+Error: java: error: release version 17 not supported
 ```
 **Solution:**
-1. Install Java 21 LTS
-2. Set JAVA_HOME: `set JAVA_HOME=C:\Program Files\Java\jdk-21`
+1. Install Java 17 LTS
+2. Set JAVA_HOME: `set JAVA_HOME=C:\Program Files\Java\jdk-17`
 3. Verify: `java -version`
 4. Clean and rebuild: `mvnw.cmd clean install`
 
@@ -314,7 +314,7 @@ chmod +x mvnw
 git clone <repo-url>
 cd socialhub-backend
 
-# Setup Java 21 and MongoDB (see Prerequisites)
+# Setup Java 17 and MongoDB (see Prerequisites)
 
 # Create .env file
 cp .env.example .env
@@ -400,7 +400,7 @@ java -jar target/socialhub-backend-1.0.0.jar
 
 | Technology | Version | Purpose |
 |-----------|---------|---------|
-| Java | 21 LTS | Programming language |
+| Java | 17 LTS | Programming language |
 | Spring Boot | 3.5.1 | Web framework |
 | Spring Security | 6.x | Authentication & Authorization |
 | Spring Data MongoDB | - | Database access |
@@ -448,7 +448,7 @@ This project is part of SocialHub platform - All rights reserved.
 
 ## ✅ Checklist Before First Push
 
-- [ ] Java 21 installed and set in JAVA_HOME
+- [ ] Java 17 installed and set in JAVA_HOME
 - [ ] MongoDB installed and running
 - [ ] `.env` file created with correct MongoDB URI
 - [ ] `mvnw.cmd clean install` runs successfully
