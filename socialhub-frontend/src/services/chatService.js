@@ -13,6 +13,25 @@ const chatService = {
 
   // ─── Messages ────────────────────────────────────────────────────────
 
+  // Load messages after a specific messageId (for missed message sync after WS reconnect)
+  getMessagesAfter: (conversationId, lastMessageId, size = 50) =>
+    apiClient.get(`/conversations/${conversationId}/messages`, {
+      params: { after: lastMessageId, size }
+    }),
+
+  // Get presence status for a list of user IDs
+  getPresence: (userIds) =>
+    apiClient.post('/conversations/users/presence', userIds),
+
+  // Upload file attachment via /media/upload and return { id, url, type, fileName, fileSize }
+  uploadAttachment: (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiClient.post('/media/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+
   // Load messages in a conversation (oldest first)
   getMessages: (conversationId, page = 0, size = 50) =>
     apiClient.get(`/conversations/${conversationId}/messages`, { params: { page, size } }),

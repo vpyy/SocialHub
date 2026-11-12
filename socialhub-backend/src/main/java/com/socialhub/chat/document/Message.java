@@ -67,6 +67,10 @@ public class Message {
     @Builder.Default
     private java.util.Map<String, String> reactions = new java.util.HashMap<>();
 
+    /** Read receipts: {userId: readAt timestamp, ...} */
+    @Builder.Default
+    private java.util.Map<String, Instant> readBy = new java.util.HashMap<>();
+
     /** Dùng khi messageType = VOICE */
     private String voiceUrl;
     private Long voiceDuration;  // ms
@@ -87,9 +91,29 @@ public class Message {
     private String fileName;
     private Long fileSize;  // bytes
     
+    /** Multiple attachments support (max 10 files) */
+    @Builder.Default
+    private java.util.List<AttachmentItem> attachments = new java.util.ArrayList<>();
+    
     /** Link preview metadata */
     private String linkPreviewUrl;
     private String linkPreviewTitle;
     private String linkPreviewDescription;
     private String linkPreviewImage;
+    
+    /**
+     * Attachment item for multi-file messages
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @Builder
+    public static class AttachmentItem {
+        private String id;
+        private String type; // IMAGE, VIDEO, PDF, DOCX, ZIP
+        private String url;
+        private String fileName;
+        private Long fileSize;
+        private String thumbnailUrl;
+    }
 }

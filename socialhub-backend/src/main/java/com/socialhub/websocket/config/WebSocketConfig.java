@@ -56,6 +56,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         
         // Set application destination prefix
         config.setApplicationDestinationPrefixes("/app");
+        
+        // Set user destination prefix so convertAndSendToUser works
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
@@ -134,6 +137,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                 userId, null, authorities);
 
                         accessor.setUser(auth);
+                        
+                        // Also set userId in session attributes so WebSocketEventListener can read it
+                        if (accessor.getSessionAttributes() != null) {
+                            accessor.getSessionAttributes().put("userId", userId);
+                        }
                     } else {
                         log.warn("[WebSocket:CONNECT] Invalid JWT token");
                     }
