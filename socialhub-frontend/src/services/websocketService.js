@@ -40,7 +40,15 @@ class WebSocketService {
   // ── Connection ────────────────────────────────────────────────────────
 
   connect(userId, onNotification = null) {
-    if (this.connected && this.userId === userId) return
+    // If already connected for same user, skip
+    if (this.connected && this.userId === userId && this.client) return
+
+    // If client exists but not connected (stale), deactivate first
+    if (this.client && !this.connected) {
+      try { this.client.deactivate() } catch {}
+      this.client = null
+    }
+
     this.userId = userId
     this._manuallyDisconnected = false
 
@@ -79,7 +87,7 @@ class WebSocketService {
   }
 
   _onConnected(frame) {
-    console.log('[WS] Connected')
+    console.log('[WS] ✅ Connected successfully, userId:', this.userId)
     this.connected = true
     this._reconnectAttempts = 0
 
@@ -87,35 +95,45 @@ class WebSocketService {
 
     // Chat events: message:new, edited, deleted, unsent, reaction, pinned, read
     this.client.subscribe('/user/queue/messages', (msg) => {
-      this._dispatch('message', this._parse(msg))
+      const data = this._parse(msg)
+      console.log('[WS] 📨 chat event:', data?.type, data)
+      this._dispatch('message', data)
     })
 
     // Presence events
     this.client.subscribe('/user/queue/presence', (msg) => {
-      this._dispatch('presence', this._parse(msg))
+      const data = this._parse(msg)
+      console.log('[WS] 👤 presence event:', data)
+      this._dispatch('presence', data)
     })
 
     // Call signaling
     this.client.subscribe('/user/queue/call', (msg) => {
-      this._dispatch('call', this._parse(msg))
-      this._dispatch('notification', this._parse(msg))
+      const data = this._parse(msg)
+      console.log('[WS] 📞 call event:', data?.type)
+      this._dispatch('call', data)
+      this._dispatch('notification', data)
     })
 
-    // General notifications
+    // General notifications (personal + broadcast)
     this.client.subscribe(`/topic/notifications/${this.userId}`, (msg) => {
-      this._dispatch('notification', this._parse(msg))
+      const data = this._parse(msg)
+      console.log('[WS] 🔔 notification:', data?.type)
+      this._dispatch('notification', data)
     })
     this.client.subscribe('/topic/notifications/broadcast', (msg) => {
       this._dispatch('notification', this._parse(msg))
     })
 
-    // Re-subscribe typing for any conversation that was active before reconnect
-    this._typingSubscriptions.forEach((_, convId) => {
+    // Re-subscribe typing for any active conversations
+    this._typingSubscriptions.forEach((entry, convId) => {
+      const cb = typeof entry === 'function' ? entry : entry?.callback
+      if (cb) this._typingSubscriptions.set(convId, cb)
       this._subscribeTyping(convId)
     })
 
     // Notify reconnect callbacks (for missed message sync)
-    this._onReconnectCallbacks.forEach(cb => { try { cb() } catch (e) { /* silent */ } })
+    this._onReconnectCallbacks.forEach(cb => { try { cb() } catch {} })
   }
 
   _onError(frame) {
